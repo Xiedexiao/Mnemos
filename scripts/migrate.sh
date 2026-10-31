@@ -6,10 +6,10 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 # Load .env file if it exists (for development mode)
-if [ -f "$PROJECT_ROOT/.env" ]; then
-    echo "Loading .env file from $PROJECT_ROOT/.env"
+if [ -f "$PROJECT_ROOT/docker/.env" ]; then
+    echo "Loading .env file from $PROJECT_ROOT/docker/.env"
     set -a
-    source "$PROJECT_ROOT/.env"
+    source "$PROJECT_ROOT/docker/.env"
     set +a
 fi
 

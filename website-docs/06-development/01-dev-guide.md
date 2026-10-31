@@ -37,7 +37,7 @@ pip install uv          # docreader 使用 uv sync 安装依赖
 
 ```bash
 # 1. 准备环境变量：dev.sh 会加载 .env（必须存在），再用 .env.local 覆盖（可选）
-cp .env.example .env
+cp docker/.env.example docker/.env
 
 # 2. 启动基础设施（ParadeDB/Postgres + Redis + docreader，默认还带 Langfuse）
 make dev-start                      # 等价 ./scripts/dev.sh start
@@ -311,7 +311,7 @@ make fmt && make lint && make test
 在项目 `.env` 中设置 `GIN_MODE=debug`，然后重新创建 app 容器，使环境变量生效（仅执行 `docker compose restart app` 不会更新容器环境）：
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env up -d --no-deps --force-recreate app
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --no-deps --force-recreate app
 docker compose exec app printenv GIN_MODE
 docker compose port app 8080
 ```

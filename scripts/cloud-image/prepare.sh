@@ -134,16 +134,16 @@ curl -fsSL "${tarball_url}" -o "${tmp}/repo.tar.gz"
 tar -xzf "${tmp}/repo.tar.gz" -C "${tmp}" \
   --wildcards \
   '*/docker/docker-compose.yml' \
-  '*/.env.example' \
+  '*/docker/.env.example' \
   '*/config/config.yaml'
 src=$(find "${tmp}" -maxdepth 1 -mindepth 1 -type d -name 'Mnemos-*' | head -1)
 if [[ -z "${src}" ]]; then
-  echo "[prepare] 解压失败, 未找到 mnemos-* 目录" >&2
+  echo "[prepare] 解压失败, 未找到 Mnemos-* 目录" >&2
   exit 1
 fi
 
 cp    "${src}/docker/docker-compose.yml" "${WEKNORA_DIR}/docker/"
-cp    "${src}/.env.example"       "${WEKNORA_DIR}/"
+cp    "${src}/docker/.env.example"       "${WEKNORA_DIR}/docker/"
 cp    "${src}/config/config.yaml" "${WEKNORA_DIR}/config/"
 
 # 记录元信息, 供 firstboot / 升级时参考
@@ -155,7 +155,7 @@ EOF
 
 echo "[prepare] 3/6 准备 .env (默认值, firstboot 会替换为随机密钥)"
 cd "${WEKNORA_DIR}"
-[[ -f .env ]] || cp .env.example .env
+[[ -f docker/.env ]] || cp docker/.env.example docker/.env
 sed -i 's/^GIN_MODE=.*/GIN_MODE=release/' .env || true
 
 # 把 WEKNORA_VERSION 与 WEKNORA_REF 对齐, 让 docker compose 拉取与 ref 一致的

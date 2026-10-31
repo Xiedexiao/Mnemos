@@ -3,13 +3,13 @@
 先在「设置 → 系统信息」确认应用版本、数据库迁移状态和依赖连接状态，再查看对应服务日志。以下 Compose 命令在仓库根目录执行；本地开发的依赖服务使用 `docker compose -f docker/docker-compose.dev.yml`，app 日志查看宿主机终端或其日志文件，开发 Compose 没有 `app` 服务。
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env ps
-docker compose -f docker/docker-compose.yml --env-file .env logs --tail=200 app
-docker compose -f docker/docker-compose.yml --env-file .env logs --tail=200 docreader
-docker compose -f docker/docker-compose.yml --env-file .env logs --tail=200 postgres redis
+docker compose -f docker/docker-compose.yml --env-file docker/.env ps
+docker compose -f docker/docker-compose.yml --env-file docker/.env logs --tail=200 app
+docker compose -f docker/docker-compose.yml --env-file docker/.env logs --tail=200 docreader
+docker compose -f docker/docker-compose.yml --env-file docker/.env logs --tail=200 postgres redis
 ```
 
-修改 `.env` 后用 `docker compose -f docker/docker-compose.yml --env-file .env up -d <服务名>` 重建对应容器；`docker compose restart` 不会重新加载容器环境变量。
+修改 `.env` 后用 `docker compose -f docker/docker-compose.yml --env-file docker/.env up -d <服务名>` 重建对应容器；`docker compose restart` 不会重新加载容器环境变量。
 
 ## 按现象定位
 

@@ -172,8 +172,8 @@ docker-build-all: docker-build-app docker-build-docreader docker-build-frontend
 # The compose file lives under docker/ (project dir = docker/), so always pass
 # -f and --env-file explicitly and run make from the repo root.
 docker-run:
-	@[ -f .env ] || ([ -f .env.example ] && cp .env.example .env || touch .env)
-	docker-compose -f docker/docker-compose.yml --env-file .env up
+	@[ -f docker/.env ] || ([ -f docker/.env.example ] && cp docker/.env.example docker/.env || touch docker/.env)
+	docker-compose -f docker/docker-compose.yml --env-file docker/.env up
 
 # 使用新脚本启动所有服务
 start-all:
@@ -193,7 +193,7 @@ stop-all:
 
 # Stop Docker container (传统方式)
 docker-stop:
-	docker-compose -f docker/docker-compose.yml --env-file .env down
+	docker-compose -f docker/docker-compose.yml --env-file docker/.env down
 
 # 从源码构建镜像相关命令
 build-images:
@@ -213,9 +213,9 @@ clean-images:
 
 # Restart Docker container (stop, start)
 docker-restart:
-	@[ -f .env ] || ([ -f .env.example ] && cp .env.example .env || touch .env)
-	docker-compose -f docker/docker-compose.yml --env-file .env stop -t 60
-	docker-compose -f docker/docker-compose.yml --env-file .env up
+	@[ -f docker/.env ] || ([ -f docker/.env.example ] && cp docker/.env.example docker/.env || touch docker/.env)
+	docker-compose -f docker/docker-compose.yml --env-file docker/.env stop -t 60
+	docker-compose -f docker/docker-compose.yml --env-file docker/.env up
 
 # Database migrations
 migrate-up:

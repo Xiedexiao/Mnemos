@@ -14,7 +14,7 @@ WeKnora 支持 Docker Compose、Kubernetes Helm、Lite 单二进制和桌面应�
 
 ```mermaid
 flowchart TB
-    subgraph prod["标准部署 (docker compose -f docker/docker-compose.yml --env-file .env up)"]
+    subgraph prod["标准部署 (docker compose -f docker/docker-compose.yml --env-file docker/.env up)"]
         FE1["frontend :80"] --> APP1["app :8080"]
         APP1 --> PG1[("postgres :5432")]
         APP1 --> RD1[("redis :6379")]
@@ -51,21 +51,21 @@ Compose 默认 ParadeDB 镜像自 `v0.22.6-pg17` 起 x86 CPU 基线为 `x86-64-v
 
 ```bash
 git clone https://github.com/Tencent/WeKnora.git && cd WeKnora
-cp .env.example .env              # 编辑必填项：DB_USER/DB_PASSWORD/DB_NAME、REDIS_PASSWORD、JWT_SECRET、SYSTEM_AES_KEY
+cp docker/.env.example docker/.env              # 编辑必填项：DB_USER/DB_PASSWORD/DB_NAME、REDIS_PASSWORD、JWT_SECRET、SYSTEM_AES_KEY
 make start-all                # 等价 ./scripts/start_all.sh（默认拉取最新镜像）
 # 或直接：
-docker compose -f docker/docker-compose.yml --env-file .env build           # 拉取与 WEKNORA_VERSION 匹配的镜像
-docker compose -f docker/docker-compose.yml --env-file .env up -d
-docker compose -f docker/docker-compose.yml --env-file .env ps                 # 等所有服务变成 healthy/running
+docker compose -f docker/docker-compose.yml --env-file docker/.env build           # 拉取与 WEKNORA_VERSION 匹配的镜像
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
+docker compose -f docker/docker-compose.yml --env-file docker/.env ps                 # 等所有服务变成 healthy/running
 ```
 
 `.env.example` 中的 `JWT_SECRET`、`SYSTEM_AES_KEY` 默认留空，需要在首次部署时生成一次并妥善保存：`JWT_SECRET` 可用 `openssl rand -hex 32`，`SYSTEM_AES_KEY` 必须是 32 字节，可用 `openssl rand -hex 16`。升级已有部署时请沿用原来的 `SYSTEM_AES_KEY`，否则已加密的凭据无法解密。各密钥的作用见[配置详解](./04-configuration.md)。
 
-停止用 `docker compose -f docker/docker-compose.yml --env-file .env down`（加 `-v` 会连数据卷一起删，慎用）。仓库里的 `make start-all` 是同一条命令的封装（`scripts/start_all.sh`，额外做 Ollama 检查、`.env` 兜底、沙箱镜像预拉取），两者选一即可。
+停止用 `docker compose -f docker/docker-compose.yml --env-file docker/.env down`（加 `-v` 会连数据卷一起删，慎用）。仓库里的 `make start-all` 是同一条命令的封装（`scripts/start_all.sh`，额外做 Ollama 检查、`.env` 兜底、沙箱镜像预拉取），两者选一即可。
 
 启动后在浏览器打开 `http://localhost` 就是前端（端口由 `FRONTEND_PORT` 决定，默认 80），首次访问会落到注册页。前端 Nginx 把 `/api/` 反代到后端，所以接口调用同样走 `http://localhost/api/v1`；后端 `8080` 端口也直接映射到宿主机，`curl http://localhost:8080/health` 可用于确认后端就绪。
 
-> 注意：`docker/docker-compose.yml` 的 app 服务使用 `env_file: [.env]`，`.env` 不存在会导致 compose 解析失败。`make docker-run` / `start_all.sh` 会自动 `cp .env.example .env` 或 `touch .env` 兜底。
+> 注意：`docker/docker-compose.yml` 的 app 服务使用 `env_file: [.env]`，`.env` 不存在会导致 compose 解析失败。`make docker-run` / `start_all.sh` 会自动 `cp docker/.env.example docker/.env` 或 `touch docker/.env` 兜底。
 
 ### 版本升级
 
@@ -75,11 +75,11 @@ docker compose -f docker/docker-compose.yml --env-file .env ps                 #
 
 ```bash
 # 在 .env 中将 WEKNORA_VERSION 设为目标版本（如 0.9.0），或保持 latest
-docker compose -f docker/docker-compose.yml --env-file .env build
-docker compose -f docker/docker-compose.yml --env-file .env up -d
+docker compose -f docker/docker-compose.yml --env-file docker/.env build
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
 ```
 
-> 仅执行 `docker compose -f docker/docker-compose.yml --env-file .env up -d` 会复用本地缓存镜像，可能导致 Web UI 显示版本与下载的 release 不一致。
+> 仅执行 `docker compose -f docker/docker-compose.yml --env-file docker/.env up -d` 会复用本地缓存镜像，可能导致 Web UI 显示版本与下载的 release 不一致。
 
 ### 核心服务（默认启动）
 
@@ -93,7 +93,7 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d
 
 ### 可选服务与 profiles
 
-按需以 `docker compose -f docker/docker-compose.yml --env-file .env --profile <name> up -d` 启用：
+按需以 `docker compose -f docker/docker-compose.yml --env-file docker/.env --profile <name> up -d` 启用：
 
 | profile | 服务 | 端口 | 用途 |
 | --- | --- | --- | --- |

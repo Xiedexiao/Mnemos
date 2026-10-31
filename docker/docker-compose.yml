@@ -85,7 +85,7 @@ services:
     # absent — see scripts/start_all.sh for the pre-flight touch that keeps
     # fresh clones working.
     env_file:
-      - ../.env
+      - .env
     environment:
       # ========== 日志 ==========
       # 日志级别，默认debug
@@ -426,7 +426,7 @@ services:
     container_name: mnemos-sandbox
     build:
       context: ..
-      dockerfile: docker/Dockerfile.sandbox
+      dockerfile: Dockerfile.sandbox
       target: sandbox
     profiles:
       - full
@@ -439,7 +439,7 @@ services:
     # builds can set them explicitly to identify the resulting image.
     build:
       context: ..
-      dockerfile: docker/Dockerfile.docreader
+      dockerfile: Dockerfile.docreader
       args:
         - APT_MIRROR=${APT_MIRROR:-}
         - PLAYWRIGHT_DOWNLOAD_HOST=${PLAYWRIGHT_DOWNLOAD_HOST:-}
@@ -456,7 +456,7 @@ services:
     expose:
       - "50051"
     volumes:
-      - docreader-tmp:/tmp/docreader
+      - ./data/docreader/docreader-tmp:/tmp/docreader
     environment:
       # ========== 基础 ==========
       - TZ=${TZ:-Asia/Shanghai}

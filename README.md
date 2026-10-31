@@ -99,9 +99,9 @@ Requires [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker
 ```bash
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
-cp .env.example .env    # Edit .env as needed, see comments in the file
-docker compose -f docker/docker-compose.yml --env-file .env build     # Build the images locally
-docker compose -f docker/docker-compose.yml --env-file .env up -d    # Start core services
+cp docker/.env.example docker/.env    # Edit .env as needed, see comments in the file
+docker compose -f docker/docker-compose.yml --env-file docker/.env build     # Build the images locally
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d    # Start core services
 ```
 
 Then open **http://localhost** and follow the onboarding guide. A walkthrough with sample data is in the [Quickstart](https://weknora.weixin.qq.com/docs/01-getting-started/03-quickstart).
@@ -128,9 +128,9 @@ Add `--profile` flags to enable additional components; multiple profiles can be 
 | `langfuse` | Tracing (Langfuse) |
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio pull
-docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio up -d
-docker compose -f docker/docker-compose.yml --env-file .env down     # Stop services
+docker compose -f docker/docker-compose.yml --env-file docker/.env --profile neo4j --profile minio pull
+docker compose -f docker/docker-compose.yml --env-file docker/.env --profile neo4j --profile minio up -d
+docker compose -f docker/docker-compose.yml --env-file docker/.env down     # Stop services
 ```
 
 ### Upgrading
@@ -139,12 +139,12 @@ If you already have WeKnora running and downloaded a newer release:
 
 ```bash
 # Set WEKNORA_VERSION in .env to the target release (e.g. 0.9.0), or keep latest
-docker compose -f docker/docker-compose.yml --env-file .env build     # Build images tagged with WEKNORA_VERSION
-docker compose -f docker/docker-compose.yml --env-file .env up -d    # Recreate containers with new images
+docker compose -f docker/docker-compose.yml --env-file docker/.env build     # Build images tagged with WEKNORA_VERSION
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d    # Recreate containers with new images
 ```
 
 > [!NOTE]
-> `docker compose -f docker/docker-compose.yml --env-file .env up -d` alone reuses locally cached images and may leave the UI version out of sync with the release you downloaded. Read the [upgrade notes](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes) before upgrading. Deployments older than v0.8.2 should also read the [v0.8.2 notes](https://weknora.weixin.qq.com/docs/07-releases/v0.8.2#upgrade-notes).
+> `docker compose -f docker/docker-compose.yml --env-file docker/.env up -d` alone reuses locally cached images and may leave the UI version out of sync with the release you downloaded. Read the [upgrade notes](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes) before upgrading. Deployments older than v0.8.2 should also read the [v0.8.2 notes](https://weknora.weixin.qq.com/docs/07-releases/v0.8.2#upgrade-notes).
 
 ### Other ways to deploy
 

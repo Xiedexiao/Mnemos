@@ -24,7 +24,7 @@ if [[ -d "${WEKNORA_DIR}" ]]; then
   # 优先用 compose ls 拿到真实 project 名 (默认是目录名小写, 如 mnemos)
   COMPOSE_PROJECT="$(docker compose ls --format json 2>/dev/null \
     | grep -oE '"Name":"[^"]+"' | head -1 | cut -d'"' -f4 || true)"
-  docker compose -f docker/docker-compose.yml --env-file .env down -v --remove-orphans || true
+  docker compose -f docker/docker-compose.yml --env-file docker/.env down -v --remove-orphans || true
 fi
 
 echo "[cleanup] 2/8 清空 Mnemos 业务数据 + 首启 marker / 日志"
@@ -34,7 +34,7 @@ if [[ -d "${WEKNORA_DIR}" ]]; then
   # 起来的 docker compose 都会因找不到 .env 而失败, 避免明文默认密码
   # (postgres123!@# 之类) 把 postgres 数据卷初始化坏。
   # firstboot.sh 自己会从 .env.example 拷贝并替换密钥。
-  rm -f "${WEKNORA_DIR}/.env" "${WEKNORA_DIR}/.firstboot.done"
+  rm -f "${WEKNORA_DIR}/docker/.env" "${WEKNORA_DIR}/.firstboot.done"
 fi
 rm -f /root/mnemos-credentials.txt /var/log/mnemos-firstboot.log
 

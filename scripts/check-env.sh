@@ -38,14 +38,14 @@ cd "$PROJECT_ROOT"
 
 # 检查 .env 文件
 log_info "检查 .env 文件..."
-if [ -f ".env" ]; then
+if [ -f "docker/.env" ]; then
     log_success ".env 文件存在"
 else
     log_error ".env 文件不存在"
     echo ""
     log_info "解决方法："
-    echo "  1. 复制示例文件: cp .env.example .env"
-    echo "  2. 编辑 .env 文件并配置必要的环境变量"
+    echo "  1. 复制示例文件: cp docker/.env.example docker/.env"
+    echo "  2. 编辑 docker/.env 文件并配置必要的环境变量"
     exit 1
 fi
 
@@ -54,7 +54,7 @@ log_info "检查必要的环境变量..."
 
 # 加载 .env 文件
 set -a
-source .env
+source docker/.env
 set +a
 
 # 检查必要的环境变量
@@ -198,7 +198,7 @@ else
     log_error "发现 $errors 个问题，请修复后再启动开发环境"
     echo ""
     log_info "常见问题："
-    echo "  - 如果 .env 文件不存在，请复制 .env.example"
+    echo "  - 如果 .env 文件不存在，请复制 docker/.env.example"
     echo "  - 确保 DB_DRIVER 设置为 'postgres' 或 'mysql'"
     echo "  - 确保 Docker 服务正在运行"
 fi

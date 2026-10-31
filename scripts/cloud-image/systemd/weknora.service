@@ -13,8 +13,8 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/WeKnora
-ExecStart=@DOCKER_BIN@ compose -f docker/docker-compose.yml --env-file .env up -d
-ExecStop=@DOCKER_BIN@ compose -f docker/docker-compose.yml --env-file .env down
+ExecStart=@DOCKER_BIN@ compose -f docker/docker-compose.yml --env-file docker/.env up -d
+ExecStop=@DOCKER_BIN@ compose -f docker/docker-compose.yml --env-file docker/.env down
 TimeoutStartSec=600
 
 [Install]

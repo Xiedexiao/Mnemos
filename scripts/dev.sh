@@ -103,8 +103,8 @@ _source_env_file() {
 }
 
 load_env_files() {
-    if [ -f ".env" ]; then
-        _source_env_file .env || return 1
+    if [ -f "docker/.env" ]; then
+        _source_env_file docker/.env || return 1
     else
         return 1
     fi
@@ -188,14 +188,14 @@ start_services() {
     cd "$PROJECT_ROOT"
     
     # 检查 .env 文件
-    if [ ! -f ".env" ]; then
-        log_error ".env 文件不存在，请先创建"
+    if [ ! -f "docker/.env" ]; then
+        log_error "docker/.env 文件不存在，请先创建"
         return 1
     fi
 
     load_env_files
     if [ $? -ne 0 ]; then
-        log_error ".env 文件不存在，请先创建"
+        log_error "docker/.env 文件不存在，请先创建"
         return 1
     fi
 

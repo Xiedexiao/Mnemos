@@ -12,8 +12,8 @@
 set -euo pipefail
 
 WEKNORA_DIR="${WEKNORA_DIR:-/opt/WeKnora}"
-ENV_FILE="${WEKNORA_DIR}/.env"
-ENV_TEMPLATE="${WEKNORA_DIR}/.env.example"
+ENV_FILE="${WEKNORA_DIR}/docker/.env"
+ENV_TEMPLATE="${WEKNORA_DIR}/docker/.env.example"
 CRED_FILE="/root/mnemos-credentials.txt"
 LOG_FILE="/var/log/mnemos-firstboot.log"
 MARKER="${WEKNORA_DIR}/.firstboot.done"
@@ -98,7 +98,7 @@ chmod 0600 "${MARKER}"
 
 echo "env updated, marker written, starting docker compose..."
 cd "${WEKNORA_DIR}"
-"${DOCKER_BIN}" compose -f docker/docker-compose.yml --env-file .env up -d
+"${DOCKER_BIN}" compose -f docker/docker-compose.yml --env-file docker/.env up -d
 
 # 尝试拿公网 IP, 失败就用内网
 PUB_IP=$(curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null \
@@ -115,7 +115,7 @@ cat >"${CRED_FILE}" <<INFO
 
 注册后如需关闭后续注册, 编辑 ${ENV_FILE}:
     DISABLE_REGISTRATION=true
-然后执行:  cd ${WEKNORA_DIR} && docker compose -f docker/docker-compose.yml --env-file .env up -d
+然后执行:  cd ${WEKNORA_DIR} && docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
 
 下列随机凭证已写入 ${ENV_FILE}, 请妥善保存(仅 root 可读):
   DB_PASSWORD     = ${DB_PWD}

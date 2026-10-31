@@ -32,8 +32,8 @@
 3. 使用更新后的 Compose，只替换数据库容器：
 
    ```bash
-   docker compose -f docker/docker-compose.yml --env-file .env build postgres
-   docker compose -f docker/docker-compose.yml --env-file .env up -d --no-deps --wait postgres
+   docker compose -f docker/docker-compose.yml --env-file docker/.env build postgres
+   docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --no-deps --wait postgres
    ```
 
 4. 完成扩展的 SQL 升级。仅替换镜像不会更新已有数据库内的 `pg_extension` 版本。新镜像自带 0.22.x 起的完整升级脚本链，任意 0.22.x 都可以一步升级到镜像默认版本：

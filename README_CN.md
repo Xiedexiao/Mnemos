@@ -99,9 +99,9 @@ https://github.com/user-attachments/assets/de0e490a-e738-405e-bb3a-64b63edd7278
 ```bash
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
-cp .env.example .env    # 按需编辑 .env，详见文件内注释
-docker compose -f docker/docker-compose.yml --env-file .env build     # 构建本地镜像
-docker compose -f docker/docker-compose.yml --env-file .env up -d    # 启动核心服务
+cp docker/.env.example docker/.env    # 按需编辑 .env，详见文件内注释
+docker compose -f docker/docker-compose.yml --env-file docker/.env build     # 构建本地镜像
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d    # 启动核心服务
 ```
 
 启动成功后访问 **[http://localhost](http://localhost)**，按新手引导完成配置即可使用。带样例数据的完整上手流程见[快速上手](https://weknora.weixin.qq.com/docs/01-getting-started/03-quickstart)。
@@ -128,9 +128,9 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d    # 启动核
 | `langfuse` | 链路追踪 (Langfuse) |
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio pull
-docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio up -d
-docker compose -f docker/docker-compose.yml --env-file .env down     # 停止服务
+docker compose -f docker/docker-compose.yml --env-file docker/.env --profile neo4j --profile minio pull
+docker compose -f docker/docker-compose.yml --env-file docker/.env --profile neo4j --profile minio up -d
+docker compose -f docker/docker-compose.yml --env-file docker/.env down     # 停止服务
 ```
 
 ### 版本升级
@@ -139,12 +139,12 @@ docker compose -f docker/docker-compose.yml --env-file .env down     # 停止服
 
 ```bash
 # 在 .env 中将 WEKNORA_VERSION 设为目标版本（如 0.9.0），或保持 latest
-docker compose -f docker/docker-compose.yml --env-file .env build     # 构建打上 WEKNORA_VERSION 标签的镜像
-docker compose -f docker/docker-compose.yml --env-file .env up -d    # 用新镜像重建容器
+docker compose -f docker/docker-compose.yml --env-file docker/.env build     # 构建打上 WEKNORA_VERSION 标签的镜像
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d    # 用新镜像重建容器
 ```
 
 > [!NOTE]
-> 仅执行 `docker compose -f docker/docker-compose.yml --env-file .env up -d` 会复用本地缓存镜像，可能导致 Web UI 显示版本与下载的 release 不一致。升级前请先阅读[升级须知](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes)。
+> 仅执行 `docker compose -f docker/docker-compose.yml --env-file docker/.env up -d` 会复用本地缓存镜像，可能导致 Web UI 显示版本与下载的 release 不一致。升级前请先阅读[升级须知](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes)。
 
 ### 其他部署方式
 

@@ -103,21 +103,21 @@ detect_compose_cmd() {
 # 检查并创建.env文件
 check_env_file() {
     log_info "检查环境变量配置..."
-    if [ ! -f "$PROJECT_ROOT/.env" ]; then
-        log_warning ".env 文件不存在，将从模板创建"
-        if [ -f "$PROJECT_ROOT/.env.example" ]; then
-            cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
-            log_success "已从 .env.example 创建 .env 文件"
+    if [ ! -f "$PROJECT_ROOT/docker/.env" ]; then
+        log_warning "docker/.env 文件不存在，将从模板创建"
+        if [ -f "$PROJECT_ROOT/docker/.env.example" ]; then
+            cp "$PROJECT_ROOT/docker/.env.example" "$PROJECT_ROOT/docker/.env"
+            log_success "已从 docker/.env.example 创建 docker/.env 文件"
         else
-            log_error "未找到 .env.example 模板文件，无法创建 .env 文件"
+            log_error "未找到 docker/.env.example 模板文件，无法创建 docker/.env 文件"
             return 1
         fi
     else
-        log_info ".env 文件已存在"
+        log_info "docker/.env 文件已存在"
     fi
     
     # 检查必要的环境变量是否已设置
-    source "$PROJECT_ROOT/.env"
+    source "$PROJECT_ROOT/docker/.env"
     local missing_vars=()
     
     # 检查基础变量
@@ -342,11 +342,11 @@ ensure_sandbox_image() {
 
     # 后台拉取，不阻塞主流程
     (
-        if PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env --profile sandbox pull sandbox 2>/dev/null; then
+        if PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env --profile sandbox pull sandbox 2>/dev/null; then
             log_success "沙箱镜像拉取完成: $sandbox_image"
         else
             log_warning "沙箱镜像拉取失败，Agent Skills 功能可能不可用"
-            log_warning "可稍后手动拉取: $DOCKER_COMPOSE_BIN $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env --profile sandbox pull sandbox"
+            log_warning "可稍后手动拉取: $DOCKER_COMPOSE_BIN $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env --profile sandbox pull sandbox"
         fi
     ) &
 
@@ -367,7 +367,7 @@ start_docker() {
     check_env_file
     
     # 读取.env文件
-    source "$PROJECT_ROOT/.env"
+    source "$PROJECT_ROOT/docker/.env"
     storage_type=${STORAGE_TYPE:-local}
     
     check_platform
@@ -385,11 +385,11 @@ start_docker() {
 	if [ "$NO_PULL" = true ]; then
 		# 不拉取镜像，使用本地镜像
 		log_info "跳过镜像拉取，使用本地镜像..."
-		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up --build -d
+		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env up --build -d
 	else
 		# 默认策略：本地缺失才构建/拉取
 		log_info "启动服务（本地缺失的镜像会自动构建）..."
-		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up -d
+		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env up -d
 	fi
     if [ $? -ne 0 ]; then
         log_error "Docker容器启动失败"
@@ -400,7 +400,7 @@ start_docker() {
 
     # 显示容器状态
     log_info "当前容器状态:"
-	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env ps
+	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env ps
 
     # 预拉取Sandbox镜像（Agent Skills 执行所需，仅拉取不启动）
     ensure_sandbox_image
@@ -423,7 +423,7 @@ stop_docker() {
     cd "$PROJECT_ROOT"
     
     # 停止所有容器
-	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env down --remove-orphans
+	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env down --remove-orphans
     if [ $? -ne 0 ]; then
         log_error "Docker容器停止失败"
         return 1
@@ -448,7 +448,7 @@ list_containers() {
     
     # 列出所有容器
     printf "%b\n" "${BLUE}当前正在运行的容器:${NC}"
-	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env ps --services | sort
+	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env ps --services | sort
     
     return 0
 }
@@ -467,7 +467,7 @@ pull_images() {
     check_env_file
     
     # 读取.env文件
-    source "$PROJECT_ROOT/.env"
+    source "$PROJECT_ROOT/docker/.env"
     storage_type=${STORAGE_TYPE:-local}
     
     check_platform
@@ -477,7 +477,7 @@ pull_images() {
     
     # 拉取所有镜像
     log_info "拉取所有服务的最新镜像..."
-	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env pull
+	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env pull
     if [ $? -ne 0 ]; then
         log_error "镜像拉取失败"
         return 1
@@ -485,7 +485,7 @@ pull_images() {
 
     # 拉取 sandbox 镜像（sandbox 在 profile 中，需要单独拉取）
     log_info "拉取沙箱镜像..."
-    PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env --profile sandbox pull sandbox 2>/dev/null || \
+    PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env --profile sandbox pull sandbox 2>/dev/null || \
         log_warning "沙箱镜像拉取失败（非必需，跳过）"
 
     log_success "所有镜像已成功拉取到最新版本"
@@ -524,7 +524,7 @@ restart_container() {
     export_build_args
     
     # 检查容器是否存在
-	if ! "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env ps --services | grep -q "^$container_name$"; then
+	if ! "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env ps --services | grep -q "^$container_name$"; then
         log_error "容器 '$container_name' 不存在或未运行"
         echo "可用的容器有:"
         list_containers
@@ -533,14 +533,14 @@ restart_container() {
     
     # 构建并重启容器
     log_info "正在重新构建容器 '$container_name'..."
-	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env build "$container_name"
+	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env build "$container_name"
     if [ $? -ne 0 ]; then
         log_error "容器 '$container_name' 构建失败"
         return 1
     fi
     
     log_info "正在重启容器 '$container_name'..."
-	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up -d --no-deps "$container_name"
+	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env up -d --no-deps "$container_name"
     if [ $? -ne 0 ]; then
         log_error "容器 '$container_name' 重启失败"
         return 1
@@ -774,7 +774,7 @@ else
             printf "%b\n" "${GREEN}  - API接口: http://localhost:${APP_PORT:-8080}${NC}"
             echo ""
             log_info "正在持续输出容器日志（按 Ctrl+C 退出日志，容器不会停止）..."
-            "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env logs app docreader postgres --since=10s -f
+            "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env logs app docreader postgres --since=10s -f
         else
             log_error "部分服务启动失败，请检查日志并修复问题"
         fi
@@ -787,7 +787,7 @@ else
         printf "%b\n" "${GREEN}  - API接口: http://localhost:${APP_PORT:-8080}${NC}"
         echo ""
         log_info "正在持续输出容器日志（按 Ctrl+C 退出日志，容器不会停止）..."
-        "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env logs app docreader postgres --since=10s -f
+        "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file docker/.env logs app docreader postgres --since=10s -f
     fi
 fi
 
