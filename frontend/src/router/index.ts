@@ -91,6 +91,15 @@ const router = createRouter({
       component: () => import("../views/knowledge/KnowledgeBase.vue"),
       meta: { requiresInit: true, requiresAuth: true }
     },
+    // Review workbench entry point. The page itself is a platform child (it
+    // needs the app shell); this top-level alias keeps the documented
+    // /review/workbench URL working, same pattern as the /platform/system/*
+    // compatibility redirects below.
+    {
+      path: "/review/workbench",
+      redirect: { path: "/platform/review/workbench" },
+      meta: { requiresInit: true, requiresAuth: true },
+    },
     {
       path: "/platform",
       name: "Platform",
@@ -147,6 +156,14 @@ const router = createRouter({
           path: "automations/:automationId?",
           name: "automationList",
           component: () => import("../views/automation/AutomationList.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          // 审核工作台：租户 Admin 的待审池（后端 /review/tasks 为 Admin+，
+          // 非 Admin 进入后由接口 403 → 页面空态 + toast）。
+          path: "review/workbench",
+          name: "reviewWorkbench",
+          component: () => import("../views/review/ReviewWorkbench.vue"),
           meta: { requiresInit: true, requiresAuth: true }
         },
         {

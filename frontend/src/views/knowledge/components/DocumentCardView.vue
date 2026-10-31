@@ -6,6 +6,7 @@ import { formatReferenceSnippet } from '@/utils/referenceSources';
 import KnowledgeTagPopover from './KnowledgeTagPopover.vue';
 import DocumentFileIcon from './DocumentFileIcon.vue';
 import DocumentActionMenu from './DocumentActionMenu.vue';
+import type { GovernanceActionMeta } from '@/components/knowledge/governanceActions';
 import FolderPickerMenu, { type FolderOption } from './FolderPickerMenu.vue';
 import KnowledgeProcessingTimeline from '@/components/knowledge-processing-timeline.vue';
 import { shownStall } from '@/utils/knowledgeProcessingStall';
@@ -35,6 +36,8 @@ interface KnowledgeCard {
   created_at?: string;
   file_size?: number | string;
   channel?: string;
+  // Governance fields served by the knowledge list/detail API (A期).
+  lifecycle_status?: string;
 }
 
 const props = defineProps<{
@@ -46,6 +49,8 @@ const props = defineProps<{
   canDownload: boolean;
   canMutateKnowledge: boolean;
   traceAvailableById: Record<string, boolean>;
+  /** Show the per-document ACL entry (权限管理) in the card menu. */
+  canManageAcl?: boolean;
   /** Every folder of the knowledge base, for the "move to folder" picker. */
   folderOptions?: FolderOption[];
   /**
@@ -73,6 +78,10 @@ const emit = defineEmits<{
   (e: 'toggle-checkbox', id: string, checked: boolean, ctx?: { e?: Event }): void;
   (e: 'menu-visible-change', visible: boolean, item: KnowledgeCard): void;
   (e: 'action', action: 'download' | 'edit' | 'view-trace' | 'reparse' | 'cancel-parse' | 'move' | 'move-folder' | 'batch-manage' | 'delete', item: KnowledgeCard): void;
+  // Knowledge governance (A期 second batch): row-menu actions + drawers.
+  (e: 'governance-action', action: GovernanceActionMeta, item: KnowledgeCard): void;
+  (e: 'acl-manage', item: KnowledgeCard): void;
+  (e: 'share-manage', item: KnowledgeCard): void;
   (e: 'tags-changed', payload?: { deletedTagId?: string }): void;
   (e: 'open-folder', path: string): void;
   (e: 'move-to-folder', item: KnowledgeCard, folderPath: string): void;
@@ -331,6 +340,26 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
   }
   emit('action', action, item);
 };
+
+// Governance actions and drawer entries always close the menu first: they
+// open confirm dialogs / drawers that must not sit inside the popup.
+const handleGovernanceAction = (action: GovernanceActionMeta, item: KnowledgeCard) => {
+  if (item.isMore !== undefined) item.isMore = false;
+  activeMenuIndex.value = -1;
+  emit('governance-action', action, item);
+};
+
+const handleAclManage = (item: KnowledgeCard) => {
+  if (item.isMore !== undefined) item.isMore = false;
+  activeMenuIndex.value = -1;
+  emit('acl-manage', item);
+};
+
+const handleShareManage = (item: KnowledgeCard) => {
+  if (item.isMore !== undefined) item.isMore = false;
+  activeMenuIndex.value = -1;
+  emit('share-manage', item);
+};
 </script>
 
 <template>
@@ -433,6 +462,7 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
                   :item="item"
                   :can-download="canDownload"
                   :can-mutate-knowledge="canMutateKnowledge"
+                  :can-manage-acl="canManageAcl"
                   :trace-visible="isTraceMenuVisible(item)"
                   :folders-available="Boolean(folderOptions?.length)"
                   @download="handleAction('download', item)"
@@ -444,6 +474,9 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
                   @move-folder="handleAction('move-folder', item)"
                   @batch-manage="handleAction('batch-manage', item)"
                   @delete="handleAction('delete', item)"
+                  @governance-action="(action: GovernanceActionMeta) => handleGovernanceAction(action, item)"
+                  @acl-manage="handleAclManage(item)"
+                  @share-manage="handleShareManage(item)"
                 />
               </div>
 

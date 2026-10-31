@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import {
+  governanceActionsForStatus,
+  type GovernanceActionMeta,
+} from '@/components/knowledge/governanceActions';
 
 interface KnowledgeItem {
   id: string;
@@ -7,6 +11,8 @@ interface KnowledgeItem {
   title?: string;
   type?: string;
   parse_status?: string;
+  // Governance fields served by the knowledge list/detail API (A期).
+  lifecycle_status?: string;
 }
 
 const props = defineProps<{
@@ -14,6 +20,11 @@ const props = defineProps<{
   canDownload: boolean;
   canMutateKnowledge: boolean;
   traceVisible: boolean;
+  /**
+   * Show the per-document ACL entry (权限管理). The backend floors
+   * grant/revoke at tenant Admin; callers pass their canManage signal.
+   */
+  canManageAcl?: boolean;
   /** Whether the knowledge base has a folder structure to file documents into. */
   foldersAvailable?: boolean;
 }>();
@@ -28,6 +39,9 @@ const emit = defineEmits<{
   (e: 'move-folder'): void;
   (e: 'batch-manage'): void;
   (e: 'delete'): void;
+  (e: 'governance-action', action: GovernanceActionMeta): void;
+  (e: 'acl-manage'): void;
+  (e: 'share-manage'): void;
 }>();
 
 
@@ -38,6 +52,10 @@ const isParseInFlight = computed(() =>
 );
 
 const fileName = computed(() => props.item.file_name || props.item.title || props.item.id);
+
+// 治理动作随 lifecycle_status 变化；后端对非法迁移仍会 400，这里只保证
+// 菜单不展示注定失败的动作。
+const governanceActions = computed(() => governanceActionsForStatus(props.item.lifecycle_status));
 </script>
 
 <template>
@@ -103,6 +121,33 @@ const fileName = computed(() => props.item.file_name || props.item.title || prop
   <div v-if="canMutateKnowledge" class="doc-action-menu-item" @click.stop="emit('move')">
     <t-icon class="icon" name="swap" />
     <span>{{ $t('knowledgeBase.moveDocument') }}</span>
+  </div>
+
+  <!-- 知识治理：提交审核 / 复审确认 / 标记过期 / 下架 / 归档（随 lifecycle_status 变化） -->
+  <template v-if="canMutateKnowledge && governanceActions.length">
+    <div class="doc-action-menu-divider" role="separator"></div>
+    <div
+      v-for="action in governanceActions"
+      :key="action.id"
+      class="doc-action-menu-item"
+      :class="{ danger: action.danger }"
+      @click.stop="emit('governance-action', action)"
+    >
+      <t-icon class="icon" :name="action.icon" />
+      <span>{{ $t(action.labelKey) }}</span>
+    </div>
+  </template>
+
+  <!-- 权限管理（文档级 ACL，deny 优先） -->
+  <div v-if="canManageAcl" class="doc-action-menu-item" @click.stop="emit('acl-manage')">
+    <t-icon class="icon" name="user-safety" />
+    <span>{{ $t('knowledgeGovernance.aclMenuEntry') }}</span>
+  </div>
+
+  <!-- 分享链接（外链管理） -->
+  <div v-if="canMutateKnowledge" class="doc-action-menu-item" @click.stop="emit('share-manage')">
+    <t-icon class="icon" name="share" />
+    <span>{{ $t('knowledgeGovernance.shareMenuEntry') }}</span>
   </div>
 
   <!-- 批量管理 -->
@@ -189,5 +234,12 @@ const fileName = computed(() => props.item.file_name || props.item.title || prop
       background: var(--td-error-color-2);
     }
   }
+}
+
+/* 治理区块与常规动作之间的细分隔线 */
+.doc-action-menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--td-component-stroke);
 }
 </style>

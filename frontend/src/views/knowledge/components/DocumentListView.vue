@@ -6,6 +6,7 @@ import KnowledgeTagPopover from './KnowledgeTagPopover.vue';
 import DocumentFileIcon from './DocumentFileIcon.vue';
 import DocumentActionMenu from './DocumentActionMenu.vue';
 import KnowledgeGovernanceBadges from '@/components/knowledge/KnowledgeGovernanceBadges.vue';
+import type { GovernanceActionMeta } from '@/components/knowledge/governanceActions';
 import FolderPickerMenu, { type FolderOption } from './FolderPickerMenu.vue';
 import { shownStall } from '@/utils/knowledgeProcessingStall';
 import type { FolderEntry } from '../folderTree';
@@ -47,6 +48,8 @@ const props = defineProps<{
   canDownload: boolean;
   canMutateKnowledge: boolean;
   traceVisibleIds: Record<string, boolean>;
+  /** Show the per-document ACL entry (权限管理) in the row menu. */
+  canManageAcl?: boolean;
   loading?: boolean;
   /** Every folder of the knowledge base, for the "move to folder" picker. */
   folderOptions?: FolderOption[];
@@ -76,6 +79,10 @@ const emit = defineEmits<{
   (e: 'toggle-row', id: string, checked: boolean, shiftKey: boolean): void;
   (e: 'toggle-all', checked: boolean): void;
   (e: 'action', action: 'download' | 'edit' | 'reparse' | 'cancel-parse' | 'move' | 'move-folder' | 'delete' | 'view-trace' | 'batch-manage', item: KnowledgeItem): void;
+  // Knowledge governance (A期 second batch): row-menu actions + drawers.
+  (e: 'governance-action', action: GovernanceActionMeta, item: KnowledgeItem): void;
+  (e: 'acl-manage', item: KnowledgeItem): void;
+  (e: 'share-manage', item: KnowledgeItem): void;
   (e: 'probe-trace', item: KnowledgeItem): void;
   (e: 'tags-changed', payload?: { deletedTagId?: string }): void;
   (e: 'open-folder', path: string): void;
@@ -275,6 +282,26 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
   emit('action', action, item);
 };
 
+// Governance actions and drawer entries always close the menu first: they
+// open confirm dialogs / drawers that must not sit inside the popup.
+const handleGovernanceAction = (action: GovernanceActionMeta, item: KnowledgeItem) => {
+  moreOpen.value = null;
+  item.isMore = false;
+  emit('governance-action', action, item);
+};
+
+const handleAclManage = (item: KnowledgeItem) => {
+  moreOpen.value = null;
+  item.isMore = false;
+  emit('acl-manage', item);
+};
+
+const handleShareManage = (item: KnowledgeItem) => {
+  moreOpen.value = null;
+  item.isMore = false;
+  emit('share-manage', item);
+};
+
 </script>
 
 <template>
@@ -421,6 +448,7 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
                   :item="item"
                   :can-download="canDownload"
                   :can-mutate-knowledge="canMutateKnowledge"
+                  :can-manage-acl="canManageAcl"
                   :trace-visible="!!traceVisibleIds[item.id] || (item.parse_status === 'pending' || item.parse_status === 'processing' || item.parse_status === 'finalizing')"
                   @download="handleAction('download', item)"
                   @edit="handleAction('edit', item)"
@@ -431,6 +459,9 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
                   @move-folder="handleAction('move-folder', item)"
                   @batch-manage="handleAction('batch-manage', item)"
                   @delete="handleAction('delete', item)"
+                  @governance-action="(action: GovernanceActionMeta) => handleGovernanceAction(action, item)"
+                  @acl-manage="handleAclManage(item)"
+                  @share-manage="handleShareManage(item)"
                 />
               </div>
 

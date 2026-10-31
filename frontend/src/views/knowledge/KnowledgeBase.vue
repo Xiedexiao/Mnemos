@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useAssistantDataChange } from '@/utils/assistantDataChange';
 import { ref, onMounted, onUnmounted, watch, reactive, computed, nextTick } from "vue";
-import { MessagePlugin } from "tdesign-vue-next";
+import { MessagePlugin, DialogPlugin } from "tdesign-vue-next";
 import DocContent from "@/components/doc-content.vue";
 import useKnowledgeBase from '@/hooks/useKnowledgeBase';
 import { useRoute, useRouter } from 'vue-router';
@@ -48,6 +48,14 @@ import FAQEntryManager from './components/FAQEntryManager.vue';
 import DocumentListView from './components/DocumentListView.vue';
 import DocumentCardView from './components/DocumentCardView.vue';
 import DocumentBatchBar from './components/DocumentBatchBar.vue';
+import KnowledgeAclDrawer from '@/components/knowledge/KnowledgeAclDrawer.vue';
+import KnowledgeShareDrawer from '@/components/knowledge/KnowledgeShareDrawer.vue';
+import type { GovernanceActionMeta } from '@/components/knowledge/governanceActions';
+import { submitKnowledgeReview } from '@/api/review';
+import {
+  transitionKnowledgeLifecycle,
+  type KnowledgeLifecycleResolved,
+} from '@/api/knowledge-governance';
 import AssistantActionsButton from '@/components/assistant/AssistantActionsButton.vue';
 import KbUploadSourceDropdown from './components/KbUploadSourceDropdown.vue';
 import KbFolderTree from './components/KbFolderTree.vue';
@@ -1488,6 +1496,9 @@ type KnowledgeCard = {
   stalled_minutes?: number;
   // Server verdict on a quiet row: 'queued' (backlogged) or 'stalled'.
   stall_state?: string;
+  // Governance fields served by the knowledge list/detail API (A期).
+  lifecycle_status?: string;
+  classification?: string;
 };
 // needsStatusPolling decides whether a card row is still "in flight"
 // enough that the doc list should keep refreshing it. Keep in sync with
@@ -2413,6 +2424,108 @@ const handleListAction = (
   if (action === 'batch-manage') return handleEnterBatchFromCard(item);
 };
 
+// ── 知识治理（A期第二批）：行内动作 + ACL / 外链抽屉 ──
+
+// lifecycle_status → i18n label（与 KnowledgeGovernanceBadges 的键位一致）。
+const LIFECYCLE_LABEL_KEYS: Record<string, string> = {
+  draft: 'knowledgeGovernance.lifecycleDraft',
+  valid: 'knowledgeGovernance.lifecycleValid',
+  pending_review: 'knowledgeGovernance.lifecyclePendingReview',
+  pending_effective: 'knowledgeGovernance.lifecyclePendingEffective',
+  pending_review_cycle: 'knowledgeGovernance.lifecyclePendingReviewCycle',
+  stale: 'knowledgeGovernance.lifecycleStale',
+  expired: 'knowledgeGovernance.lifecycleExpired',
+  replaced: 'knowledgeGovernance.lifecycleReplaced',
+  delisted: 'knowledgeGovernance.lifecycleDelisted',
+  archived: 'knowledgeGovernance.lifecycleArchived',
+  conflict: 'knowledgeGovernance.lifecycleConflict',
+};
+
+const resolvedStatusLabel = (resolved?: KnowledgeLifecycleResolved | null) => {
+  const status = resolved?.effective_status || resolved?.status || 'valid';
+  return t(LIFECYCLE_LABEL_KEYS[status] || 'knowledgeGovernance.lifecycleValid');
+};
+
+const governanceItemName = (item: KnowledgeCard) => item.file_name || item.title || item.id;
+
+const refreshAfterGovernance = () => {
+  void loadKnowledgeFiles(kbId.value);
+};
+
+// 提交审核：冻结内容基线并创建审批任务（lifecycle → pending_review）。
+const handleGovernanceSubmitReview = (item: KnowledgeCard) => {
+  const dialog = DialogPlugin.confirm({
+    header: t('knowledgeGovernance.submitReviewTitle'),
+    body: t('knowledgeGovernance.submitReviewBody', { title: governanceItemName(item) }),
+    confirmBtn: { content: t('knowledgeGovernance.actionSubmitReview'), theme: 'primary' },
+    cancelBtn: { content: t('common.cancel') },
+    onConfirm: async () => {
+      try {
+        await submitKnowledgeReview(item.id);
+        MessagePlugin.success(t('knowledgeGovernance.transitionSuccess', {
+          status: t('knowledgeGovernance.lifecyclePendingReview'),
+        }));
+        refreshAfterGovernance();
+      } catch (error: any) {
+        MessagePlugin.error(error?.message || t('knowledgeGovernance.submitReviewFailed'));
+      } finally {
+        dialog.destroy();
+      }
+    },
+    onClose: () => dialog.destroy(),
+  });
+};
+
+// 复审确认 / 标记过期 / 下架 / 归档：一个状态机动作 + resolved 状态回显。
+const handleGovernanceTransition = (item: KnowledgeCard, action: GovernanceActionMeta) => {
+  const transitionAction = action.transitionAction;
+  if (!transitionAction) return;
+  const dialog = DialogPlugin.confirm({
+    header: t(action.labelKey),
+    body: t('knowledgeGovernance.transitionBody', { title: governanceItemName(item) }),
+    confirmBtn: { content: t(action.labelKey), theme: action.danger ? 'danger' : 'primary' },
+    cancelBtn: { content: t('common.cancel') },
+    onConfirm: async () => {
+      try {
+        const res = await transitionKnowledgeLifecycle(item.id, { action: transitionAction });
+        MessagePlugin.success(t('knowledgeGovernance.transitionSuccess', {
+          status: resolvedStatusLabel(res?.resolved),
+        }));
+        refreshAfterGovernance();
+      } catch (error: any) {
+        MessagePlugin.error(error?.message || t('knowledgeGovernance.transitionFailed'));
+      } finally {
+        dialog.destroy();
+      }
+    },
+    onClose: () => dialog.destroy(),
+  });
+};
+
+const handleGovernanceAction = (action: GovernanceActionMeta, item: KnowledgeCard) => {
+  if (!item?.id) return;
+  if (action.id === 'submit-review') {
+    handleGovernanceSubmitReview(item);
+    return;
+  }
+  handleGovernanceTransition(item, action);
+};
+
+// ACL / 外链抽屉共享一个目标行，随入口点击切换。
+const governanceTarget = ref<KnowledgeCard | null>(null);
+const aclDrawerVisible = ref(false);
+const shareDrawerVisible = ref(false);
+
+const handleAclManage = (item: KnowledgeCard) => {
+  governanceTarget.value = item;
+  aclDrawerVisible.value = true;
+};
+
+const handleShareManage = (item: KnowledgeCard) => {
+  governanceTarget.value = item;
+  shareDrawerVisible.value = true;
+};
+
 // Clear selection on filter/tag/kb change to avoid acting on hidden items.
 watch(
   [selectedTagIds, docSearchKeyword, selectedFileType, selectedParseStatus, selectedSource, updatedTimeRange, kbId],
@@ -2734,6 +2847,7 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     :can-download="canDownloadKnowledge"
                     :can-mutate-knowledge="canMutateKnowledge"
                     :trace-available-by-id="traceAvailableById"
+                    :can-manage-acl="canManage"
                     :move-menu-mode="moveMenuMode"
                     :move-target-kbs="moveTargetKbs"
                     :move-targets-loading="moveTargetsLoading"
@@ -2747,6 +2861,9 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     @toggle-checkbox="onCardGridCheckboxChange"
                     @menu-visible-change="(visible: boolean, item: any) => onCardMoreVisibleChange(visible, item)"
                     @action="(action: any, item: any) => handleCardAction(action, item)"
+                    @governance-action="(action: any, item: any) => handleGovernanceAction(action, item)"
+                    @acl-manage="(item: any) => handleAclManage(item)"
+                    @share-manage="(item: any) => handleShareManage(item)"
                     @tags-changed="onTagCatalogChanged"
                     @move-select-target="(kb: any) => handleMoveSelectTarget(kb)"
                     @move-back="handleMoveBack"
@@ -2760,6 +2877,7 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     :selected-ids="selectedIds"
                     :can-edit="canEdit" :can-download="canDownloadKnowledge" :can-mutate-knowledge="canMutateKnowledge"
                     :trace-visible-ids="traceAvailableById"
+                    :can-manage-acl="canManage"
                     :move-menu-mode="moveMenuMode"
                     :move-target-kbs="moveTargetKbs"
                     :move-targets-loading="moveTargetsLoading"
@@ -2771,6 +2889,9 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     @move-to-folder="(item: any, path: string) => moveKnowledgeIntoFolder([item.id], path)"
                     @open="(item: any) => openKnowledgeItem(item)" @toggle-row="toggleSelectRow"
                     @toggle-all="toggleSelectAll" @action="(action: any, item: any) => handleListAction(action, item)"
+                    @governance-action="(action: any, item: any) => handleGovernanceAction(action, item)"
+                    @acl-manage="(item: any) => handleAclManage(item)"
+                    @share-manage="(item: any) => handleShareManage(item)"
                     @probe-trace="(item: any) => probeTraceAvailable(item)"
                     @tags-changed="onTagCatalogChanged"
                     @move-select-target="(kb: any) => handleMoveSelectTarget(kb)"
@@ -2841,6 +2962,14 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
     :pre-selected-tag-ids="batchTagPreSelectedIds"
     :confirm-loading="batchTagging"
     @update:visible="batchTagDialogVisible = $event" @confirm="onBatchTagConfirm" />
+
+  <!-- 知识治理（A期第二批）：文档级 ACL 与外链抽屉，入口在行操作菜单 -->
+  <KnowledgeAclDrawer v-model:visible="aclDrawerVisible" :knowledge-id="governanceTarget?.id"
+    :knowledge-title="governanceTarget?.title || governanceTarget?.file_name"
+    :classification="governanceTarget?.classification" @changed="refreshAfterGovernance" />
+  <KnowledgeShareDrawer v-model:visible="shareDrawerVisible" :knowledge-id="governanceTarget?.id"
+    :knowledge-title="governanceTarget?.title || governanceTarget?.file_name"
+    :classification="governanceTarget?.classification" @changed="refreshAfterGovernance" />
 
 </template>
 <style>

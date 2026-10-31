@@ -81,6 +81,8 @@ async function setup(t: TestContext, tree: unknown) {
     '@/composables/useAssistantPageContext': { useAssistantPageContext() {} },
     '@/utils/kbPermission': {}, '@/utils/knowledgeDeletion': {}, '@/utils/knowledgeTrace': {},
     '@/utils/knowledgeProcessingStall': stall, '@/api/wiki': {}, '@/api/knowledge-base': {},
+    // A期治理第二批的 API 模块只被弹窗处理器引用，给空壳即可。
+    '@/api/review': {}, '@/api/knowledge-governance': {},
     '@/api/knowledge-base/index': { listKnowledgeFolders, listKnowledgeTags: async () => ({ data: { data: [], total: 0 } }) },
   })
   await flush()

@@ -95,6 +95,8 @@ async function setup(t: TestContext, initialRows: Row[] = [row('doc')]) {
     '@/utils/kbPermission': { permissionCanEditKB: () => true, permissionCanManageKB: () => true },
     '@/utils/knowledgeDeletion': {}, '@/utils/knowledgeTrace': {},
     '@/utils/knowledgeProcessingStall': stall, '@/api/wiki': {}, '@/api/knowledge-base': {},
+    // A期治理第二批的 API 模块只被弹窗处理器引用，给空壳即可。
+    '@/api/review': {}, '@/api/knowledge-governance': {},
     '@/api/knowledge-base/index': {
       batchQueryKnowledge, batchReparseKnowledge,
       listKnowledgeFolders: async () => ({ data: { folders: [{ path: 'other', name: 'other' }] } }),

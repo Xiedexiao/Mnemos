@@ -391,6 +391,7 @@ const navItems = computed(() => {
     { key: 'envvars', icon: 'key', label: envNavLabel() },
     { key: 'tenant', icon: 'user-circle', label: t('settings.tenantInfo') },
     { key: 'members', icon: 'usergroup', label: t('tenantMember.title') },
+    { key: 'review-workbench', icon: 'assignment-checked', label: t('reviewWorkbench.navEntry') },
     ...integrationItems,
   ]
   // currentTenantRole 为空表示「membership 还没加载」—— 比起渲染整套
@@ -418,7 +419,7 @@ const navGroups = computed<NavGroup[]>(() => {
     {
       key: 'workspace',
       label: t('settings.navGroups.workspace'),
-      items: pickItems(['tenant', 'members', 'defaults', 'chathistory', 'memory']),
+      items: pickItems(['tenant', 'members', 'review-workbench', 'defaults', 'chathistory', 'memory']),
     },
     {
       key: 'models_runtime',
@@ -471,6 +472,7 @@ const handleNavClick = (item: any) => {
 
   // 切换到对应页面，并同步 URL 为 ?section=<navKey>（含 integration-claw）。
   // 否则从其它 section 点进来时 query 不变，路由监听会把内容拉回去。
+  if (redirectToReviewWorkbench(item.key)) return
   currentSection.value = item.key
   syncSettingsRoute(item.key)
 }
@@ -535,11 +537,22 @@ const redirectToToolbox = (section: string, subSection?: string | null) => {
   return true
 }
 
+// 审核工作台是独立整页（/platform/review/workbench，见 router 的
+// reviewWorkbench 路由），设置里只挂入口：点击即关弹窗并跳转，与本文件里
+// 跳 toolbox 的处理同一套路。
+const redirectToReviewWorkbench = (section: string) => {
+  if (section !== 'review-workbench') return false
+  uiStore.closeSettings()
+  void router.push('/platform/review/workbench')
+  return true
+}
+
 // 监听初始导航设置
 watch(() => uiStore.settingsInitialSection, (section) => {
   if (section && visible.value) {
     const normalizedSection = normalizeSettingsSection(section)
     if (redirectToToolbox(normalizedSection, uiStore.settingsInitialSubSection)) return
+    if (redirectToReviewWorkbench(normalizedSection)) return
     if (deploymentCapabilities.loaded && !isSectionSupported(normalizedSection)) {
       MessagePlugin.warning(t('settings.capabilityUnavailable'))
       currentSection.value = navItems.value[0]?.key || 'general'
@@ -580,6 +593,8 @@ watch(
       section,
       typeof route.query.tab === 'string' ? route.query.tab : undefined,
     )
+    // 深链 /platform/settings?section=review-workbench → 直接进工作台。
+    if (redirectToReviewWorkbench(normalizedSection)) return
     if (capabilitiesLoaded && !isSectionSupported(normalizedSection)) {
       MessagePlugin.warning(t('settings.capabilityUnavailable'))
       const fallback = navItems.value[0]?.key || 'general'
@@ -618,6 +633,7 @@ const handleSettingsNav = (e: CustomEvent) => {
   if (section) {
     const normalizedSection = normalizeSettingsSection(section)
     if (redirectToToolbox(normalizedSection, subsection)) return
+    if (redirectToReviewWorkbench(normalizedSection)) return
     if (deploymentCapabilities.loaded && !isSectionSupported(normalizedSection)) {
       MessagePlugin.warning(t('settings.capabilityUnavailable'))
       currentSection.value = navItems.value[0]?.key || 'general'

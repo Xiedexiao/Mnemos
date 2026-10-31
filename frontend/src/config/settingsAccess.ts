@@ -27,6 +27,9 @@ export const SETTINGS_SECTION_MIN_ROLE: Record<string, SettingsRoleKey> = {
   browserconnection: 'viewer',
   tenant: 'viewer',
   members: 'viewer',
+  // 审核工作台入口：GET /review/tasks 是 Admin+ 的治理面（JWT-only）。
+  // 入口只做导航跳转，实际页面 /platform/review/workbench 同为 Admin 视角。
+  'review-workbench': 'admin',
   mymemory: 'viewer',
   memory: 'admin',
   // Members read which model each feature falls back to; editing is Admin+ inside.

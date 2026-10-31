@@ -41,6 +41,8 @@ async function setup(t: TestContext, translate = (key: string, _params?: unknown
     '@/utils/kbPermission': { permissionCanEditKB: () => true, permissionCanManageKB: () => true },
     '@/utils/knowledgeDeletion': { waitForKnowledgeDeletion }, '@/utils/knowledgeTrace': {},
     '@/utils/knowledgeProcessingStall': stall, '@/api/wiki': {}, '@/api/knowledge-base': {},
+    // A期治理第二批的 API 模块只被弹窗处理器引用，挂载冒烟用不到，给空壳即可。
+    '@/api/review': {}, '@/api/knowledge-governance': {},
     '@/api/knowledge-base/index': {
       listKnowledgeFolders, listKnowledgeTags: async () => ({ data: { data: [], total: 0 } }),
       batchReparseKnowledge: async () => ({ success: true }),
