@@ -278,6 +278,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewFeedbackService))
 	must(container.Provide(service.NewQualityTaskService))
 	must(container.Provide(service.NewAuditLogRetentionRunner))
+	must(container.Provide(service.NewFreshnessReviewScheduler))
+	must(container.Provide(func(s *service.FreshnessReviewScheduler) interfaces.FreshnessService { return s }))
 	must(container.Provide(service.NewKnowledgeBaseService))
 	must(container.Provide(service.NewGraphSearchService))
 	must(container.Provide(service.NewOrganizationService))
@@ -568,6 +570,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Invoke(startDataSourceScheduler))
 	logger.Debugf(ctx, "[Container] Data source sync framework registered")
 	must(container.Invoke(startAuditLogRetention))
+		must(container.Invoke(startFreshnessReviewScheduler))
 	logger.Debugf(ctx, "[Container] Audit log retention runner registered")
 	must(container.Provide(service.NewHousekeepingService))
 	must(container.Invoke(startHousekeepingService))
@@ -718,6 +721,10 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewGoldenSetRepository))
 	must(container.Provide(service.NewGoldenSetService))
 	must(container.Provide(handler.NewGoldenSetHandler))
+	must(container.Provide(repository.NewKnowledgeHealthRepository))
+	must(container.Provide(service.NewKnowledgeHealthService))
+	must(container.Provide(handler.NewKnowledgeHealthHandler))
+	must(container.Provide(handler.NewFreshnessHandler))
 	must(container.Provide(repository.NewEvidencePackRepository))
 	must(container.Provide(service.NewEvidencePackService))
 	must(container.Provide(handler.NewEvidencePackHandler))
@@ -2351,6 +2358,18 @@ func startAuditLogRetention(
 	runner.Start(context.Background())
 	cleaner.RegisterWithName("AuditLogRetentionRunner", func() error {
 		runner.StopWithin(cleanupStepTimeout)
+		return nil
+	})
+}
+
+// startFreshnessReviewScheduler boots the daily review-cycle/freshness sweep
+// (V3.0 §7.7/§7.9) and registers its shutdown with the resource cleaner.
+func startFreshnessReviewScheduler(
+	scheduler *service.FreshnessReviewScheduler, cleaner interfaces.ResourceCleaner,
+) {
+	scheduler.Start(context.Background())
+	cleaner.RegisterWithName("FreshnessReviewScheduler", func() error {
+		scheduler.StopWithin(cleanupStepTimeout)
 		return nil
 	})
 }
