@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
@@ -53,7 +54,7 @@ func (r *evidencePackRepository) Save(ctx context.Context, pack *types.EvidenceP
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if tx.Dialector.Name() == "postgres" {
-			if err := tx.Exec(evidencePackAdvisoryLock, pack.TenantID).Error; err != nil {
+			if err := tx.Exec(evidencePackAdvisoryLock, fmt.Sprintf("%d", pack.TenantID)).Error; err != nil {
 				return err
 			}
 		}

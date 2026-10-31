@@ -57,8 +57,8 @@ func RegisterShareLinkRoutes(r *gin.RouterGroup, g *rbacGuards, h *handler.Share
 	// 上下文改写到 KB 归属租户，服务层再做一次租户兜底校验。
 	share := r.Group("/knowledge/:id/share-links")
 	{
-		share.POST("", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("knowledge_id"), h.CreateShareLink)
-		share.GET("", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("knowledge_id"), h.ListShareLinks)
+		share.POST("", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("id"), h.CreateShareLink)
+		share.GET("", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("id"), h.ListShareLinks)
 	}
 	// 撤销：路由层只卡 Contributor（撤销是低风险动作，且不需要反查 KB）；
 	// 租户隔离由服务层的 (tenant_id, id) 条件 UPDATE 兜底——跨租户/未知 id

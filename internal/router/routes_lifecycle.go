@@ -19,11 +19,11 @@ func RegisterKnowledgeLifecycleRoutes(r *gin.RouterGroup, handler *handler.Knowl
 	lifecycleRead := lifecycle.With(apiKeyRetrieve(apiKeyFullAccess()))
 	{
 		// 读取时解析出的生效行为（UI 徽章 / 问答提示的数据源）。
-		lifecycleRead.GET("", g.Viewer(), g.KBAccessReadFromKnowledgeIDParam("knowledge_id"), handler.GetKnowledgeLifecycle)
+		lifecycleRead.GET("", g.Viewer(), g.KBAccessReadFromKnowledgeIDParam("id"), handler.GetKnowledgeLifecycle)
 		// 已发布版本快照（不可变，倒序）。
-		lifecycleRead.GET("/versions", g.Viewer(), g.KBAccessReadFromKnowledgeIDParam("knowledge_id"), handler.ListKnowledgeVersions)
+		lifecycleRead.GET("/versions", g.Viewer(), g.KBAccessReadFromKnowledgeIDParam("id"), handler.ListKnowledgeVersions)
 		// 生命周期动作：提交审核/发布/复审确认/标记过期/替代/冲突/下架/归档/恢复/治理配置。
 		// 发布与恢复最终由审核流（A2）驱动；这里的直通入口同样写审计。
-		lifecycle.POST("/transition", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("knowledge_id"), handler.TransitionKnowledgeLifecycle)
+		lifecycle.POST("/transition", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("id"), handler.TransitionKnowledgeLifecycle)
 	}
 }
