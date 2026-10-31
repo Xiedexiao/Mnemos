@@ -3,6 +3,9 @@ package types
 import (
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // Knowledge lifecycle states (KnowAxis V3.0 §7.1). The state decides how a
@@ -260,6 +263,15 @@ type KnowledgeVersion struct {
 
 // TableName pins the GORM table name.
 func (KnowledgeVersion) TableName() string { return "knowledge_versions" }
+
+// BeforeCreate assigns a UUID before persistence (the column default only
+// covers SQL-side inserts; GORM sends an empty string without this hook).
+func (v *KnowledgeVersion) BeforeCreate(_ *gorm.DB) error {
+	if v.ID == "" {
+		v.ID = uuid.NewString()
+	}
+	return nil
+}
 
 // KnowledgeLifecycleAction names one lifecycle state-machine action. Actions
 // are the only way states change; every application writes an audit event.
