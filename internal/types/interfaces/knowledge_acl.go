@@ -41,8 +41,8 @@ type KnowledgeACLService interface {
 	Grant(ctx context.Context, grant *types.KnowledgeACL) (*types.KnowledgeACL, error)
 	// ListByKnowledge returns all grants of one knowledge entry.
 	ListByKnowledge(ctx context.Context, knowledgeID string) ([]*types.KnowledgeACL, error)
-	// Revoke deletes one grant (within tenant).
-	Revoke(ctx context.Context, tenantID uint64, grantID string) error
+	// Revoke deletes one grant (within tenant); actorID feeds the audit event.
+	Revoke(ctx context.Context, tenantID uint64, grantID, actorID string) error
 	// DeniedKnowledgeIDs answers the deny-wins query for retrieval filtering.
 	DeniedKnowledgeIDs(
 		ctx context.Context,

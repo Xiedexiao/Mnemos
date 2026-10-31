@@ -48,6 +48,7 @@ const kbDeleteTaskMaxRetry = 3
 type knowledgeBaseService struct {
 	repo            interfaces.KnowledgeBaseRepository
 	kgRepo          interfaces.KnowledgeRepository
+	aclRepo         interfaces.KnowledgeACLRepository
 	chunkRepo       interfaces.ChunkRepository
 	shareRepo       interfaces.KBShareRepository
 	kbShareService  interfaces.KBShareService
@@ -72,6 +73,7 @@ type knowledgeBaseService struct {
 // NewKnowledgeBaseService creates a new knowledge base service
 func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 	kgRepo interfaces.KnowledgeRepository,
+	aclRepo interfaces.KnowledgeACLRepository,
 	chunkRepo interfaces.ChunkRepository,
 	shareRepo interfaces.KBShareRepository,
 	kbShareService interfaces.KBShareService,
@@ -95,6 +97,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 	return &knowledgeBaseService{
 		repo:            repo,
 		kgRepo:          kgRepo,
+		aclRepo:         aclRepo,
 		chunkRepo:       chunkRepo,
 		shareRepo:       shareRepo,
 		kbShareService:  kbShareService,

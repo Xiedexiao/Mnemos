@@ -267,6 +267,30 @@ func (s *knowledgeBaseService) hybridSearchCandidates(ctx context.Context,
 		params.ExcludeKnowledgeIDs = append(params.ExcludeKnowledgeIDs, excludedKnowledgeIDs...)
 	}
 
+	// ACL + classification gate (KnowAxis V3.0 §2.4/§2.7 权限先行): secret/
+	// confidential entries without an explicit allow are invisible to the
+	// ask action, and any deny row wins. This is a security gate — unlike the
+	// freshness gate above it fails closed: the request errors out rather
+	// than searching without the filter. The DB is the permission source;
+	// indexes are accelerators only (§12.7), so a request-time query makes
+	// index lag irrelevant and no separate post-recall re-check is needed.
+	if caller := types.CallerFromContext(ctx); caller.UserID != "" && s.aclRepo != nil {
+		aclDenied, aclErr := s.aclRepo.DeniedKnowledgeIDs(
+			ctx, searchKBIDs, types.KnowledgeACLSubjectUser, caller.UserID,
+			types.PermissionActionAsk, time.Now(),
+		)
+		if aclErr != nil {
+			logger.ErrorWithFields(ctx, aclErr, map[string]interface{}{
+				"fail_closed": true,
+				"kb_ids":      searchKBIDs,
+			})
+			return nil, aclErr
+		}
+		if len(aclDenied) > 0 {
+			params.ExcludeKnowledgeIDs = append(params.ExcludeKnowledgeIDs, aclDenied...)
+		}
+	}
+
 	// Explicit embedding-model consistency check. Multi-KB searches that
 	// span different embedding spaces would otherwise silently produce
 	// meaningless cross-model scores. Same-model wiki/graph KBs are

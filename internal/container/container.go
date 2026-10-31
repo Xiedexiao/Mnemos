@@ -691,6 +691,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewAuditLogHandler))
 	must(container.Provide(handler.NewKnowledgeLifecycleHandler))
 	must(container.Provide(handler.NewFeedbackHandler))
+	must(container.Provide(service.NewKnowledgeACLService))
+	must(container.Provide(handler.NewKnowledgeACLHandler))
 	must(container.Provide(handler.NewKnowledgeBaseHandler))
 	must(container.Provide(handler.NewGraphSearchHandler))
 	must(container.Provide(handler.NewKnowledgeHandler))
