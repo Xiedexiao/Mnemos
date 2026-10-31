@@ -1,4 +1,52 @@
-                                 Apache License
+Tencent is pleased to support the open source community by making  WeKnora available. 
+
+Copyright (C) 2026 Tencent.  All rights reserved. 
+
+The open-source software included in this distribution may have been modified by Tencent (“Tencent Modifications”). All Tencent Modifications are Copyright (C) Tencent. 
+
+ WeKnora is licensed under the MIT except for the third-party components listed below.
+
+
+Terms of the MIT:
+--------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+Dependencies and Licenses:
+
+This open-source project,  WeKnora, builds upon the following open-source software components, each of which remains licensed under its original license. Certain software may include modifications made by Tencent (“Tencent Modifications”), which are Copyright (C) Tencent.
+
+In case you believe there have been errors in the attribution below, you may submit the concerns to us for review and correction.
+
+
+Open Source Software Licensed under the Apache-2.0
+--------------------------------------------------------------------
+1. github.com/longbridgeapp/opencc
+Copyright (c) github.com/longbridgeapp/opencc authors.
+You may obtain the source code and detailed information about this component at https://pkg.go.dev/github.com/longbridgeapp/opencc.
+
+
+
+Terms of the Apache-2.0
+--------------------------------------------------------------------
+Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
 
@@ -199,3 +247,37 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+
+Open Source Software Licensed under the MIT
+--------------------------------------------------------------------
+1. anydoc
+Copyright (c) 2026 Sideguide Technologies Inc.
+Please note this software has been modified by Tencent in this distribution.
+
+2. github.com/wailsapp/wails/v2
+Copyright (c) github.com/wailsapp/wails/v2 authors.
+You may obtain the source code and detailed information about this component at https://pkg.go.dev/github.com/wailsApp/wails/v2.
+
+
+
+Terms of the MIT
+--------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
