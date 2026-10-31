@@ -56,6 +56,7 @@ type RouterParams struct {
 	AuditLogService              interfaces.AuditLogService
 	KnowledgeLifecycleHandler    *handler.KnowledgeLifecycleHandler
 	KnowledgeACLHandler          *handler.KnowledgeACLHandler
+	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
 	ShareLinkHandler             *handler.ShareLinkHandler
 	ChunkHandler                 *handler.ChunkHandler
@@ -308,6 +309,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterKnowledgeLifecycleRoutes(v1, params.KnowledgeLifecycleHandler, rbacGuards)
 		RegisterQualityRoutes(v1, rbacGuards, params.FeedbackHandler)
 		RegisterKnowledgeACLRoutes(v1, params.KnowledgeACLHandler, rbacGuards)
+		RegisterReviewRoutes(v1, rbacGuards, params.ReviewHandler)
 		RegisterShareLinkRoutes(v1, rbacGuards, params.ShareLinkHandler)
 		RegisterGraphSearchRoutes(v1, params.GraphSearchHandler, rbacGuards)
 		RegisterFAQRoutes(v1, params.FAQHandler, rbacGuards)

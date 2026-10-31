@@ -172,6 +172,9 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewKnowledgeACLRepository))
 	must(container.Provide(repository.NewFeedbackRepository))
 	must(container.Provide(repository.NewQualityTaskRepository))
+	must(container.Provide(repository.NewApprovalFlowRepository))
+	must(container.Provide(repository.NewApprovalTaskRepository))
+	must(container.Provide(repository.NewApprovalReceiptRepository))
 	// knowledgeRepository implements both KnowledgeRepository and
 	// KnowledgeVersionRepository; expose the second view for the DI container.
 	must(container.Provide(func(r interfaces.KnowledgeRepository) interfaces.KnowledgeVersionRepository {
@@ -692,7 +695,9 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewKnowledgeLifecycleHandler))
 	must(container.Provide(handler.NewFeedbackHandler))
 	must(container.Provide(service.NewKnowledgeACLService))
+	must(container.Provide(service.NewReviewService))
 	must(container.Provide(handler.NewKnowledgeACLHandler))
+	must(container.Provide(handler.NewReviewHandler))
 	must(container.Provide(repository.NewShareLinkRepository))
 	must(container.Provide(service.NewShareLinkService))
 	must(container.Provide(handler.NewShareLinkHandler))

@@ -592,9 +592,10 @@ services:
       - mnemos-network
     restart: unless-stopped
 
-  # 修改的PostgreSQL配置
+  # PostgreSQL（ParadeDB 发行版：自带 pgvector / BM25 全文检索扩展，
+  # 迁移链 000002 起硬依赖 vector 扩展，勿改回纯 postgres 镜像）
   postgres:
-    image: postgres:16-alpine
+    image: paradedb/paradedb:v0.25.11-pg17
     container_name: mnemos-postgres
     environment:
       - POSTGRES_USER=${DB_USER}
