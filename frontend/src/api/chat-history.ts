@@ -63,3 +63,32 @@ export function getChatHistoryKBStats() {
 export function searchMessages(data: MessageSearchRequest) {
   return post('/api/v1/messages/search', data)
 }
+
+// MessageFeedbackRating is the verdict a user gives one chat answer.
+export type MessageFeedbackRating = 'useful' | 'useless'
+
+// MessageFeedbackPayload is the body for POST /messages/:message_id/feedback.
+// reason_codes only makes sense for useless ratings; comment is free text.
+export interface MessageFeedbackPayload {
+  rating: MessageFeedbackRating
+  reason_codes?: string[]
+  comment?: string
+}
+
+// Canonical machine-readable reason codes for useless ratings, mirrored by the
+// ChatMessageFeedback panel options. The backend stores them verbatim.
+export const MESSAGE_FEEDBACK_REASON_CODES = [
+  'fact_error',
+  'outdated',
+  'incomplete',
+  'off_topic',
+  'other',
+] as const
+
+export type MessageFeedbackReasonCode = (typeof MESSAGE_FEEDBACK_REASON_CODES)[number]
+
+// Submit (or overwrite — the backend keys one row per user per message) the
+// caller's useful/useless rating for one message.
+export function submitMessageFeedback(messageId: string, data: MessageFeedbackPayload) {
+  return post(`/api/v1/messages/${encodeURIComponent(messageId)}/feedback`, data)
+}

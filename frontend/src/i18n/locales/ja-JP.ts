@@ -4543,6 +4543,20 @@ export default {
     requestInfoUrl: 'リクエスト',
     requestInfoSentAt: '送信日時',
     requestInfoEmpty: 'リクエスト情報はありません',
+    feedback: {
+      useful: 'Helpful',
+      useless: 'Not helpful',
+      panelTitle: 'What went wrong with this answer?',
+      reasonFactError: 'Factually wrong',
+      reasonOutdated: 'Outdated',
+      reasonIncomplete: 'Incomplete',
+      reasonOffTopic: 'Off topic',
+      reasonOther: 'Other',
+      commentPlaceholder: 'Additional details (optional)',
+      submit: 'Submit feedback',
+      submitted: 'Feedback received, thanks',
+      failed: 'Failed to submit feedback, please retry',
+    },
     channelWeb: 'Web',
     channelApi: 'API',
     channelIm: 'IM',
@@ -9360,5 +9374,20 @@ export default {
       description:
         'まず画像の特徴を観察して説明を生成し、その特徴に基づいて OCR を実行するかどうかを判断します。モデル呼び出しを節約し、解析速度を向上させます 画像が補正可能な書類やラベルの写真と判定された場合、認識前にページを傾き補正・トリミングして OCR 精度を高めます。補正に失敗した場合は元の画像を使用します。'
     }
+  },
+  knowledgeGovernance: {
+    lifecycleDraft: 'Draft',
+    lifecyclePendingReview: 'Pending review',
+    lifecyclePendingEffective: 'Pending effective',
+    lifecyclePendingReviewCycle: 'Review due',
+    lifecycleStale: 'Possibly outdated',
+    lifecycleExpired: 'Expired',
+    lifecycleReplaced: 'Replaced',
+    lifecycleDelisted: 'Delisted',
+    lifecycleArchived: 'Archived',
+    lifecycleConflict: 'Conflict',
+    classificationPublic: 'Public',
+    classificationSecret: 'Secret',
+    classificationConfidential: 'Confidential',
   }
 }

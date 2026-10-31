@@ -556,6 +556,7 @@
                 </t-tooltip>
                 <ChatRequestInfoButton v-if="showRequestInfo && isConversationDone" :session="session"
                   :session-id="sessionId" />
+                <ChatMessageFeedback v-if="showFeedback" :message-id="feedbackMessageId" />
                 <transition name="follow-up-toolbar-loading">
                   <span v-if="!embeddedMode && followUpLoading" class="answer-toolbar__follow-up-loading" role="status"
                     aria-live="polite">
@@ -791,6 +792,7 @@ import ChatTimelineIcon from '@/components/ChatTimelineIcon.vue';
 import HostApprovalCard from './HostApprovalCard.vue';
 import { isHostApprovalEvent } from './hostApproval';
 import ChatRequestInfoButton from '@/components/ChatRequestInfoButton.vue';
+import ChatMessageFeedback from '@/components/ChatMessageFeedback.vue';
 import ChatCitationFloat from '@/components/ChatCitationFloat.vue';
 import picturePreview from '@/components/picture-preview.vue';
 import ChatArtifactsDrawer from './ChatArtifactsDrawer.vue';
@@ -1269,6 +1271,15 @@ const hideApprovalFromTimeline = (event: { type?: string; kind?: string; host?: 
 
 const showRequestInfo = computed(
   () => !props.embeddedMode && !!(props.session?.request_id || props.session?.id),
+);
+
+// Message feedback (useful/useless) targets the persisted assistant message,
+// same id resolution the request-info button and artifact download use.
+const feedbackMessageId = computed(
+  () => persistedAssistantId(props.session) || String(props.session?.id || ''),
+);
+const showFeedback = computed(
+  () => !props.embeddedMode && isConversationDone.value && !!feedbackMessageId.value,
 );
 
 const {

@@ -119,6 +119,7 @@
                     </t-button>
                 </t-tooltip>
                 <ChatRequestInfoButton v-if="showRequestInfo" :session="session" :session-id="sessionId" />
+                <ChatMessageFeedback v-if="showFeedback" :message-id="feedbackMessageId" />
                 <transition name="follow-up-toolbar-loading">
                     <span v-if="followUpLoading" class="answer-toolbar__follow-up-loading" role="status"
                         aria-live="polite">
@@ -155,6 +156,7 @@ import RagPipelineProgress from './RagPipelineProgress.vue';
 import ChatActionIcon from '@/components/ChatActionIcon.vue';
 import AssistantActionsButton from '@/components/assistant/AssistantActionsButton.vue';
 import ChatRequestInfoButton from '@/components/ChatRequestInfoButton.vue';
+import ChatMessageFeedback from '@/components/ChatMessageFeedback.vue';
 import ChatCitationFloat from '@/components/ChatCitationFloat.vue';
 import picturePreview from '@/components/picture-preview.vue';
 import ChatArtifactsDrawer from './ChatArtifactsDrawer.vue';
@@ -298,6 +300,11 @@ const answerAssistantActions = computed(() => {
 })
 
 const showRequestInfo = computed(() => !!(props.session?.request_id || props.session?.id));
+
+// Message feedback (useful/useless) targets the persisted assistant message.
+// Hidden in embedded mode: embed visitors have no JWT, so the POST would 401.
+const feedbackMessageId = computed(() => persistedAssistantId(props.session) || String(props.session?.id || ''));
+const showFeedback = computed(() => !props.embeddedMode && answerFullyRendered.value && !!feedbackMessageId.value);
 
 // -----------------------------------------------------------------------------
 // Skill artifact download (drawer in embedded mode; sandbox panel otherwise)

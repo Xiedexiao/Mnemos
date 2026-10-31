@@ -5,6 +5,7 @@ import { formatFileSize } from '@/utils/files';
 import KnowledgeTagPopover from './KnowledgeTagPopover.vue';
 import DocumentFileIcon from './DocumentFileIcon.vue';
 import DocumentActionMenu from './DocumentActionMenu.vue';
+import KnowledgeGovernanceBadges from '@/components/knowledge/KnowledgeGovernanceBadges.vue';
 import FolderPickerMenu, { type FolderOption } from './FolderPickerMenu.vue';
 import { shownStall } from '@/utils/knowledgeProcessingStall';
 import type { FolderEntry } from '../folderTree';
@@ -33,6 +34,9 @@ interface KnowledgeItem {
   isMore?: boolean;
   stalled_minutes?: number;
   stall_state?: string;
+  // Governance fields served by the knowledge list/detail API (A期).
+  lifecycle_status?: string;
+  classification?: string;
 }
 
 const props = defineProps<{
@@ -333,6 +337,8 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
             <div class="row-title-line">
               <button type="button" class="row-file-name" :title="item.description ? `${item.file_name}\n${item.description}` : item.file_name"
                 @click.stop="emit('open', item)">{{ item.file_name }}</button>
+              <KnowledgeGovernanceBadges :lifecycle-status="item.lifecycle_status"
+                :classification="item.classification" />
             </div>
             <span class="row-file-meta">
               <span class="row-source"><t-icon :name="getSourceInfo(item).icon" />{{ getSourceInfo(item).label }}</span>
@@ -822,7 +828,7 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
   &.status-primary { color: var(--td-brand-color); }
   &.status-default { color: var(--td-text-color-placeholder); }
 }
-.row-title-line { display: flex; align-items: center; min-width: 0; }
+.row-title-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .row-tag-trigger { display: inline-flex; min-width: 0; max-width: 100%; }
 .row-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
 .row-tag {

@@ -4543,6 +4543,20 @@ export default {
     requestInfoUrl: 'Request',
     requestInfoSentAt: 'Sent at',
     requestInfoEmpty: 'No request info available',
+    feedback: {
+      useful: 'Helpful',
+      useless: 'Not helpful',
+      panelTitle: 'What went wrong with this answer?',
+      reasonFactError: 'Factually wrong',
+      reasonOutdated: 'Outdated',
+      reasonIncomplete: 'Incomplete',
+      reasonOffTopic: 'Off topic',
+      reasonOther: 'Other',
+      commentPlaceholder: 'Additional details (optional)',
+      submit: 'Submit feedback',
+      submitted: 'Feedback received, thanks',
+      failed: 'Failed to submit feedback, please retry',
+    },
     channelWeb: 'Web',
     channelApi: 'API',
     channelIm: 'IM',
@@ -9366,5 +9380,20 @@ export default {
       description:
         'Observe the image attributes and describe the image first, then decide from the attributes whether to run OCR, saving model calls and speeding up parsing. When the image is recognised as a photograph of a correctable page or label, it is straightened and cropped before recognition to improve OCR accuracy; if that fails, the original image is used.'
     }
+  },
+  knowledgeGovernance: {
+    lifecycleDraft: 'Draft',
+    lifecyclePendingReview: 'Pending review',
+    lifecyclePendingEffective: 'Pending effective',
+    lifecyclePendingReviewCycle: 'Review due',
+    lifecycleStale: 'Possibly outdated',
+    lifecycleExpired: 'Expired',
+    lifecycleReplaced: 'Replaced',
+    lifecycleDelisted: 'Delisted',
+    lifecycleArchived: 'Archived',
+    lifecycleConflict: 'Conflict',
+    classificationPublic: 'Public',
+    classificationSecret: 'Secret',
+    classificationConfidential: 'Confidential',
   }
 }

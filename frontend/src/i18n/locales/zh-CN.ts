@@ -5171,6 +5171,20 @@ export default {
     requestInfoUrl: '请求',
     requestInfoSentAt: '发起时间',
     requestInfoEmpty: '暂无请求信息',
+    feedback: {
+      useful: '有用',
+      useless: '没用',
+      panelTitle: '这条回答哪里有问题？',
+      reasonFactError: '事实错误',
+      reasonOutdated: '过时',
+      reasonIncomplete: '不完整',
+      reasonOffTopic: '答非所问',
+      reasonOther: '其他',
+      commentPlaceholder: '补充说明（可选）',
+      submit: '提交反馈',
+      submitted: '已收到反馈，谢谢',
+      failed: '反馈提交失败，请重试',
+    },
     channelWeb: '网页',
     channelApi: 'API',
     channelIm: 'IM',
@@ -9359,5 +9373,20 @@ export default {
       },
       description: '先观察图片特征并进行图片描述，再根据图片特征决定是否调用OCR对图片进行识别，以节省模型调用次数并提升解析速度。当识别到图片为可校正的文档或标签页照片时，会在识别前自动摆正并裁剪页面，以提升 OCR 准确率；若校正失败则直接使用原图。'
     }
+  },
+  knowledgeGovernance: {
+    lifecycleDraft: '草稿',
+    lifecyclePendingReview: '待审核',
+    lifecyclePendingEffective: '未生效',
+    lifecyclePendingReviewCycle: '待复审',
+    lifecycleStale: '疑似过期',
+    lifecycleExpired: '已过期',
+    lifecycleReplaced: '已替换',
+    lifecycleDelisted: '已下架',
+    lifecycleArchived: '已归档',
+    lifecycleConflict: '状态冲突',
+    classificationPublic: '公开',
+    classificationSecret: '秘密',
+    classificationConfidential: '机密',
   }
 }

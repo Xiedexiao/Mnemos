@@ -5169,6 +5169,20 @@ export default {
     requestInfoUrl: 'Request',
     requestInfoSentAt: 'Sent at',
     requestInfoEmpty: 'No request info available',
+    feedback: {
+      useful: 'Helpful',
+      useless: 'Not helpful',
+      panelTitle: 'What went wrong with this answer?',
+      reasonFactError: 'Factually wrong',
+      reasonOutdated: 'Outdated',
+      reasonIncomplete: 'Incomplete',
+      reasonOffTopic: 'Off topic',
+      reasonOther: 'Other',
+      commentPlaceholder: 'Additional details (optional)',
+      submit: 'Submit feedback',
+      submitted: 'Feedback received, thanks',
+      failed: 'Failed to submit feedback, please retry',
+    },
     channelWeb: 'Веб',
     channelApi: 'API',
     channelIm: 'IM',
@@ -9360,5 +9374,20 @@ export default {
       description:
         'Сначала наблюдаются признаки изображения и создаётся его описание, затем по этим признакам решается, вызывать ли OCR. Экономит вызовы модели и ускоряет разбор Если изображение распознано как фотография выравниваемой страницы или этикетки, перед распознаванием оно автоматически выравнивается и обрезается для повышения точности OCR; при неудаче используется исходное изображение.'
     }
+  },
+  knowledgeGovernance: {
+    lifecycleDraft: 'Draft',
+    lifecyclePendingReview: 'Pending review',
+    lifecyclePendingEffective: 'Pending effective',
+    lifecyclePendingReviewCycle: 'Review due',
+    lifecycleStale: 'Possibly outdated',
+    lifecycleExpired: 'Expired',
+    lifecycleReplaced: 'Replaced',
+    lifecycleDelisted: 'Delisted',
+    lifecycleArchived: 'Archived',
+    lifecycleConflict: 'Conflict',
+    classificationPublic: 'Public',
+    classificationSecret: 'Secret',
+    classificationConfidential: 'Confidential',
   }
 }

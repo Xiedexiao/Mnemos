@@ -5169,6 +5169,20 @@ export default {
     requestInfoUrl: 'Request',
     requestInfoSentAt: 'Sent at',
     requestInfoEmpty: 'No request info available',
+    feedback: {
+      useful: 'Helpful',
+      useless: 'Not helpful',
+      panelTitle: 'What went wrong with this answer?',
+      reasonFactError: 'Factually wrong',
+      reasonOutdated: 'Outdated',
+      reasonIncomplete: 'Incomplete',
+      reasonOffTopic: 'Off topic',
+      reasonOther: 'Other',
+      commentPlaceholder: 'Additional details (optional)',
+      submit: 'Submit feedback',
+      submitted: 'Feedback received, thanks',
+      failed: 'Failed to submit feedback, please retry',
+    },
     channelWeb: '웹',
     channelApi: 'API',
     channelIm: 'IM',
@@ -9360,5 +9374,20 @@ export default {
       description:
         '먼저 이미지 특징을 관찰하여 설명을 생성하고, 그 특징을 바탕으로 OCR 실행 여부를 결정합니다. 모델 호출을 절약하고 분석 속도를 높입니다 이미지가 보정 가능한 문서나 라벨 사진으로 인식되면 인식 전에 페이지를 자동으로 정렬하고 잘라내어 OCR 정확도를 높입니다. 보정에 실패하면 원본 이미지를 사용합니다.'
     }
+  },
+  knowledgeGovernance: {
+    lifecycleDraft: 'Draft',
+    lifecyclePendingReview: 'Pending review',
+    lifecyclePendingEffective: 'Pending effective',
+    lifecyclePendingReviewCycle: 'Review due',
+    lifecycleStale: 'Possibly outdated',
+    lifecycleExpired: 'Expired',
+    lifecycleReplaced: 'Replaced',
+    lifecycleDelisted: 'Delisted',
+    lifecycleArchived: 'Archived',
+    lifecycleConflict: 'Conflict',
+    classificationPublic: 'Public',
+    classificationSecret: 'Secret',
+    classificationConfidential: 'Confidential',
   }
 }

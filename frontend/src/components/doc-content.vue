@@ -27,6 +27,7 @@ import { useAssistantStore } from '@/stores/assistant';
 import AssistantActionsButton from '@/components/assistant/AssistantActionsButton.vue';
 import DocumentPreview from '@/components/document-preview.vue';
 import DocumentFileIcon from '@/views/knowledge/components/DocumentFileIcon.vue';
+import KnowledgeGovernanceBadges from '@/components/knowledge/KnowledgeGovernanceBadges.vue';
 import KnowledgeProcessingTimeline from '@/components/knowledge-processing-timeline.vue';
 import { resolveKnowledgeDownloadFileName } from '@/views/knowledge/knowledgeDownloadFileName';
 import { isKnownPreviewableExt, resolveFilePreviewExt } from '@/utils/filePreview';
@@ -1604,6 +1605,9 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
           </div>
           <div class="doc-drawer-header-text">
             <div class="doc-drawer-header-title">{{ getDisplayTitle() }}</div>
+            <KnowledgeGovernanceBadges v-if="details.lifecycle_status || details.classification"
+              class="doc-drawer-header-badges" :lifecycle-status="details.lifecycle_status"
+              :classification="details.classification" />
           </div>
           <div class="header-actions">
             <t-button v-if="canDownloadKB && (details.type === 'file' || details.type === 'manual')" class="header-action-btn" size="small"
@@ -2290,6 +2294,10 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.doc-drawer-header-badges {
+  margin-top: 2px;
 }
 
 .doc-drawer-body {
