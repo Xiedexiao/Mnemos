@@ -62,6 +62,7 @@ type RouterParams struct {
 	KnowledgeCandidateHandler    *handler.KnowledgeCandidateHandler
 	CommentHandler               *handler.CommentHandler
 	RecycleBinHandler            *handler.RecycleBinHandler
+	GoldenSetHandler             *handler.GoldenSetHandler
 	EvidencePackHandler          *handler.EvidencePackHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
@@ -322,6 +323,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterGlossaryRoutes(v1, params.GlossaryHandler, rbacGuards)
 		RegisterKnowledgeCandidateRoutes(v1, rbacGuards, params.KnowledgeCandidateHandler)
 		RegisterCommentRecycleRoutes(v1, params.CommentHandler, params.RecycleBinHandler, rbacGuards)
+		RegisterGoldenSetRoutes(v1, params.GoldenSetHandler, rbacGuards)
 		RegisterEvidenceRoutes(v1, rbacGuards, params.EvidencePackHandler)
 		RegisterShareLinkRoutes(v1, rbacGuards, params.ShareLinkHandler)
 		RegisterGraphSearchRoutes(v1, params.GraphSearchHandler, rbacGuards)
