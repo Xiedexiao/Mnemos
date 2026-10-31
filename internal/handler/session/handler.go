@@ -61,6 +61,9 @@ type Handler struct {
 	// evidenceService persists the per-request Evidence Pack (V3.0 §13.4)
 	// after each assistant message finalizes. Optional: nil (Lite) skips it.
 	evidenceService interfaces.EvidencePackService
+	// dlpService masks PII in finalized assistant output (V3.0 §13 DLP v1).
+	// Optional: nil (Lite) skips the scan entirely.
+	dlpService interfaces.DLPService
 	desktopService  *service.SandboxDesktopService
 	desktopTickets  service.SandboxDesktopTicketStore
 	desktopLast     service.SandboxDesktopLastStore
@@ -122,6 +125,9 @@ func NewHandler(
 	approvedProjectDirs HostProjectDirsLoader,
 	backgroundWork *service.BackgroundWork,
 	evidenceService interfaces.EvidencePackService,
+	// dlpService masks PII in finalized assistant output (V3.0 §13 DLP v1).
+	// Optional: nil (Lite) skips the scan entirely.
+	dlpService interfaces.DLPService,
 ) *Handler {
 	h := &Handler{
 		browserSkill:          browserSkill,
@@ -154,6 +160,7 @@ func NewHandler(
 		approvedProjectDirs:   approvedProjectDirs,
 		background:            backgroundWork,
 		evidenceService:       evidenceService,
+		dlpService:            dlpService,
 		attachmentProcessor: NewAttachmentProcessor(
 			fileService,
 			documentReader,

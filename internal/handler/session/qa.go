@@ -2251,6 +2251,9 @@ func (h *Handler) completeAssistantMessage(
 ) error {
 	assistantMessage.UpdatedAt = time.Now()
 	assistantMessage.IsCompleted = true
+	// DLP 输出扫描（KnowAxis V3.0 §13）：先掩码再落库，消息正文、Evidence
+	// Pack 与下游索引拿到的都是清洗后文本。best-effort，不阻断主链路。
+	h.maskAssistantOutput(ctx, assistantMessage)
 	if err := h.messageService.UpdateMessage(ctx, assistantMessage); err != nil {
 		logger.Errorf(ctx, "Failed to persist assistant message %s: %v", assistantMessage.ID, err)
 		return err
@@ -2282,6 +2285,28 @@ func (h *Handler) completeAssistantMessage(
 		go h.recordTurnMemory(bgCtx, assistantMessage, userQuery, userMessageID)
 	}
 	return nil
+}
+
+// maskAssistantOutput runs the DLP output scan (V3.0 §13 v1) on the finalized
+// answer: PII hits (phone / ID card / bank card / email + custom patterns) are
+// masked in place (keep first/last two runes) and recorded as findings.
+// dlpService nil (Lite/未装配) skips; scan errors never block the turn.
+func (h *Handler) maskAssistantOutput(ctx context.Context, assistantMessage *types.Message) {
+	if h.dlpService == nil || assistantMessage == nil || assistantMessage.Content == "" {
+		return
+	}
+	tenantID, _ := types.TenantIDFromContext(ctx)
+	cleaned, findings, err := h.dlpService.ScanText(
+		ctx, tenantID, assistantMessage.RequestID, assistantMessage.ID, assistantMessage.Content)
+	if err != nil {
+		logger.Warnf(ctx, "dlp scan failed for message %s: %v", assistantMessage.ID, err)
+		return
+	}
+	if findings > 0 {
+		assistantMessage.Content = cleaned
+		logger.Warnf(ctx, "dlp masked %d finding(s) in message %s (request %s)",
+			findings, assistantMessage.ID, assistantMessage.RequestID)
+	}
 }
 
 // saveEvidencePack persists the per-request Evidence Pack after the assistant

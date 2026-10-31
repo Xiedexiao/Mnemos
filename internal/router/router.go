@@ -65,6 +65,8 @@ type RouterParams struct {
 	GoldenSetHandler             *handler.GoldenSetHandler
 	KnowledgeHealthHandler       *handler.KnowledgeHealthHandler
 	ModelGatewayHandler          *handler.ModelGatewayHandler
+	ExportControlHandler         *handler.ExportControlHandler
+	DLPHandler                   *handler.DLPHandler
 	FreshnessHandler             *handler.FreshnessHandler
 	EvidencePackHandler          *handler.EvidencePackHandler
 	ReviewHandler                *handler.ReviewHandler
@@ -330,6 +332,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterKnowledgeHealthRoutes(v1, params.KnowledgeHealthHandler, rbacGuards)
 		RegisterFreshnessRoutes(v1, params.FreshnessHandler, rbacGuards)
 		RegisterModelGatewayRoutes(v1, params.ModelGatewayHandler, rbacGuards)
+		RegisterExportDLPRoutes(v1, params.ExportControlHandler, params.DLPHandler, rbacGuards)
 		RegisterEvidenceRoutes(v1, rbacGuards, params.EvidencePackHandler)
 		RegisterShareLinkRoutes(v1, rbacGuards, params.ShareLinkHandler)
 		RegisterGraphSearchRoutes(v1, params.GraphSearchHandler, rbacGuards)
