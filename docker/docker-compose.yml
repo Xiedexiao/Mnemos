@@ -175,11 +175,11 @@ services:
       - LANGFUSE_SAMPLE_RATE=${LANGFUSE_SAMPLE_RATE:-}
       - LANGFUSE_DEBUG=${LANGFUSE_DEBUG:-}
       # 向量库 / 检索引擎
-      - RETRIEVE_DRIVER=${RETRIEVE_DRIVER:-postgres}
-      - ELASTICSEARCH_ADDR=${ELASTICSEARCH_ADDR:-}
+      - RETRIEVE_DRIVER=${RETRIEVE_DRIVER:-elasticsearch_v8}
+      - ELASTICSEARCH_ADDR=${ELASTICSEARCH_ADDR:-http://elasticsearch:9200}
       - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-}
       - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-}
-      - ELASTICSEARCH_INDEX=${ELASTICSEARCH_INDEX:-}
+      - ELASTICSEARCH_INDEX=${ELASTICSEARCH_INDEX:-mnemos}
       - QDRANT_HOST=${QDRANT_HOST:-qdrant}
       - QDRANT_PORT=${QDRANT_PORT:-6334}
       - QDRANT_COLLECTION=${QDRANT_COLLECTION:-mnemos_embeddings}
@@ -411,6 +411,8 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
       docreader:
         condition: service_healthy
     networks:
@@ -592,14 +594,14 @@ services:
 
   # 修改的PostgreSQL配置
   postgres:
-    image: paradedb/paradedb:v0.25.11-pg17
+    image: postgres:16-alpine
     container_name: mnemos-postgres
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./data/postgres-data:/var/lib/postgresql/data
     networks:
       - mnemos-network
     healthcheck:
@@ -612,8 +614,37 @@ services:
     # 添加停机时的优雅退出时间
     stop_grace_period: 1m
 
+  # 默认向量/检索引擎 (RETRIEVE_DRIVER=elasticsearch_v8)。单节点、HTTP 无 TLS/认证，
+  # 适合内网/单机部署；对接外部集群时改 ELASTICSEARCH_* 指向并注释本服务。
+  # 宿主机要求: vm.max_map_count >= 262144 (Linux: sudo sysctl -w vm.max_map_count=262144)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.6
+    container_name: mnemos-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    networks:
+      - mnemos-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
   redis:
-    image: redis:7.0-alpine
+    image: redis:7-alpine
     container_name: mnemos-redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     restart: always
@@ -630,8 +661,8 @@ services:
     container_name: mnemos-searxng-init
     command: ["sh", "-c", "cp /template/settings.yml /etc/searxng/settings.yml && chmod 0644 /etc/searxng/settings.yml"]
     volumes:
-      - ./searxng/settings.yml:/template/settings.yml:ro
-      - searxng_config:/etc/searxng
+      - ./data/searxng/settings.yml:/template/settings.yml:ro
+      - ./data/searxng/config:/etc/searxng
     restart: "no"
     networks:
       - mnemos-network
@@ -647,7 +678,7 @@ services:
     ports:
       - "${SEARXNG_BIND:-127.0.0.1}:${SEARXNG_PORT:-8888}:8080"
     volumes:
-      - searxng_config:/etc/searxng
+      - ./data/searxng/config:/etc/searxng
     environment:
       - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8888}/
       - INSTANCE_NAME=mnemos-searxng
@@ -696,7 +727,7 @@ services:
       - full
 
   neo4j:
-    image: neo4j:2025.10.1
+    image: neo4j:5-community
     container_name: mnemos-neo4j
     volumes:
       - neo4j-data:/data
@@ -1097,21 +1128,3 @@ services:
 networks:
   mnemos-network:
     driver: bridge
-
-volumes:
-  postgres-data:
-  data-files:
-  docreader-tmp:
-  minio_data:
-  neo4j-data:
-  qdrant_data:
-  milvus_data:
-  weaviate_data:
-  doris_fe_meta:
-  doris_fe_log:
-  doris_be_storage:
-  doris_be_log:
-  langfuse_clickhouse_data:
-  langfuse_clickhouse_logs:
-  langfuse_minio_data:
-  searxng_config:

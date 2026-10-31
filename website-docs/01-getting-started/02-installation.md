@@ -6,7 +6,7 @@ WeKnora 支持 Docker Compose、Kubernetes Helm、Lite 单二进制和桌面应�
 
 | 形态 | 入口 | 数据库 | 队列/流 | 适用场景 |
 | --- | --- | --- | --- | --- |
-| Docker Compose（标准） | `docker/docker-compose.yml` | ParadeDB（PostgreSQL） | Redis + Asynq | 生产 / 团队自托管，推荐 |
+| Docker Compose（标准） | `docker/docker-compose.yml` | Elasticsearch 8（向量检索）+ ParadeDB（元数据） | Redis + Asynq | 生产 / 团队自托管，推荐 |
 | Docker Compose（开发） | `docker/docker-compose.dev.yml` | 同上（仅基础设施进容器） | 同上 | 本地开发：app / frontend 在宿主机运行 |
 | Helm | `helm/` | ParadeDB（chart 内置） | Redis（chart 内置） | Kubernetes >= 1.25 |
 | Lite 单二进制 | `make build-lite` / `scripts/package-lite.sh` | SQLite（FTS5 + sqlite-vec） | 内存（无 Redis） | 个人 / 离线 / 低资源环境 |

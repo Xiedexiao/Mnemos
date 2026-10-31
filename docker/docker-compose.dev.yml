@@ -13,7 +13,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - ./data/dev/postgres-data:/var/lib/postgresql/data
     networks:
       - mnemos-network-dev
     healthcheck:
@@ -31,7 +31,7 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - redis_data_dev:/data
+      - ./data/dev/redis:/data
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     restart: always
     networks:
@@ -45,7 +45,7 @@ services:
     command: ["sh", "-c", "cp /template/settings.yml /etc/searxng/settings.yml && chmod 0644 /etc/searxng/settings.yml"]
     volumes:
       - ./searxng/settings.yml:/template/settings.yml:ro
-      - searxng_config_dev:/etc/searxng
+      - ./data/dev/searxng-config:/etc/searxng
     restart: "no"
     networks:
       - mnemos-network-dev
@@ -61,7 +61,7 @@ services:
     ports:
       - "${SEARXNG_BIND:-127.0.0.1}:${SEARXNG_PORT:-8888}:8080"
     volumes:
-      - searxng_config_dev:/etc/searxng
+      - ./data/dev/searxng-config:/etc/searxng
     environment:
       - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8888}/
       - INSTANCE_NAME=mnemos-searxng-dev
@@ -94,7 +94,7 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_ACCESS_KEY:-minioadmin}
     command: server --console-address ":9001" /data
     volumes:
-      - minio_data_dev:/data
+      - ./data/dev/minio:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -113,7 +113,7 @@ services:
       - "${QDRANT_REST_PORT:-6333}:6333"
       - "${QDRANT_PORT:-6334}:6334"
     volumes:
-      - qdrant_data_dev:/qdrant/storage
+      - ./data/dev/qdrant:/qdrant/storage
     networks:
       - mnemos-network-dev
     restart: unless-stopped
@@ -144,7 +144,7 @@ services:
     ports:
       - "${OPENSEARCH_PORT:-9200}:9200"
     volumes:
-      - opensearch_data_dev:/usr/share/opensearch/data
+      - ./data/dev/opensearch:/usr/share/opensearch/data
     networks:
       - mnemos-network-dev
     restart: unless-stopped
@@ -154,6 +154,31 @@ services:
       # Also a member of opensearch-ui so the Dashboards depends_on resolves
       # when only that profile is active (`--profile opensearch-ui up`).
       - opensearch-ui
+
+  # Elasticsearch 8（与 RETRIEVE_DRIVER=elasticsearch_v8 配套）。本地开发 app 跑宿主机时，
+  # 把 docker/.env 里 ELASTICSEARCH_ADDR 改成 http://localhost:9200。
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.6
+    container_name: mnemos-elasticsearch-dev
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - ./data/dev/elasticsearch:/usr/share/elasticsearch/data
+    networks:
+      - mnemos-network-dev
+    restart: unless-stopped
+    profiles:
+      - elasticsearch
+      - full
 
   # Optional UI for visual index/mapping/query inspection. Decoupled from the
   # "opensearch" / "full" profiles so the heavy Dashboards container is never
@@ -197,7 +222,7 @@ services:
       - "${MILVUS_PORT:-19530}:19530"
       - "${MILVUS_HEALTH_PORT:-9091}:9091"
     volumes:
-      - milvus_data_dev:/var/lib/milvus
+      - ./data/dev/milvus:/var/lib/milvus
     networks:
       - mnemos-network-dev
     restart: unless-stopped
@@ -209,7 +234,7 @@ services:
     image: neo4j:latest
     container_name: mnemos-neo4j-dev
     volumes:
-      - neo4j-data-dev:/data
+      - ./data/dev/neo4j:/data
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-password}
       - NEO4J_apoc_export_file_enabled=true
@@ -250,7 +275,7 @@ services:
     ports:
       - "${DOCREADER_PORT:-50051}:50051"
     volumes:
-      - docreader-tmp-dev:/tmp/docreader
+      - ./data/dev/docreader-tmp:/tmp/docreader
     environment:
       # ========== 基础 ==========
       - TZ=${TZ:-Asia/Shanghai}
@@ -436,8 +461,8 @@ services:
       CLICKHOUSE_USER: ${LANGFUSE_CLICKHOUSE_USER:-clickhouse}
       CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-clickhouse}
     volumes:
-      - langfuse_clickhouse_data_dev:/var/lib/clickhouse
-      - langfuse_clickhouse_logs_dev:/var/log/clickhouse-server
+      - ./data/dev/langfuse-clickhouse:/var/lib/clickhouse
+      - ./data/dev/langfuse-clickhouse-logs:/var/log/clickhouse-server
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
       interval: 5s
@@ -463,7 +488,7 @@ services:
       - "${LANGFUSE_MINIO_S3_PORT:-9100}:9000"
       - "${LANGFUSE_MINIO_CONSOLE_PORT:-9101}:9001"
     volumes:
-      - langfuse_minio_data_dev:/data
+      - ./data/dev/langfuse-minio:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -586,16 +611,3 @@ networks:
   mnemos-network-dev:
     driver: bridge
 
-volumes:
-  postgres-data-dev:
-  redis_data_dev:
-  minio_data_dev:
-  neo4j-data-dev:
-  qdrant_data_dev:
-  opensearch_data_dev:
-  milvus_data_dev:
-  docreader-tmp-dev:
-  langfuse_clickhouse_data_dev:
-  langfuse_clickhouse_logs_dev:
-  langfuse_minio_data_dev:
-  searxng_config_dev:

@@ -35,6 +35,8 @@ cmd/desktop/build/bin/
 test/data/mswag.txt
 data/files/
 data/weknora.db
+# Docker bind-mount 数据目录（compose 项目目录在 docker/ 下）
+docker/data/
 data/weknora.db-wal
 data/weknora.db-shm
 skills-lock.json
