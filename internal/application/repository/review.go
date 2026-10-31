@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
@@ -148,7 +149,7 @@ func (r *approvalReceiptRepository) Append(ctx context.Context, receipt *types.A
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if tx.Dialector.Name() == "postgres" {
-			if err := tx.Exec(approvalReceiptAdvisoryLock, receipt.TenantID).Error; err != nil {
+			if err := tx.Exec(approvalReceiptAdvisoryLock, fmt.Sprintf("%d", receipt.TenantID)).Error; err != nil {
 				return err
 			}
 		}
