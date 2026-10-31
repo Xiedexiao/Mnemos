@@ -25,6 +25,9 @@ type PluginSearch struct {
 	sessionService        interfaces.SessionService
 	webSearchStateService interfaces.WebSearchStateService
 	webSearchProviderRepo interfaces.WebSearchProviderRepository
+	// glossaryService drives term/alias query expansion (V3.0 §4.4 术语表
+	// 驱动搜索同义词). Optional: nil (Lite) skips glossary expansion.
+	glossaryService interfaces.GlossaryService
 }
 
 func NewPluginSearch(eventManager *EventManager,
@@ -37,6 +40,7 @@ func NewPluginSearch(eventManager *EventManager,
 	sessionService interfaces.SessionService,
 	webSearchStateService interfaces.WebSearchStateService,
 	webSearchProviderRepo interfaces.WebSearchProviderRepository,
+	glossaryService interfaces.GlossaryService,
 ) *PluginSearch {
 	res := &PluginSearch{
 		knowledgeBaseService:  knowledgeBaseService,
@@ -48,6 +52,7 @@ func NewPluginSearch(eventManager *EventManager,
 		sessionService:        sessionService,
 		webSearchStateService: webSearchStateService,
 		webSearchProviderRepo: webSearchProviderRepo,
+		glossaryService:       glossaryService,
 	}
 	eventManager.Register(res)
 	return res

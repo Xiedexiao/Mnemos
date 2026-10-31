@@ -8,6 +8,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
 )
 
@@ -172,6 +173,19 @@ func (p *PluginSearch) expandQueries(ctx context.Context, chatManage *types.Chat
 	cleaned := removeQuestionWords(query)
 	if cleaned != query {
 		addIfNew(cleaned)
+	}
+
+	// 5. Glossary-driven synonym expansion (V3.0 §4.4 术语表驱动搜索同义词):
+	// hit terms by the rewritten query and add every alias as a variant.
+	// Best-effort — a glossary failure must not degrade the base expansion.
+	if p.glossaryService != nil && chatManage.TenantID != 0 {
+		if aliases, err := p.glossaryService.ExpandSynonyms(ctx, chatManage.TenantID, query); err != nil {
+			logger.Warnf(ctx, "glossary synonym expansion failed: %v", err)
+		} else {
+			for _, alias := range aliases {
+				addIfNew(alias)
+			}
+		}
 	}
 
 	// Limit to 5 expansions
