@@ -12,8 +12,8 @@ import (
 // RegisterShareLinkRoutes — authenticated management surface, mounted on
 // the /api/v1 group next to RegisterKnowledgeRoutes:
 //
-//	POST   /api/v1/knowledge/:knowledge_id/share-links   创建外链（Contributor + KB write）
-//	GET    /api/v1/knowledge/:knowledge_id/share-links   列出外链（Contributor + KB write）
+//	POST   /api/v1/knowledge/:id/share-links   创建外链（Contributor + KB write）
+//	GET    /api/v1/knowledge/:id/share-links   列出外链（Contributor + KB write）
 //	DELETE /api/v1/share-links/:share_link_id            撤销外链（Contributor；服务层按租户兜底）
 //
 // JWT-only by design: no API-key capability is declared for share
@@ -55,7 +55,7 @@ func RegisterShareLinkRoutes(r *gin.RouterGroup, g *rbacGuards, h *handler.Share
 	// 创建/列表走 :knowledge_id 所属 KB 的写权限链（own / org-shared editor），
 	// 与 lifecycle/chunk 的 per-KB 矩阵一致；KBAccessWrite 同时会把请求租户
 	// 上下文改写到 KB 归属租户，服务层再做一次租户兜底校验。
-	share := r.Group("/knowledge/:knowledge_id/share-links")
+	share := r.Group("/knowledge/:id/share-links")
 	{
 		share.POST("", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("knowledge_id"), h.CreateShareLink)
 		share.GET("", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("knowledge_id"), h.ListShareLinks)

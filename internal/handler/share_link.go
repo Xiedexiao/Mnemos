@@ -13,8 +13,8 @@ import (
 // ShareLinkHandler exposes knowledge external share links (KnowAxis V3.0
 // §2.5 v1):
 //
-//	POST   /knowledge/:knowledge_id/share-links   issue a link (Contributor + KB write)
-//	GET    /knowledge/:knowledge_id/share-links   list a document's links (Contributor + KB write)
+//	POST   /knowledge/:id/share-links   issue a link (Contributor + KB write)
+//	GET    /knowledge/:id/share-links   list a document's links (Contributor + KB write)
 //	DELETE /share-links/:share_link_id            revoke a link (Contributor, tenant-scoped)
 //	GET    /public/share/:token                   anonymous resolve (no auth)
 //
@@ -31,7 +31,7 @@ func NewShareLinkHandler(shareService interfaces.ShareLinkService) *ShareLinkHan
 	return &ShareLinkHandler{shareService: shareService}
 }
 
-// createShareLinkRequest is the body of POST /knowledge/:knowledge_id/share-links.
+// createShareLinkRequest is the body of POST /knowledge/:id/share-links.
 type createShareLinkRequest struct {
 	// LinkType is the audience: "org" or "people".
 	LinkType string `json:"link_type" binding:"required"`
@@ -76,7 +76,7 @@ type shareLinkResolutionResponse struct {
 // @Router       /knowledge/{knowledge_id}/share-links [post]
 func (h *ShareLinkHandler) CreateShareLink(c *gin.Context) {
 	ctx := c.Request.Context()
-	knowledgeID := c.Param("knowledge_id")
+	knowledgeID := c.Param("id")
 	if knowledgeID == "" {
 		c.Error(errors.NewBadRequestError("knowledge_id is required"))
 		return
@@ -120,7 +120,7 @@ func (h *ShareLinkHandler) CreateShareLink(c *gin.Context) {
 // @Router       /knowledge/{knowledge_id}/share-links [get]
 func (h *ShareLinkHandler) ListShareLinks(c *gin.Context) {
 	ctx := c.Request.Context()
-	knowledgeID := c.Param("knowledge_id")
+	knowledgeID := c.Param("id")
 	if knowledgeID == "" {
 		c.Error(errors.NewBadRequestError("knowledge_id is required"))
 		return
