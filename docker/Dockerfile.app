@@ -17,7 +17,16 @@ RUN if [ -n "$APK_MIRROR_ARG" ]; then \
     rm -rf /var/lib/apt/lists/*
 ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo
 ENV PATH=/usr/local/cargo/bin:$PATH
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+# Rust 工具链与 crates 走国内镜像：static.rust-lang.org / crates.io 直连在受限
+# 网络下长时间下载后被重置（V3.0 构建环境适配；海外网络可按需移除）。
+RUN mkdir -p ${CARGO_HOME} && \
+    printf '[source.crates-io]\nreplace-with = "mirror"\n[source.mirror]\nregistry = "sparse+https://rsproxy.cn/index/"\n[net]\ngit-fetch-with-cli = true\n' > ${CARGO_HOME}/config.toml && \
+    n=0; while [ $n -lt 5 ]; do \
+      RUSTUP_DIST_SERVER=https://mirrors.tuna.tsinghua.edu.cn/rustup \
+      RUSTUP_UPDATE_ROOT=https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup \
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable && break; \
+      n=$((n+1)); echo "rustup attempt $n failed, retrying in 20s"; sleep 20; \
+    done && [ -x ${CARGO_HOME}/bin/cargo ]
 COPY scripts/build_browserskill.sh scripts/browserskill-release.json ./scripts/
 ARG TARGETOS
 ARG TARGETARCH
@@ -79,8 +88,13 @@ ENV PATH=/usr/local/cargo/bin:$PATH
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     if [ "$WITH_ANYDOC" = "1" ]; then \
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-            | sh -s -- -y --profile minimal --default-toolchain stable && \
+        export RUSTUP_DIST_SERVER=https://mirrors.tuna.tsinghua.edu.cn/rustup && \
+        export RUSTUP_UPDATE_ROOT=https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup && \
+        n=0; while [ $n -lt 5 ]; do \
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain stable && break; \
+          n=$((n+1)); echo "rustup attempt $n failed, retrying in 20s"; sleep 20; \
+        done && [ -x ${CARGO_HOME}/bin/cargo ] && \
         ./scripts/build-anydoc-lib.sh; \
     fi
 
