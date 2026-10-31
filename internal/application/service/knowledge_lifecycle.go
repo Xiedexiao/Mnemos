@@ -12,9 +12,9 @@ import (
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
 )
 
-// mustJSON marshals v, falling back to an empty object on failure so audit
+// lifecycleJSON marshals v, falling back to an empty object on failure so audit
 // writes never block a lifecycle transition over a logging payload.
-func mustJSON(v interface{}) types.JSON {
+func lifecycleJSON(v interface{}) types.JSON {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return types.JSON([]byte("{}"))
@@ -202,7 +202,7 @@ func (s *knowledgeLifecycleService) writeVersionSnapshot(
 		"parse_status":  knowledge.ParseStatus,
 		"classification": knowledge.Classification,
 	}
-	snapshotJSON := mustJSON(snapshot)
+	snapshotJSON := lifecycleJSON(snapshot)
 	record := &types.KnowledgeVersion{
 		TenantID:    knowledge.TenantID,
 		KnowledgeID: knowledge.ID,
@@ -265,7 +265,7 @@ func (s *knowledgeLifecycleService) logTransition(
 		TargetType:  "knowledge",
 		TargetID:    after.ID,
 		Outcome:     "success",
-		Details: mustJSON(map[string]interface{}{
+		Details: lifecycleJSON(map[string]interface{}{
 			"action":      string(input.Action),
 			"from_state":  before.LifecycleStatus,
 			"to_state":    after.LifecycleStatus,
@@ -294,7 +294,7 @@ func (s *knowledgeLifecycleService) logVersionPublished(
 		TargetType:  "knowledge",
 		TargetID:    knowledge.ID,
 		Outcome:     "success",
-		Details: mustJSON(map[string]interface{}{
+		Details: lifecycleJSON(map[string]interface{}{
 			"version":     version,
 			"receipt_id":  input.ReceiptID,
 			"change_note": input.ChangeNote,
@@ -320,7 +320,7 @@ func (s *knowledgeLifecycleService) illegalTransition(
 			TargetType:  "knowledge",
 			TargetID:    knowledge.ID,
 			Outcome:     "denied",
-			Details: mustJSON(map[string]interface{}{
+			Details: lifecycleJSON(map[string]interface{}{
 				"action":     "illegal_transition",
 				"from_state": string(current),
 				"to_state":   string(requested),

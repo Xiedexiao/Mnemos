@@ -169,6 +169,9 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewAuditLogRepository))
 	must(container.Provide(repository.NewKnowledgeBaseRepository))
 	must(container.Provide(repository.NewKnowledgeRepository))
+	must(container.Provide(repository.NewKnowledgeACLRepository))
+	must(container.Provide(repository.NewFeedbackRepository))
+	must(container.Provide(repository.NewQualityTaskRepository))
 	// knowledgeRepository implements both KnowledgeRepository and
 	// KnowledgeVersionRepository; expose the second view for the DI container.
 	must(container.Provide(func(r interfaces.KnowledgeRepository) interfaces.KnowledgeVersionRepository {
@@ -266,6 +269,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewTenantInvitationService))
 	must(container.Provide(service.NewAuditLogService))
 	must(container.Provide(service.NewKnowledgeLifecycleService))
+	must(container.Provide(service.NewFeedbackService))
+	must(container.Provide(service.NewQualityTaskService))
 	must(container.Provide(service.NewAuditLogRetentionRunner))
 	must(container.Provide(service.NewKnowledgeBaseService))
 	must(container.Provide(service.NewGraphSearchService))
@@ -685,6 +690,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewTenantInvitationHandler))
 	must(container.Provide(handler.NewAuditLogHandler))
 	must(container.Provide(handler.NewKnowledgeLifecycleHandler))
+	must(container.Provide(handler.NewFeedbackHandler))
 	must(container.Provide(handler.NewKnowledgeBaseHandler))
 	must(container.Provide(handler.NewGraphSearchHandler))
 	must(container.Provide(handler.NewKnowledgeHandler))

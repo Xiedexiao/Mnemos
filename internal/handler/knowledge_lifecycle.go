@@ -67,7 +67,7 @@ type lifecycleResponse struct {
 // @Router       /knowledge/{knowledge_id}/lifecycle/transition [post]
 func (h *KnowledgeLifecycleHandler) TransitionKnowledgeLifecycle(c *gin.Context) {
 	ctx := c.Request.Context()
-	knowledgeID := c.Param("knowledge_id")
+	knowledgeID := c.Param("id")
 	if knowledgeID == "" {
 		c.Error(errors.NewBadRequestError("knowledge_id is required"))
 		return
@@ -119,7 +119,7 @@ func (h *KnowledgeLifecycleHandler) TransitionKnowledgeLifecycle(c *gin.Context)
 // @Router       /knowledge/{knowledge_id}/lifecycle [get]
 func (h *KnowledgeLifecycleHandler) GetKnowledgeLifecycle(c *gin.Context) {
 	ctx := c.Request.Context()
-	knowledgeID := c.Param("knowledge_id")
+	knowledgeID := c.Param("id")
 	knowledge, resolved, err := h.lifecycleService.GetResolved(ctx, knowledgeID)
 	if err != nil {
 		c.Error(err)
@@ -141,7 +141,7 @@ func (h *KnowledgeLifecycleHandler) GetKnowledgeLifecycle(c *gin.Context) {
 // @Router       /knowledge/{knowledge_id}/versions [get]
 func (h *KnowledgeLifecycleHandler) ListKnowledgeVersions(c *gin.Context) {
 	ctx := c.Request.Context()
-	knowledgeID := c.Param("knowledge_id")
+	knowledgeID := c.Param("id")
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	versions, err := h.lifecycleService.ListVersions(ctx, knowledgeID, limit)
 	if err != nil {

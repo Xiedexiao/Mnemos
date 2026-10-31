@@ -15,7 +15,7 @@ import (
 // Assembly (DI container): provide handler.NewKnowledgeLifecycleHandler and
 // call this from NewRouter with params.KnowledgeLifecycleHandler.
 func RegisterKnowledgeLifecycleRoutes(r *gin.RouterGroup, handler *handler.KnowledgeLifecycleHandler, g *rbacGuards) {
-	lifecycle := g.apiKeyGroup(r.Group("/knowledge/:knowledge_id/lifecycle"), apiKeyIngest(apiKeyFullAccess()))
+	lifecycle := g.apiKeyGroup(r.Group("/knowledge/:id/lifecycle"), apiKeyIngest(apiKeyFullAccess()))
 	lifecycleRead := lifecycle.With(apiKeyRetrieve(apiKeyFullAccess()))
 	{
 		// 读取时解析出的生效行为（UI 徽章 / 问答提示的数据源）。
