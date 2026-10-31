@@ -33,6 +33,9 @@ type modelService struct {
 	ollamaService *ollama.OllamaService
 	pooler        embedding.EmbedderPooler
 	tenantService interfaces.TenantService
+	// modelGateway is the optional D-phase routing gateway (classification /
+	// task -> model). nil disables gateway routing entirely.
+	modelGateway interfaces.ModelGatewayService
 }
 
 // NewModelService creates a new model service instance
@@ -42,6 +45,7 @@ func NewModelService(repo interfaces.ModelRepository,
 	ollamaService *ollama.OllamaService,
 	pooler embedding.EmbedderPooler,
 	tenantService interfaces.TenantService,
+	modelGateway interfaces.ModelGatewayService,
 ) interfaces.ModelService {
 	return &modelService{
 		repo:          repo,
@@ -50,6 +54,7 @@ func NewModelService(repo interfaces.ModelRepository,
 		ollamaService: ollamaService,
 		pooler:        pooler,
 		tenantService: tenantService,
+		modelGateway:  modelGateway,
 	}
 }
 
@@ -708,6 +713,19 @@ func (s *modelService) GetChatModel(ctx context.Context, modelId string) (chat.C
 	}
 
 	tenantID := types.MustTenantIDFromContext(ctx)
+
+	// D 期模型网关：密级/任务路由优先于默认模型。未命中返回 ""，走原默认
+	// modelId；路由到的模型已不存在时也回退（warn），不因网关配置错误阻断会话。
+	// 密级维度待调用链把 classification 放进 context 后接入（现为 ""）。
+	if s.modelGateway != nil {
+		if routedID := s.modelGateway.ResolveModel(ctx, tenantID, types.ModelGatewayTaskChat, ""); routedID != "" {
+			if m, err := s.repo.GetByID(ctx, tenantID, routedID); err == nil && m != nil {
+				modelId = routedID
+			} else {
+				logger.Warnf(ctx, "model gateway routed to missing model %s, falling back to %s", routedID, modelId)
+			}
+		}
+	}
 
 	// Get the model directly from repository to avoid status checks
 	model, err := s.repo.GetByID(ctx, tenantID, modelId)

@@ -169,7 +169,8 @@ func TestDeleteModel_RejectsWhenReferenced(t *testing.T) {
 		}},
 		&stubAgentRepoForModelDelete{},
 		nil, nil, nil,
-	)
+
+		nil)
 
 	err := svc.DeleteModel(ctx, modelID)
 	require.Error(t, err)
@@ -199,7 +200,8 @@ func TestDeleteModel_RejectsWhenUsedByAgent(t *testing.T) {
 			{ID: "agent-2", Name: "Writer", Bindings: []types.ModelUsageBinding{types.ModelUsageBindingFollowUpModel}},
 		}},
 		nil, nil, nil,
-	)
+
+		nil)
 
 	err := svc.DeleteModel(ctx, modelID)
 	require.Error(t, err)
@@ -230,7 +232,8 @@ func TestDeleteModel_SucceedsWhenUnreferenced(t *testing.T) {
 		&stubKBRepoForModelDelete{},
 		&stubAgentRepoForModelDelete{},
 		nil, nil, nil,
-	)
+
+		nil)
 
 	require.NoError(t, svc.DeleteModel(ctx, modelID))
 	assert.True(t, deleted)
@@ -242,7 +245,8 @@ func TestGetModelUsageDetails_NormalizesEmptyCollections(t *testing.T) {
 		&stubKBRepoForModelDelete{},
 		&stubAgentRepoForModelDelete{},
 		nil, nil, nil,
-	)
+
+		nil)
 
 	details, err := svc.(*modelService).getModelUsageDetails(context.Background(), 1, "unused-model")
 	require.NoError(t, err)
@@ -270,7 +274,8 @@ func TestDeleteModel_DoesNotDeleteWhenUsageLookupFails(t *testing.T) {
 		&stubKBRepoForModelDelete{usageErr: wantErr},
 		&stubAgentRepoForModelDelete{},
 		nil, nil, nil,
-	)
+
+		nil)
 
 	err := svc.DeleteModel(ctx, modelID)
 	require.ErrorIs(t, err, wantErr)
@@ -299,7 +304,8 @@ func TestDeleteModel_ReportsUntruncatedTotalsWhenListsAreCapped(t *testing.T) {
 			},
 		},
 		nil, nil, nil,
-	)
+
+		nil)
 
 	err := svc.DeleteModel(ctx, modelID)
 	require.Error(t, err)
@@ -374,7 +380,8 @@ func TestDeleteModel_RejectsWhenUsedByMemory(t *testing.T) {
 				MemoryConfig: &types.MemoryConfig{Enabled: true, EmbeddingModelID: modelID},
 			},
 		},
-	)
+
+		nil)
 
 	err := svc.DeleteModel(ctx, modelID)
 	require.Error(t, err)
@@ -408,7 +415,8 @@ func TestDeleteModel_RejectsWhenUsedByMemoryExtraction(t *testing.T) {
 				},
 			},
 		},
-	)
+
+		nil)
 
 	err := svc.DeleteModel(ctx, modelID)
 	require.Error(t, err)
@@ -438,7 +446,8 @@ func TestDeleteModel_ReportsAllMemoryBindings(t *testing.T) {
 				},
 			},
 		},
-	)
+
+		nil)
 
 	err := svc.DeleteModel(ctx, modelID)
 	require.Error(t, err)
