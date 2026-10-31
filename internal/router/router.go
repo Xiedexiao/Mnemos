@@ -59,6 +59,7 @@ type RouterParams struct {
 	OntologyHandler              *handler.OntologyHandler
 	ChangeRequestHandler         *handler.ChangeRequestHandler
 	GlossaryHandler              *handler.GlossaryHandler
+	KnowledgeCandidateHandler    *handler.KnowledgeCandidateHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
 	ShareLinkHandler             *handler.ShareLinkHandler
@@ -316,6 +317,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterChangeRequestRoutes(v1, rbacGuards, params.ChangeRequestHandler)
 		RegisterGlossaryRoutes(v1, params.GlossaryHandler, rbacGuards)
+		RegisterKnowledgeCandidateRoutes(v1, rbacGuards, params.KnowledgeCandidateHandler)
 		RegisterShareLinkRoutes(v1, rbacGuards, params.ShareLinkHandler)
 		RegisterGraphSearchRoutes(v1, params.GraphSearchHandler, rbacGuards)
 		RegisterFAQRoutes(v1, params.FAQHandler, rbacGuards)
