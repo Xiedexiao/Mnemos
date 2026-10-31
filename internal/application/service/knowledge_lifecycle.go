@@ -118,6 +118,14 @@ func (s *knowledgeLifecycleService) Transition(
 		}
 		updates["lifecycle_status"] = string(types.KnowledgeLifecycleStale)
 
+	case types.KnowledgeLifecycleActionMarkPendingReviewCycle:
+		// 复审调度器批量到期（C4）：valid→pending_review_cycle，同时记录
+		// 复审待办来源，行为上仍可检索但降权（§7.1 状态行为表）。
+		if next := types.KnowledgeLifecyclePendingReviewCycle; !current.CanTransitionTo(next) {
+			return nil, s.illegalTransition(ctx, knowledge, current, next, input.ActorID)
+		}
+		updates["lifecycle_status"] = string(types.KnowledgeLifecyclePendingReviewCycle)
+
 	case types.KnowledgeLifecycleActionMarkExpired:
 		if next := types.KnowledgeLifecycleExpired; !current.CanTransitionTo(next) {
 			return nil, s.illegalTransition(ctx, knowledge, current, next, input.ActorID)

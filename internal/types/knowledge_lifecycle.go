@@ -276,6 +276,9 @@ const (
 	KnowledgeLifecycleActionConfirmReview KnowledgeLifecycleAction = "confirm_review"
 	// KnowledgeLifecycleActionMarkStale 标记疑似过期。
 	KnowledgeLifecycleActionMarkStale KnowledgeLifecycleAction = "mark_stale"
+	// KnowledgeLifecycleActionMarkPendingReviewCycle 复审调度器批量到期落库
+	// （valid→pending_review_cycle；读取时降级之外的显式批处理，C4）。
+	KnowledgeLifecycleActionMarkPendingReviewCycle KnowledgeLifecycleAction = "mark_pending_review_cycle"
 	// KnowledgeLifecycleActionMarkExpired 确认过期。
 	KnowledgeLifecycleActionMarkExpired KnowledgeLifecycleAction = "mark_expired"
 	// KnowledgeLifecycleActionReplace 标记被替代（指向新版本）。
