@@ -1,7 +1,7 @@
 use_default_settings: true
 
 general:
-  instance_name: "WeKnora SearXNG"
+  instance_name: "Mnemos SearXNG"
   privacypolicy_url: false
   donation_url: false
   contact_url: false
@@ -14,8 +14,8 @@ server:
   image_proxy: true
   http_protocol_version: "1.0"
   method: "GET"
-  # Disabled so WeKnora's backend can call /search without IP-based throttling.
-  # Re-enable and add WeKnora's egress IP to a limiter allowlist if you expose
+  # Disabled so Mnemos's backend can call /search without IP-based throttling.
+  # Re-enable and add Mnemos's egress IP to a limiter allowlist if you expose
   # this instance to the public internet.
   limiter: false
   public_instance: false

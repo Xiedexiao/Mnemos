@@ -8,7 +8,7 @@
 #
 #   docker build --platform linux/amd64 \
 #     --build-arg VITE_FRONTEND_COMMIT=$(git rev-parse --short HEAD) \
-#     -t wechatopenai/weknora-ui:latest \
+#     -t mnemos-ui:latest \
 #     frontend/
 #
 # Optional npm mirror (e.g. corporate registry):
@@ -65,7 +65,7 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 # Copied outside templates/ on purpose: envsubst would eat $host and the other
 # nginx variables in it.
 COPY nginx-api-proxy.conf /etc/nginx/api-proxy.conf
-COPY nginx-http.conf /etc/nginx/conf.d/00-weknora-http.conf
+COPY nginx-http.conf /etc/nginx/conf.d/00-mnemos-http.conf
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

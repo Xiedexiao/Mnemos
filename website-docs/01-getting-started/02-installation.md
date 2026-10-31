@@ -6,15 +6,15 @@ WeKnora 支持 Docker Compose、Kubernetes Helm、Lite 单二进制和桌面应�
 
 | 形态 | 入口 | 数据库 | 队列/流 | 适用场景 |
 | --- | --- | --- | --- | --- |
-| Docker Compose（标准） | `docker-compose.yml` | ParadeDB（PostgreSQL） | Redis + Asynq | 生产 / 团队自托管，推荐 |
-| Docker Compose（开发） | `docker-compose.dev.yml` | 同上（仅基础设施进容器） | 同上 | 本地开发：app / frontend 在宿主机运行 |
+| Docker Compose（标准） | `docker/docker-compose.yml` | ParadeDB（PostgreSQL） | Redis + Asynq | 生产 / 团队自托管，推荐 |
+| Docker Compose（开发） | `docker/docker-compose.dev.yml` | 同上（仅基础设施进容器） | 同上 | 本地开发：app / frontend 在宿主机运行 |
 | Helm | `helm/` | ParadeDB（chart 内置） | Redis（chart 内置） | Kubernetes >= 1.25 |
 | Lite 单二进制 | `make build-lite` / `scripts/package-lite.sh` | SQLite（FTS5 + sqlite-vec） | 内存（无 Redis） | 个人 / 离线 / 低资源环境 |
 | 桌面应用（**未正式发布**） | `cmd/desktop`（Wails v2）+ `scripts/package-mac-app.sh` | SQLite | 内存 | 桌面单机使用，带图形界面与本地数据目录 |
 
 ```mermaid
 flowchart TB
-    subgraph prod["标准部署 (docker compose up)"]
+    subgraph prod["标准部署 (docker compose -f docker/docker/docker-compose.yml --env-file .env up)"]
         FE1["frontend :80"] --> APP1["app :8080"]
         APP1 --> PG1[("postgres :5432")]
         APP1 --> RD1[("redis :6379")]
@@ -28,7 +28,7 @@ flowchart TB
         LOCALFE["宿主机 npm run dev 前端"] --> LOCALAPP
     end
     subgraph lite["Lite / 桌面 (单进程)"]
-        BIN["WeKnora-lite 二进制 (内嵌 web/ 前端)"]
+        BIN["Mnemos-lite 二进制 (内嵌 web/ 前端)"]
         BIN --> SQLITE[("SQLite: FTS5 + sqlite-vec")]
         BIN --> MEMQ[("内存流管理")]
         BIN -. "可选" .-> DR3["docreader 127.0.0.1:50051"]
@@ -45,7 +45,7 @@ flowchart TB
 
 Compose 默认 ParadeDB 镜像自 `v0.22.6-pg17` 起 x86 CPU 基线为 `x86-64-v2`（包括 SSE4.2、POPCNT），不再强制要求 AVX2；更高镜像版本的基线以 ParadeDB 官方发布说明为准。这不代表所有 ARM CPU 或其他可选服务均兼容。
 
-## 一、Docker Compose 标准部署（docker-compose.yml）
+## 一、Docker Compose 标准部署（docker/docker-compose.yml）
 
 最快路径：
 
@@ -54,18 +54,18 @@ git clone https://github.com/Tencent/WeKnora.git && cd WeKnora
 cp .env.example .env              # 编辑必填项：DB_USER/DB_PASSWORD/DB_NAME、REDIS_PASSWORD、JWT_SECRET、SYSTEM_AES_KEY
 make start-all                # 等价 ./scripts/start_all.sh（默认拉取最新镜像）
 # 或直接：
-docker compose pull           # 拉取与 WEKNORA_VERSION 匹配的镜像
-docker compose up -d
-docker compose ps                 # 等所有服务变成 healthy/running
+docker compose -f docker/docker/docker-compose.yml --env-file .env pull           # 拉取与 WEKNORA_VERSION 匹配的镜像
+docker compose -f docker/docker/docker-compose.yml --env-file .env up -d
+docker compose -f docker/docker/docker-compose.yml --env-file .env ps                 # 等所有服务变成 healthy/running
 ```
 
 `.env.example` 中的 `JWT_SECRET`、`SYSTEM_AES_KEY` 默认留空，需要在首次部署时生成一次并妥善保存：`JWT_SECRET` 可用 `openssl rand -hex 32`，`SYSTEM_AES_KEY` 必须是 32 字节，可用 `openssl rand -hex 16`。升级已有部署时请沿用原来的 `SYSTEM_AES_KEY`，否则已加密的凭据无法解密。各密钥的作用见[配置详解](./04-configuration.md)。
 
-停止用 `docker compose down`（加 `-v` 会连数据卷一起删，慎用）。仓库里的 `make start-all` 是同一条命令的封装（`scripts/start_all.sh`，额外做 Ollama 检查、`.env` 兜底、沙箱镜像预拉取），两者选一即可。
+停止用 `docker compose -f docker/docker/docker-compose.yml --env-file .env down`（加 `-v` 会连数据卷一起删，慎用）。仓库里的 `make start-all` 是同一条命令的封装（`scripts/start_all.sh`，额外做 Ollama 检查、`.env` 兜底、沙箱镜像预拉取），两者选一即可。
 
 启动后在浏览器打开 `http://localhost` 就是前端（端口由 `FRONTEND_PORT` 决定，默认 80），首次访问会落到注册页。前端 Nginx 把 `/api/` 反代到后端，所以接口调用同样走 `http://localhost/api/v1`；后端 `8080` 端口也直接映射到宿主机，`curl http://localhost:8080/health` 可用于确认后端就绪。
 
-> 注意：`docker-compose.yml` 的 app 服务使用 `env_file: [.env]`，`.env` 不存在会导致 compose 解析失败。`make docker-run` / `start_all.sh` 会自动 `cp .env.example .env` 或 `touch .env` 兜底。
+> 注意：`docker/docker-compose.yml` 的 app 服务使用 `env_file: [.env]`，`.env` 不存在会导致 compose 解析失败。`make docker-run` / `start_all.sh` 会自动 `cp .env.example .env` 或 `touch .env` 兜底。
 
 ### 版本升级
 
@@ -75,25 +75,25 @@ docker compose ps                 # 等所有服务变成 healthy/running
 
 ```bash
 # 在 .env 中将 WEKNORA_VERSION 设为目标版本（如 0.9.0），或保持 latest
-docker compose pull
-docker compose up -d
+docker compose -f docker/docker/docker-compose.yml --env-file .env pull
+docker compose -f docker/docker/docker-compose.yml --env-file .env up -d
 ```
 
-> 仅执行 `docker compose up -d` 会复用本地缓存镜像，可能导致 Web UI 显示版本与下载的 release 不一致。
+> 仅执行 `docker compose -f docker/docker/docker-compose.yml --env-file .env up -d` 会复用本地缓存镜像，可能导致 Web UI 显示版本与下载的 release 不一致。
 
 ### 核心服务（默认启动）
 
 | 服务 | 镜像 | 端口（宿主:容器） | 依赖 | 说明 |
 | --- | --- | --- | --- | --- |
-| `frontend` | `wechatopenai/weknora-ui:${WEKNORA_VERSION:-latest}` | `${FRONTEND_PORT:-80}:80` | app（healthy） | Nginx 托管 SPA 并反代到 app；`APP_HOST`/`APP_BACKEND_PORT`/`APP_SCHEME` 可指向远程后端 |
-| `app` | `wechatopenai/weknora-app` | `${APP_PORT:-8080}:8080` | postgres（healthy）、redis、docreader（healthy） | Go 后端；挂载 `./config/config.yaml`、`data-files` 卷；健康检查 `GET /health` |
-| `docreader` | `wechatopenai/weknora-docreader` | 仅 `expose: 50051`（不发布到宿主机） | — | 文档解析 gRPC 服务；健康检查 `grpc_health_probe`；与 app 共享 `docreader-tmp` 卷传递图片 |
+| `frontend` | `mnemos-ui:${WEKNORA_VERSION:-latest}` | `${FRONTEND_PORT:-80}:80` | app（healthy） | Nginx 托管 SPA 并反代到 app；`APP_HOST`/`APP_BACKEND_PORT`/`APP_SCHEME` 可指向远程后端 |
+| `app` | `mnemos-app` | `${APP_PORT:-8080}:8080` | postgres（healthy）、redis、docreader（healthy） | Go 后端；挂载 `./config/config.yaml`、`data-files` 卷；健康检查 `GET /health` |
+| `docreader` | `mnemos-docreader` | 仅 `expose: 50051`（不发布到宿主机） | — | 文档解析 gRPC 服务；健康检查 `grpc_health_probe`；与 app 共享 `docreader-tmp` 卷传递图片 |
 | `postgres` | `paradedb/paradedb:v0.25.11-pg17` | 不映射宿主端口 | — | ParadeDB = PostgreSQL 17 + BM25/向量扩展，默认检索引擎 |
 | `redis` | `redis:7.0-alpine` | 不映射宿主端口 | — | `--appendonly yes --requirepass ${REDIS_PASSWORD}` |
 
 ### 可选服务与 profiles
 
-按需以 `docker compose --profile <name> up -d` 启用：
+按需以 `docker compose -f docker/docker/docker-compose.yml --env-file .env --profile <name> up -d` 启用：
 
 | profile | 服务 | 端口 | 用途 |
 | --- | --- | --- | --- |
@@ -111,7 +111,7 @@ docker compose up -d
 
 app 容器的 `environment` 段落是全量环境变量清单（数据库、向量库、对象存储、Docreader 调优、租户策略、OIDC 等），详见 [04-configuration.md](./04-configuration.md)。
 
-## 二、开发模式（docker-compose.dev.yml + scripts/dev.sh）
+## 二、开发模式（docker/docker-compose.dev.yml + scripts/dev.sh）
 
 开发编排只把**基础设施**放进容器（postgres、redis、docreader 端口全部映射到宿主机），app 与 frontend 在宿主机上以热更新方式运行：
 
@@ -132,11 +132,11 @@ make dev-logs / dev-status / dev-stop / dev-restart
 
 | Dockerfile | 产物镜像 | 要点 |
 | --- | --- | --- |
-| `docker/Dockerfile.app` | `wechatopenai/weknora-app` | 三阶段：先构建 BrowserSkill 的 `bsk` 与配套 Chrome 扩展（装入 `/opt/weknora/browserskill/`，见[本机浏览器](../05-clients/09-local-browser.md)）；再用 `golang:1.26-bookworm` 编译（`make build-prod`，默认 `WITH_ANYDOC=1` 链接进程内 office 解析引擎，注入版本信息，预下载 DuckDB 扩展 `cmd/download/duckdb`）→ `debian:12.12-slim` 运行层（含 `migrate` 迁移工具、python3/node/uvx（供 stdio MCP 使用）、ffmpeg（ASR）、gosu 降权，以及第三方许可证文本）。入口 `scripts/docker-entrypoint.sh`：修复挂载目录属主；若挂载了 docker.sock，按 socket GID 把 appuser 加入对应组（compose `group_add` 在 gosu 后无效），再以 appuser 运行 `./WeKnora`。`EXPOSE 8080` |
-| `docker/Dockerfile.docreader` | `wechatopenai/weknora-docreader` | Python 3.10 + uv 依赖锁定；生成 protobuf；运行层安装 LibreOffice、OpenJDK 17、antiword、Playwright（webkit）与 `grpc_health_probe`。轻量版不含 PaddleOCR。`EXPOSE 50051`。支持 `APT_MIRROR`、`PLAYWRIGHT_DOWNLOAD_HOST` 和 `PLAYWRIGHT_WEBKIT_DOWNLOAD_HOST` 构建参数 |
+| `docker/Dockerfile.app` | `mnemos-app` | 三阶段：先构建 BrowserSkill 的 `bsk` 与配套 Chrome 扩展（装入 `/opt/mnemos/browserskill/`，见[本机浏览器](../05-clients/09-local-browser.md)）；再用 `golang:1.26-bookworm` 编译（`make build-prod`，默认 `WITH_ANYDOC=1` 链接进程内 office 解析引擎，注入版本信息，预下载 DuckDB 扩展 `cmd/download/duckdb`）→ `debian:12.12-slim` 运行层（含 `migrate` 迁移工具、python3/node/uvx（供 stdio MCP 使用）、ffmpeg（ASR）、gosu 降权，以及第三方许可证文本）。入口 `scripts/docker-entrypoint.sh`：修复挂载目录属主；若挂载了 docker.sock，按 socket GID 把 appuser 加入对应组（compose `group_add` 在 gosu 后无效），再以 appuser 运行 `./Mnemos`。`EXPOSE 8080` |
+| `docker/Dockerfile.docreader` | `mnemos-docreader` | Python 3.10 + uv 依赖锁定；生成 protobuf；运行层安装 LibreOffice、OpenJDK 17、antiword、Playwright（webkit）与 `grpc_health_probe`。轻量版不含 PaddleOCR。`EXPOSE 50051`。支持 `APT_MIRROR`、`PLAYWRIGHT_DOWNLOAD_HOST` 和 `PLAYWRIGHT_WEBKIT_DOWNLOAD_HOST` 构建参数 |
 | `docker/Dockerfile.odl-hybrid` | `weknora-odl-hybrid:local` | 安装 `opendataloader-pdf[hybrid]`（Docling），监听 5002，默认 `--no-ocr`；仅本地构建不发布 |
-| `docker/Dockerfile.sandbox` | `wechatopenai/weknora-sandbox` | Agent 会话沙箱镜像。基础环境为 Python 3.12-slim + Node 20 + uv/pnpm，默认 `root` 执行，保留 `user`(UID 1000) 供显式选择。默认构建目标 `sandbox` 供 Docker 后端使用；另有 `cube`（含 Cube envd）、`desktop` / `desktop-cube`（带图形桌面）等目标，见[沙箱部署](../06-development/04-sandbox-deployment.md) |
-| `frontend/Dockerfile` | `wechatopenai/weknora-ui` | 两阶段：digest 锁定的 `node:24-bookworm-slim`（`$BUILDPLATFORM`，避免多架构 CI 用 QEMU 跑 Vite）内 `npm ci` + `npm run build`（`VITE_IS_DOCKER` / `VITE_FRONTEND_COMMIT`），可选 `NPM_REGISTRY` / `NODE_MAX_OLD_SPACE_SIZE`；运行层为按 digest 固定的 `nginx:1.30.3-alpine`（兼容 CentOS 7 旧内核）。无需宿主机预构建 `dist/` |
+| `docker/Dockerfile.sandbox` | `mnemos-sandbox` | Agent 会话沙箱镜像。基础环境为 Python 3.12-slim + Node 20 + uv/pnpm，默认 `root` 执行，保留 `user`(UID 1000) 供显式选择。默认构建目标 `sandbox` 供 Docker 后端使用；另有 `cube`（含 Cube envd）、`desktop` / `desktop-cube`（带图形桌面）等目标，见[沙箱部署](../06-development/04-sandbox-deployment.md) |
+| `frontend/Dockerfile` | `mnemos-ui` | 两阶段：digest 锁定的 `node:24-bookworm-slim`（`$BUILDPLATFORM`，避免多架构 CI 用 QEMU 跑 Vite）内 `npm ci` + `npm run build`（`VITE_IS_DOCKER` / `VITE_FRONTEND_COMMIT`），可选 `NPM_REGISTRY` / `NODE_MAX_OLD_SPACE_SIZE`；运行层为按 digest 固定的 `nginx:1.30.3-alpine`（兼容 CentOS 7 旧内核）。无需宿主机预构建 `dist/` |
 
 从源码构建全部镜像：
 
@@ -192,7 +192,7 @@ PLAYWRIGHT_WEBKIT_DOWNLOAD_HOST=https://your-playwright-mirror.example.com \
 
 `helm/Chart.yaml`：apiVersion v2，chart 名 `weknora`，appVersion 跟随版本（如 v0.9.0），要求 Kubernetes >= 1.25.0。
 
-Chart 内包含五个组件：`app`（`wechatopenai/weknora-app`）、`frontend`（`wechatopenai/weknora-ui`）、`docreader`、`postgresql`（ParadeDB 镜像，chart 默认 `paradedb/paradedb:v0.18.9-pg17`，与 Compose 的版本不同）、`redis`（`redis:7-alpine`），并可选启用 `minio` 与 `neo4j`。
+Chart 内包含五个组件：`app`（`mnemos-app`）、`frontend`（`mnemos-ui`）、`docreader`、`postgresql`（ParadeDB 镜像，chart 默认 `paradedb/paradedb:v0.18.9-pg17`，与 Compose 的版本不同）、`redis`（`redis:7-alpine`），并可选启用 `minio` 与 `neo4j`。
 
 `helm/values.yaml` 关键配置：
 
@@ -246,7 +246,7 @@ Lite 模式通过编译期 `EDITION=lite` 与运行期 `.env.lite` 环境实现�
 
 ```bash
 cp .env.lite.example .env.lite      # 填写 SYSTEM_AES_KEY（openssl rand -hex 16）与 JWT_SECRET
-make run-lite                       # 构建并以 .env.lite 环境启动 ./WeKnora-lite
+make run-lite                       # 构建并以 .env.lite 环境启动 ./Mnemos-lite
 make package-lite                   # 打包发行 tarball（scripts/package-lite.sh）
 ```
 
@@ -272,7 +272,7 @@ make package-mac-app
 ```bash
 # 后端（标准版，需本地 postgres/redis/docreader，见开发模式）
 go mod download
-make build && ./WeKnora                       # 或 make build-prod
+make build && ./Mnemos                       # 或 make build-prod
 
 # 前端
 cd frontend && npm ci && npm run dev          # 开发；npm run build 产出 dist/
@@ -292,7 +292,7 @@ cd docreader && uv sync --locked && bash scripts/generate_proto.sh && uv run -m 
 ```bash
 (cd frontend && npm ci && npm run build)
 make build-prod
-SERVER_HOST=127.0.0.1 WEKNORA_WEB_DIR="$PWD/frontend/dist" ./WeKnora
+SERVER_HOST=127.0.0.1 WEKNORA_WEB_DIR="$PWD/frontend/dist" ./Mnemos
 ```
 
 启动后通过 `http://127.0.0.1:8080` 访问（使用默认 `SERVER_PORT` 时）。`WEKNORA_WEB_DIR` 目录仅应包含前端构建产物，不要放入数据、配置或密钥；其中的文件会作为静态资源提供。已注册的后端路由（包括 `/mcp/` 端点）优先于静态文件和 SPA 回退，现有 API 的认证与授权规则保持不变。
@@ -319,7 +319,7 @@ flowchart TB
     end
     subgraph laptop["个人：Lite / 桌面"]
         direction LR
-        U3["用户"] --> L1["WeKnora-lite 单进程 (内嵌前端 + SQLite + 内存队列)"]
+        U3["用户"] --> L1["Mnemos-lite 单进程 (内嵌前端 + SQLite + 内存队列)"]
         L1 --> O3["Ollama / 远程 OpenAI 兼容 API"]
     end
 ```

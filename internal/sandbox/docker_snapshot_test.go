@@ -15,9 +15,9 @@ func TestDockerCreateSnapshotTagsASkillImage(t *testing.T) {
 
 	ref, err := docker.CreateSnapshot(context.Background(), "container-1", "weknora-sk-cfg1-g1")
 	require.NoError(t, err)
-	require.Equal(t, "weknora-skill/weknora-sk-cfg1-g1", ref.ID)
+	require.Equal(t, "mnemos-skill/weknora-sk-cfg1-g1", ref.ID)
 	require.Len(t, engine.committed, 1)
-	require.Equal(t, "weknora-skill/weknora-sk-cfg1-g1", engine.committed[0].Reference)
+	require.Equal(t, "mnemos-skill/weknora-sk-cfg1-g1", engine.committed[0].Reference)
 	require.False(t, engine.committed[0].NoPause,
 		"the Engine must pause the container for the duration of the commit")
 	require.Contains(t, engine.committed[0].Changes, "LABEL "+dockerSkillSnapshotLabel+"=true")
@@ -33,7 +33,7 @@ func TestDockerCreateSnapshotRejectsEmptySandboxID(t *testing.T) {
 
 func TestDockerDeleteSnapshotTreatsMissingAsSuccess(t *testing.T) {
 	err := newTestDockerClient(t, newFakeDockerEngine()).
-		DeleteSnapshot(context.Background(), "weknora-skill/missing")
+		DeleteSnapshot(context.Background(), "mnemos-skill/missing")
 	require.NoError(t, err)
 }
 
@@ -99,7 +99,7 @@ func TestDockerDeleteSnapshotSweepsUntaggedSkillImages(t *testing.T) {
 	engine.images = []image.Summary{
 		{
 			ID:       "sha256:retired",
-			RepoTags: []string{"weknora-skill/weknora-sk-a-g1:latest"},
+			RepoTags: []string{"mnemos-skill/weknora-sk-a-g1:latest"},
 			Labels:   map[string]string{dockerSkillSnapshotLabel: "true"},
 		},
 		{
@@ -109,7 +109,7 @@ func TestDockerDeleteSnapshotSweepsUntaggedSkillImages(t *testing.T) {
 		},
 		{
 			ID:       "sha256:live",
-			RepoTags: []string{"weknora-skill/weknora-sk-a-g2:latest"},
+			RepoTags: []string{"mnemos-skill/weknora-sk-a-g2:latest"},
 			Labels:   map[string]string{dockerSkillSnapshotLabel: "true"},
 		},
 		{
@@ -121,10 +121,10 @@ func TestDockerDeleteSnapshotSweepsUntaggedSkillImages(t *testing.T) {
 	docker := newTestDockerClient(t, engine)
 
 	require.NoError(t, docker.DeleteSnapshot(
-		context.Background(), "weknora-skill/weknora-sk-a-g1"))
+		context.Background(), "mnemos-skill/weknora-sk-a-g1"))
 
 	require.Equal(t,
-		[]string{"weknora-skill/weknora-sk-a-g1", "sha256:orphan"},
+		[]string{"mnemos-skill/weknora-sk-a-g1", "sha256:orphan"},
 		engine.removedImages,
 		"the sweep must take the untagged snapshot and nothing that is still named")
 }
@@ -173,12 +173,12 @@ func TestDockerDeleteSnapshotSweepFailureIsNotAnError(t *testing.T) {
 			Labels:   map[string]string{dockerSkillSnapshotLabel: "true"},
 		},
 	}
-	engine.imagePresent["weknora-skill/weknora-sk-a-g1"] = true
+	engine.imagePresent["mnemos-skill/weknora-sk-a-g1"] = true
 	engine.listImagesErr = errors.New("daemon busy")
 	docker := newTestDockerClient(t, engine)
 
 	require.NoError(t, docker.DeleteSnapshot(
-		context.Background(), "weknora-skill/weknora-sk-a-g1"),
+		context.Background(), "mnemos-skill/weknora-sk-a-g1"),
 		"reclaiming storage must not turn a completed delete into a failure")
 }
 
@@ -192,7 +192,7 @@ func TestDockerListTemplatesHidesSkillSnapshots(t *testing.T) {
 		},
 		{
 			ID:       "sha256:snap",
-			RepoTags: []string{"weknora-skill/weknora-sk-cfg1-g1:latest"},
+			RepoTags: []string{"mnemos-skill/weknora-sk-cfg1-g1:latest"},
 			Labels:   map[string]string{dockerSkillSnapshotLabel: "true"},
 		},
 	}
@@ -209,7 +209,7 @@ func TestDockerCreateDoesNotPullAMissingSkillSnapshot(t *testing.T) {
 	docker := newTestDockerClient(t, engine)
 
 	_, err := docker.Create(context.Background(), RemoteCreateRequest{
-		TemplateID: "weknora-skill/weknora-sk-cfg1-g1",
+		TemplateID: "mnemos-skill/weknora-sk-cfg1-g1",
 	})
 	require.True(t, IsRemoteInvalidRequest(err), err)
 	require.Empty(t, engine.pulled,
@@ -272,7 +272,7 @@ func TestDockerListSnapshotsExcludesForkImages(t *testing.T) {
 	listed, err := docker.ListSnapshots(ctx, "")
 	require.NoError(t, err)
 	require.Len(t, listed, 1)
-	require.Equal(t, "weknora-skill/weknora-sk-cfg1-g1", listed[0].ID)
+	require.Equal(t, "mnemos-skill/weknora-sk-cfg1-g1", listed[0].ID)
 }
 
 func TestDockerCreateDoesNotPullAMissingForkSnapshot(t *testing.T) {

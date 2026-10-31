@@ -10,13 +10,13 @@ import (
 )
 
 func TestSkillProgressKeyIncludesTheTenant(t *testing.T) {
-	require.Equal(t, "weknora-skill-install:7:cfg-1:sk-1", skillProgressKey(7, "cfg-1", "sk-1"))
+	require.Equal(t, "mnemos-skill-install:7:cfg-1:sk-1", skillProgressKey(7, "cfg-1", "sk-1"))
 	require.NotEqual(t, skillProgressKey(7, "cfg-1", "sk-1"), skillProgressKey(8, "cfg-1", "sk-1"),
 		"two workspaces must not share a progress slot because they happened to reuse IDs")
 }
 
 func TestSkillImageLockKeyIncludesTheTenant(t *testing.T) {
-	require.Equal(t, "weknora-skill-image-lock:7:cfg-1", skillImageLockKey(7, "cfg-1"))
+	require.Equal(t, "mnemos-skill-image-lock:7:cfg-1", skillImageLockKey(7, "cfg-1"))
 	require.NotEqual(t, skillImageLockKey(7, "cfg-1"), skillImageLockKey(8, "cfg-1"),
 		"two workspaces must not share an image lock because they happened to reuse config IDs")
 }

@@ -51,7 +51,7 @@ detect_compose_cmd() {
 
 # 显示帮助信息
 show_help() {
-    printf "%b\n" "${GREEN}WeKnora 开发环境脚本${NC}"
+    printf "%b\n" "${GREEN}Mnemos 开发环境脚本${NC}"
     echo "用法: $0 [命令] [选项]"
     echo ""
     echo "命令:"
@@ -172,7 +172,7 @@ _wait_odl_hybrid_ready() {
         sleep "$interval"
         waited=$((waited + interval))
     done
-    log_warning "odl-hybrid 在 ${max_wait}s 内未就绪，请查看: docker logs WeKnora-odl-hybrid"
+    log_warning "odl-hybrid 在 ${max_wait}s 内未就绪，请查看: docker logs mnemos-odl-hybrid"
     return 1
 }
 
@@ -256,16 +256,16 @@ start_services() {
     done
 
     # 启动服务（odl-hybrid 单独 --build，避免每次重建 docreader）
-    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker-compose.dev.yml $PROFILES up -d
+    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.dev.yml $PROFILES up -d
     local compose_rc=$?
     if [ "$compose_rc" -eq 0 ] && [[ "$ENABLED_SERVICES" == *"odl-hybrid"* ]]; then
         log_info "构建/更新 odl-hybrid 镜像..."
-        "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker-compose.dev.yml $PROFILES up -d --build odl-hybrid
+        "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.dev.yml $PROFILES up -d --build odl-hybrid
         _wait_odl_hybrid_ready || true
         # docreader 需读取 DOCREADER_ODL_HYBRID；若刚改 .env，强制重建以注入环境变量
         if _should_enable_odl_hybrid_from_env; then
             log_info "重建 docreader 以应用 DOCREADER_ODL_HYBRID=${DOCREADER_ODL_HYBRID} ..."
-            "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker-compose.dev.yml up -d --force-recreate docreader
+            "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.dev.yml up -d --force-recreate docreader
         fi
     fi
 
@@ -319,7 +319,7 @@ stop_services() {
     fi
     
     cd "$PROJECT_ROOT"
-    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker-compose.dev.yml down
+    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.dev.yml down
     
     if [ $? -eq 0 ]; then
         log_success "所有服务已停止"
@@ -345,7 +345,7 @@ show_logs() {
     fi
 
     cd "$PROJECT_ROOT"
-    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker-compose.dev.yml logs -f
+    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.dev.yml logs -f
 }
 
 # 查看状态
@@ -356,7 +356,7 @@ show_status() {
     fi
 
     cd "$PROJECT_ROOT"
-    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker-compose.dev.yml ps
+    "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.dev.yml ps
 }
 
 # 远程开发模式下检查基础设施端口是否可达

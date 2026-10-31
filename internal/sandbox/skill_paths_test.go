@@ -12,11 +12,11 @@ import (
 func TestSkillDirFor(t *testing.T) {
 	dir, err := SkillDirFor("sk-1")
 	require.NoError(t, err)
-	require.Equal(t, "/opt/weknora/tenant/skills/sk-1", dir)
+	require.Equal(t, "/opt/mnemos/tenant/skills/sk-1", dir)
 }
 
 func TestSkillVenvPython(t *testing.T) {
-	require.Equal(t, "/opt/weknora/tenant/skills/律师助手/.venv/bin/python",
+	require.Equal(t, "/opt/mnemos/tenant/skills/律师助手/.venv/bin/python",
 		SkillVenvPython(SkillsImageRoot+"/律师助手"))
 }
 
@@ -93,7 +93,7 @@ func TestRunnableWorkspaceScript(t *testing.T) {
 		"/workspace/output",
 		"/workspace/input",
 		"/workspace/input/upload.py",
-		"/opt/weknora/tenant/skills/pdf/scripts/run.py",
+		"/opt/mnemos/tenant/skills/pdf/scripts/run.py",
 		"/etc/passwd",
 		"",
 	} {
@@ -111,7 +111,7 @@ func TestValidatedImageSkillDir(t *testing.T) {
 		SkillsImageRoot,
 		SkillsImageRoot + "/pdf/scripts",
 		"/workspace/output",
-		"/opt/weknora/tenant/skills/../skills/pdf/x",
+		"/opt/mnemos/tenant/skills/../skills/pdf/x",
 		"",
 	} {
 		_, ok := ValidatedImageSkillDir(p)
@@ -150,7 +150,7 @@ func TestSkillInterpreterCommand(t *testing.T) {
 		require.Contains(t, args[1], dir+"/.venv/bin/python",
 			"a skill with its own venv must not be run by the system interpreter")
 		require.Contains(t, args[1], "else", "there must be a fallback when the venv is absent")
-		require.Equal(t, "weknora-skill", args[2])
+		require.Equal(t, "mnemos-skill", args[2])
 	})
 
 	t.Run("javascript uses node", func(t *testing.T) {
@@ -173,7 +173,7 @@ func TestSkillInterpreterCommand(t *testing.T) {
 		require.Equal(t, "-c", args[0])
 		require.Contains(t, args[1], "exec bash "+dir+"/scripts/run.sh")
 		require.Contains(t, args[1], "else", "there must be a fallback when bash is absent")
-		require.Equal(t, "weknora-skill", args[2])
+		require.Equal(t, "mnemos-skill", args[2])
 	})
 
 	t.Run("a shell script receives the caller's arguments", func(t *testing.T) {

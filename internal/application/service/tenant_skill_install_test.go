@@ -1927,15 +1927,15 @@ func TestStartMaintenanceSessionRemovesTheSessionWhenPlacementFails(t *testing.T
 	require.Equal(t, []string{"CreateSession", "DeleteSession"}, fx.sessionCalls)
 }
 
-const installSkillDir = "/opt/weknora/tenant/skills/pdf-tools"
+const installSkillDir = "/opt/mnemos/tenant/skills/pdf-tools"
 
 // The install commands are asserted verbatim: an install runs as root with the
 // skills root writable, so "the command contained this substring" is not a
 // strong enough statement about what actually executes.
 const (
 	installPrepareCommand = "rm -rf " + installSkillDir +
-		" && mkdir -p /opt/weknora/tenant/skills " + installSkillDir +
-		" && chmod 755 /opt/weknora/tenant/skills " + installSkillDir
+		" && mkdir -p /opt/mnemos/tenant/skills " + installSkillDir +
+		" && chmod 755 /opt/mnemos/tenant/skills " + installSkillDir
 )
 
 // installPythonVerifyCommand is built from the same helper the install path

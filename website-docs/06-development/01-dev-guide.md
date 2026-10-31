@@ -1,6 +1,6 @@
 # 开发指南
 
-开发环境使用 `docker-compose.dev.yml` 启动依赖服务，并支持独立运行 Go 后端、Web 前端和 docreader。代码修改后按所在模块执行构建与测试，再检查相关集成路径。
+开发环境使用 `docker/docker-compose.dev.yml` 启动依赖服务，并支持独立运行 Go 后端、Web 前端和 docreader。代码修改后按所在模块执行构建与测试，再检查相关集成路径。
 
 ## 技术栈与环境要求 {#_1-技术栈与环境要求}
 
@@ -75,9 +75,9 @@ VITE_DEV_PROXY_TARGET=https://kb.example.com npm run dev
 
 `vite preview`（端口 `4173`）用生产构建产物起服务，是最接近 release 镜像的验证环境。它使用相同的代理路径和目标选择规则，可在 `frontend/` 目录执行 `npm run build` 后，用 `VITE_DEV_PROXY_TARGET=https://kb.example.com npm run preview` 连接远程后端。
 
-### docker-compose.dev.yml 服务清单 {#_2-1-docker-compose-dev-yml-服务清单}
+### docker/docker-compose.dev.yml 服务清单 {#_2-1-docker-compose-dev-yml-服务清单}
 
-`docker-compose.dev.yml` 只包含依赖服务，不含 `app`/`frontend`。默认启动与 profile 可选服务如下（profile 通过 `dev.sh start` 的参数开启）：
+`docker/docker-compose.dev.yml` 只包含依赖服务，不含 `app`/`frontend`。默认启动与 profile 可选服务如下（profile 通过 `dev.sh start` 的参数开启）：
 
 | 服务 | 镜像 | 端口（默认） | 启动条件 |
 | --- | --- | --- | --- |
@@ -94,7 +94,7 @@ VITE_DEV_PROXY_TARGET=https://kb.example.com npm run dev
 | `dex` | `dexidp/dex:latest`（OIDC 测试身份源，配置 `misc/dex-config.yaml`） | `5556` | `--dex` / `--full` |
 | `langfuse-web` / `langfuse-worker` / `langfuse-clickhouse` / `langfuse-minio` / `langfuse-db-init` | Langfuse v3 自建栈，复用 dev 的 postgres（独立 `langfuse` 库）与 redis（DB 1） | web `3000`、minio `9100/9101` | `--langfuse`（`dev.sh` 默认开启，`--no-langfuse` 关闭） |
 | `odl-hybrid` | 本地构建 `docker/Dockerfile.odl-hybrid`（Docling PDF 后端） | `5002` | `--odl-hybrid`（镜像较大，按需） |
-| `sandbox` | `wechatopenai/weknora-sandbox`（Skills 脚本执行沙箱，仅 build/pull，非常驻） | - | profile `full` |
+| `sandbox` | `mnemos-sandbox`（Skills 脚本执行沙箱，仅 build/pull，非常驻） | - | profile `full` |
 
 `dev.sh start` 的可选参数：`--minio`、`--qdrant`、`--neo4j`、`--dex`、`--langfuse`（默认开）、`--no-langfuse`、`--odl-hybrid`、`--full`（全部可选服务，不含 odl-hybrid）。通过 Makefile 传参：`make dev-start DEV_ARGS=--odl-hybrid`。
 
@@ -108,7 +108,7 @@ uv sync                       # 按 uv.lock 安装依赖（容器内为 uv sync 
 uv run -m docreader.main      # 启动 gRPC 服务（与 Dockerfile CMD 一致），监听 DOCREADER_GRPC_PORT（默认 50051）
 ```
 
-docreader 的大量调优参数（PDF 渲染 DPI、扫描件判定、SSRF 白名单、gRPC TLS 等）以 `DOCREADER_*` 环境变量注入，完整清单见 `docker-compose.dev.yml` 的 `docreader.environment` 段。
+docreader 的大量调优参数（PDF 渲染 DPI、扫描件判定、SSRF 白名单、gRPC TLS 等）以 `DOCREADER_*` 环境变量注入，完整清单见 `docker/docker-compose.dev.yml` 的 `docreader.environment` 段。
 
 ### Lite 模式（零外部依赖） {#_2-3-lite-模式-零外部依赖}
 
@@ -116,7 +116,7 @@ Lite 模式把 SQLite（+sqlite-vec）与内存队列编译进单个二进制，
 
 ```bash
 make build-lite     # 先构建前端到 web/，再 CGO 构建 Go（tags: sqlite_fts5）；SKIP_FRONTEND=1 跳过前端
-make run-lite       # 依赖 .env.lite，构建并启动 WeKnora-lite
+make run-lite       # 依赖 .env.lite，构建并启动 Mnemos-lite
 make package-lite   # 打 tarball 发行包（scripts/package-lite.sh）
 make package-mac-app  # 打 macOS .app（scripts/package-mac-app.sh）
 ```
@@ -130,7 +130,7 @@ make package-mac-app  # 打 macOS .app（scripts/package-mac-app.sh）
 | 目标 | 作用 |
 | --- | --- |
 | `build` | `go build -o WeKnora ./cmd/server` |
-| `run` | 先 `build` 再运行 `./WeKnora` |
+| `run` | 先 `build` 再运行 `./Mnemos` |
 | `test` | `go test -v ./...` |
 | `clean` | `go clean` 并删除二进制 |
 | `build-prod` | 生产构建：CGO_ENABLED=1，`-ldflags "-w -s"` 注入 Version/CommitID/BuildTime/GoVersion（`internal/handler` 包变量），并设置 protobuf `conflictPolicy=warn`（规避 qdrant/milvus proto 冲突） |
@@ -144,9 +144,9 @@ make package-mac-app  # 打 macOS .app（scripts/package-mac-app.sh）
 
 | 目标 | 作用 |
 | --- | --- |
-| `docker-build-app` | 构建 `wechatopenai/weknora-app`（`docker/Dockerfile.app`，注入 `scripts/get_version.sh` 的版本信息） |
-| `docker-build-docreader` | 构建 `wechatopenai/weknora-docreader`（`docker/Dockerfile.docreader`） |
-| `docker-build-frontend` | 多阶段构建 `wechatopenai/weknora-ui`（builder 内 `npm ci` + `npm run build`，无需宿主机预构建 dist；自动从 git 注入 `VITE_FRONTEND_COMMIT`） |
+| `docker-build-app` | 构建 `mnemos-app`（`docker/Dockerfile.app`，注入 `scripts/get_version.sh` 的版本信息） |
+| `docker-build-docreader` | 构建 `mnemos-docreader`（`docker/Dockerfile.docreader`） |
+| `docker-build-frontend` | 多阶段构建 `mnemos-ui`（builder 内 `npm ci` + `npm run build`，无需宿主机预构建 dist；自动从 git 注入 `VITE_FRONTEND_COMMIT`） |
 | `docker-build-all` | 以上三个镜像 |
 | `docker-run` | 确保 `.env` 存在（缺失时从 `.env.example` 复制或 touch）后 `docker-compose up` |
 | `docker-stop` / `docker-restart` | `docker-compose down` / `stop -t 60` + `up` |
@@ -311,7 +311,7 @@ make fmt && make lint && make test
 在项目 `.env` 中设置 `GIN_MODE=debug`，然后重新创建 app 容器，使环境变量生效（仅执行 `docker compose restart app` 不会更新容器环境）：
 
 ```bash
-docker compose up -d --no-deps --force-recreate app
+docker compose -f docker/docker/docker-compose.yml --env-file .env up -d --no-deps --force-recreate app
 docker compose exec app printenv GIN_MODE
 docker compose port app 8080
 ```

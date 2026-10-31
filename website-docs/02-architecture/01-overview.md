@@ -17,12 +17,12 @@ WeKnora 采用"主服务 + 前端 + 文档解析微服务"的三进程核心架�
 
 | 服务 | 镜像 / 构建 | 端口 | 职责 |
 | --- | --- | --- | --- |
-| `app` | `wechatopenai/weknora-app`（`docker/Dockerfile.app`，Go） | `8080` | 主后端：REST API、RAG 检索、Agent 引擎、异步任务 worker、IM/Embed 渠道接入。健康检查 `GET /health` |
-| `frontend` | `wechatopenai/weknora-ui`（`frontend/`，NGINX + Vue3 静态产物） | `80` | Web UI；NGINX 同时充当反向代理，将 `/api` 转发到 `app`（`APP_HOST`/`APP_BACKEND_PORT`/`APP_SCHEME` 可指向远端后端） |
-| `docreader` | `wechatopenai/weknora-docreader`（`docker/Dockerfile.docreader`，Python） | `50051`（仅 compose 网络内 expose，不映射宿主机） | 文档解析微服务：gRPC 服务端，PDF/DOCX/Excel/EPUB/网页等 25+ 格式解析与页面渲染。健康检查 `grpc_health_probe` |
+| `app` | `mnemos-app`（`docker/Dockerfile.app`，Go） | `8080` | 主后端：REST API、RAG 检索、Agent 引擎、异步任务 worker、IM/Embed 渠道接入。健康检查 `GET /health` |
+| `frontend` | `mnemos-ui`（`frontend/`，NGINX + Vue3 静态产物） | `80` | Web UI；NGINX 同时充当反向代理，将 `/api` 转发到 `app`（`APP_HOST`/`APP_BACKEND_PORT`/`APP_SCHEME` 可指向远端后端） |
+| `docreader` | `mnemos-docreader`（`docker/Dockerfile.docreader`，Python） | `50051`（仅 compose 网络内 expose，不映射宿主机） | 文档解析微服务：gRPC 服务端，PDF/DOCX/Excel/EPUB/网页等 25+ 格式解析与页面渲染。健康检查 `grpc_health_probe` |
 | `postgres` | `paradedb/paradedb:v0.25.11-pg17` | `5432`（网络内） | 主数据库。ParadeDB 发行版自带 BM25 全文检索与 pgvector 向量能力，因此**默认部署无需独立向量库**（`RETRIEVE_DRIVER=postgres`） |
 | `redis` | `redis:7.0-alpine`（`appendonly` + `requirepass`） | `6379`（网络内） | Asynq 任务队列、SSE 流管理（跨实例）、system_settings 发布订阅、限流与分布式模型并发闸门 |
-| `sandbox` | `wechatopenai/weknora-sandbox`（`docker/Dockerfile.sandbox`） | — | WeKnora 标准运行镜像；可直接用于空间 Docker 后端，接入 CubeSandbox/E2B 时则通过模板 API 自动注册并用于 Agent Skills |
+| `sandbox` | `mnemos-sandbox`（`docker/Dockerfile.sandbox`） | — | WeKnora 标准运行镜像；可直接用于空间 Docker 后端，接入 CubeSandbox/E2B 时则通过模板 API 自动注册并用于 Agent Skills |
 
 `app` 与 `docreader` 之间还通过共享卷 `docreader-tmp`（挂载于 `/tmp/docreader`）传递解析产物图片；`app` 的本地文件存储卷为 `data-files`（`/data/files`）。
 
@@ -106,7 +106,7 @@ graph LR
         IM["IM 平台 (微信/飞书/钉钉/Slack...)"]
     end
 
-    subgraph Compose["Docker Compose: WeKnora-network"]
+    subgraph Compose["Docker Compose: mnemos-network"]
         FE["frontend: NGINX + 静态资源 (:80)"]
         APP["app: Go 主服务 (:8080)<br/>Gin REST + SSE / Agent 引擎 / Asynq worker"]
         DR["docreader: Python gRPC (:50051)<br/>PDF / DOCX / Excel / Web 解析"]
@@ -211,6 +211,6 @@ sequenceDiagram
 | `packages/` | 独立发布的集成包，如 DeepSeek Harness 插件 `packages/dsh-weknora`，见 [DeepSeek Harness](../05-clients/08-deepseek-harness.md) |
 | `docs/` | 停止维护的旧文档；暂存 Swagger 生成包、发布资源和历史图片 |
 
-> 说明：Go 模块路径为 `github.com/Tencent/WeKnora`；根目录还包含 `docker-compose.yml`（生产编排）与 `docker-compose.dev.yml`（开发编排）、`Makefile`、`VERSION` 等。
+> 说明：Go 模块路径为 `github.com/Tencent/WeKnora`；根目录还包含 `docker/docker-compose.yml`（生产编排）与 `docker/docker-compose.dev.yml`（开发编排）、`Makefile`、`VERSION` 等。
 
 下一篇《Go 后端设计》将深入 `internal/` 内部：分层架构、dig 依赖注入、启动流程、路由与 RBAC、中间件、领域模型与错误/日志规范。

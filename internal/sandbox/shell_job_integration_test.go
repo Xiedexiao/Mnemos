@@ -503,7 +503,7 @@ func TestShellJobBudgetedIncrementalReadAfterRotation(t *testing.T) {
 	client := dockerIntegrationClient(t)
 	handle := dockerIntegrationHandle(t, client)
 	id := "sj_c111"
-	script := `D=/var/lib/weknora/jobs/sj_c111; mkdir -p "$D"
+	script := `D=/var/lib/mnemos/jobs/sj_c111; mkdir -p "$D"
 printf '%s' '{"work_id":"sj_c111"}' > "$D/meta.json"
 printf '%s' '{"state":"succeeded"}' > "$D/status.json"
 printf 65536 > "$D/stdout.rotated"

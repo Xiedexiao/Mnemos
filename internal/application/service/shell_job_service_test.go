@@ -987,7 +987,7 @@ func TestSweepKillsOrphansWhenTheWatcherDies(t *testing.T) {
 	require.Contains(t, script, "kill -TERM")
 	require.Contains(t, script, "99")
 	require.Contains(t, script, "77")
-	require.Contains(t, script, "weknora-sandbox-activity")
+	require.Contains(t, script, "mnemos-sandbox-activity")
 	require.Equal(t, "sbx1", opts.ExpectedSandboxID)
 	require.True(t, opts.SkipWorkspacePrep)
 	notices, err := bg.Inbox.Pending(context.Background(), ref)

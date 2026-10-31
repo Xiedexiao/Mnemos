@@ -437,7 +437,7 @@ func (c *E2BRemoteClient) EnsureStandardTemplate(ctx context.Context) (*RemoteTe
 	return c.buildStandardTemplate(ctx)
 }
 
-// ReplaceStandardTemplate starts a new WeKnora-template build from the current
+// ReplaceStandardTemplate starts a new mnemos-template build from the current
 // spec. E2B resolves builds by name, so this is often a rebuild of the same
 // ID. The previous template stays listed until the caller has persisted a
 // spawnable replacement and called DeleteSupersededStandardTemplates: deleting
@@ -521,11 +521,11 @@ func (c *E2BRemoteClient) DeleteSupersededStandardTemplates(ctx context.Context,
 
 // e2bPtyPromptOverrideCmd re-sources the image prompt after E2B's
 // template provisioner appends `PS1='\w $ '` to bashrc. Harmless if the
-// image already sources /etc/weknora/pty-prompt.sh (PROMPT_COMMAND wins
+// image already sources /etc/mnemos/pty-prompt.sh (PROMPT_COMMAND wins
 // either way); required when rebuilding from an older image that does not.
-const e2bPtyPromptOverrideCmd = `. /etc/weknora/pty-prompt.sh 2>/dev/null; ` +
+const e2bPtyPromptOverrideCmd = `. /etc/mnemos/pty-prompt.sh 2>/dev/null; ` +
 	`for f in /root/.bashrc /home/user/.bashrc /etc/profile.d/zz-weknora-prompt.sh; do ` +
-	`grep -q /etc/weknora/pty-prompt.sh "$f" 2>/dev/null || echo '. /etc/weknora/pty-prompt.sh' >> "$f"; ` +
+	`grep -q /etc/mnemos/pty-prompt.sh "$f" 2>/dev/null || echo '. /etc/mnemos/pty-prompt.sh' >> "$f"; ` +
 	`done`
 
 func (c *E2BRemoteClient) buildStandardTemplate(ctx context.Context) (*RemoteTemplate, error) {

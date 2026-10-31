@@ -44,7 +44,7 @@
 
 ## 配置方法汇总 {#_6-配置方法汇总}
 
-核心开关（`.env.example` C1 节、`docker-compose.yml`）：
+核心开关（`.env.example` C1 节、`docker/docker-compose.yml`）：
 
 | 环境变量 | 默认 | 说明 |
 |----------|------|------|
@@ -328,7 +328,7 @@ sequenceDiagram
 | 混合检索调度与融合 | `internal/application/service/knowledgebase_search*.go` |
 | 引擎类型常量 | `internal/types/retriever.go` |
 | 租户默认引擎 | `internal/types/tenant.go`（`GetDefaultRetrieverEngines`） |
-| 环境变量清单 | `.env.example`（C1 节）、`docker-compose.yml` |
+| 环境变量清单 | `.env.example`（C1 节）、`docker/docker-compose.yml` |
 
 ## 本地验证与升级
 
@@ -339,7 +339,7 @@ sequenceDiagram
 在仓库根目录启动开发集群：
 
 ```bash
-docker compose -f docker-compose.dev.yml --profile opensearch up -d opensearch
+docker compose -f docker/docker-compose.dev.yml --profile opensearch up -d opensearch
 curl -fsS 'http://localhost:9200/'
 curl -fsS 'http://localhost:9200/_cat/plugins?format=json'
 ```
@@ -363,7 +363,7 @@ SSRF_WHITELIST=localhost
 结束后仅停止本次使用的服务，保留开发数据：
 
 ```bash
-docker compose -f docker-compose.dev.yml --profile opensearch stop opensearch
+docker compose -f docker/docker-compose.dev.yml --profile opensearch stop opensearch
 # 若启动过 Dashboards
-docker compose -f docker-compose.dev.yml --profile opensearch-ui stop opensearch-dashboards
+docker compose -f docker/docker-compose.dev.yml --profile opensearch-ui stop opensearch-dashboards
 ```

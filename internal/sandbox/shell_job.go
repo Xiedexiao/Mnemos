@@ -15,7 +15,7 @@ import (
 
 // ShellJobsRoot is where job directories live inside a remote sandbox, outside
 // the /workspace git worktree so checkpoints never see them (shell 稿 §9.1).
-const ShellJobsRoot = "/var/lib/weknora/jobs"
+const ShellJobsRoot = "/var/lib/mnemos/jobs"
 
 const (
 	shellJobSegmentBytes = 16 * 1024 * 1024

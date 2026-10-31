@@ -18,20 +18,20 @@ const (
 	Root            = "/workspace"
 	InputDir        = "/workspace/input"
 	OutputDir       = "/workspace/output"
-	GitDir          = "/var/lib/weknora/workspace.git"
-	SkillsImageRoot = "/opt/weknora/tenant/skills"
+	GitDir          = "/var/lib/mnemos/workspace.git"
+	SkillsImageRoot = "/opt/mnemos/tenant/skills"
 	TmpRoot         = "/tmp"
 
 	// UserSessionsRoot holds one directory per session on a machine that
 	// several sessions of one owner share; UserGitRoot holds their checkpoint
 	// repositories, outside the work trees for the same reason GitDir is.
 	UserSessionsRoot = Root + "/sessions"
-	UserGitRoot      = "/var/lib/weknora/sessions"
+	UserGitRoot      = "/var/lib/mnemos/sessions"
 
 	// RemoteBrowserRoot is the agent-browser state root on a machine one
 	// session owns. Outside Root for the same reason GitDir is: Root is a
 	// git work tree committed with add -A.
-	RemoteBrowserRoot = "/var/lib/weknora/browser/session"
+	RemoteBrowserRoot = "/var/lib/mnemos/browser/session"
 )
 
 // Origin says what kind of workspace a layout describes. Isolation policy

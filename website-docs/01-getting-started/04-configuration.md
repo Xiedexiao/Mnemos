@@ -133,7 +133,7 @@ flowchart LR
 
 ## 重要环境变量
 
-以下变量来自 `docker-compose.yml` 的 app/docreader `environment` 段、`.env.example` 与代码中的 `os.Getenv`。生产部署至少要改：`DB_USER/DB_PASSWORD/DB_NAME`、`REDIS_PASSWORD`、`JWT_SECRET`、`SYSTEM_AES_KEY`。
+以下变量来自 `docker/docker-compose.yml` 的 app/docreader `environment` 段、`.env.example` 与代码中的 `os.Getenv`。生产部署至少要改：`DB_USER/DB_PASSWORD/DB_NAME`、`REDIS_PASSWORD`、`JWT_SECRET`、`SYSTEM_AES_KEY`。
 
 ### 运行时基础
 
@@ -267,12 +267,12 @@ AWS S3 的 `S3_ACCESS_KEY` / `S3_SECRET_KEY` 可以**同时留空**，此时走 
 
 ### 镜像构建参数（从源码构建时）
 
-以下变量只在 `docker compose build` / `make docker-build-frontend` 从源码构建 frontend / app 镜像时使用，拉取官方镜像部署时无需设置。其他构建参数（Go 代理、apt 镜像源等）见 `.env.example` A1 节。
+以下变量只在 `docker compose -f docker/docker/docker-compose.yml --env-file .env build` / `make docker-build-frontend` 从源码构建 frontend / app 镜像时使用，拉取官方镜像部署时无需设置。其他构建参数（Go 代理、apt 镜像源等）见 `.env.example` A1 节。
 
 | 名称 | 默认值 | 说明 |
 | --- | --- | --- |
-| `VITE_FRONTEND_COMMIT` | unknown | 写入「系统信息」页的前端短 commit。`make docker-build-frontend` 与 `start_all.sh --no-pull` 会从 git 自动填充；直接 `docker compose build` 时需自行导出 |
-| `VERSION_ARG` | 空（构建时回退读 `VERSION` 文件） | 写入「系统信息」页的应用版本号。`start_all.sh --no-pull` 会自动填充；直接 `docker compose build` 时可自行导出 |
+| `VITE_FRONTEND_COMMIT` | unknown | 写入「系统信息」页的前端短 commit。`make docker-build-frontend` 与 `start_all.sh --no-pull` 会从 git 自动填充；直接 `docker compose -f docker/docker/docker-compose.yml --env-file .env build` 时需自行导出 |
+| `VERSION_ARG` | 空（构建时回退读 `VERSION` 文件） | 写入「系统信息」页的应用版本号。`start_all.sh --no-pull` 会自动填充；直接 `docker compose -f docker/docker/docker-compose.yml --env-file .env build` 时可自行导出 |
 | `COMMIT_ID_ARG` / `BUILD_TIME_ARG` / `GO_VERSION_ARG` | 空（unknown） | 写入「系统信息」页的应用 commit / 构建时间 / Go 版本。`start_all.sh --no-pull` 会从 git 自动填充 |
 | `NPM_REGISTRY` | 空（默认源） | 构建阶段使用的 npm registry，国内可设 `https://registry.npmmirror.com` |
 | `NODE_MAX_OLD_SPACE_SIZE` | 4096 | Vite 构建的 Node 堆上限（MB），Docker Desktop 内存较小时可降到 2048 |
@@ -289,7 +289,7 @@ AWS S3 的 `S3_ACCESS_KEY` / `S3_SECRET_KEY` 可以**同时留空**，此时走 
 | `DOCREADER_ODL_HYBRID` / `DOCREADER_ODL_HYBRID_URL` / `DOCREADER_ODL_HYBRID_MODE` / `DOCREADER_ODL_HYBRID_FALLBACK` | off / http://odl-hybrid:5002 / auto / false | OpenDataLoader 混合解析 |
 | `DOCREADER_XLSX_PERCENT_AS_TEXT` / `DOCREADER_XLSX_PCT_ROW_HINT_MIN` | false / 0 | 可选百分比显示文本和同行推断；开启后可能把数值转为字符串，见[解析说明](../03-features/03-document-parsing.md) |
 | `DOCREADER_HTML_MAIN_CONTENT` | false | 上传的 HTML 文件只索引正文（与 URL 导入同一抽取策略；抽取不足时回退整页转换） |
-| 其余 `DOCREADER_PDF_*`（词距/边栏/隐藏文本/嵌入图/图表区等 20+ 项） | 见 `docker-compose.yml` docreader 段注释 | PDF 版式与抽取精调 |
+| 其余 `DOCREADER_PDF_*`（词距/边栏/隐藏文本/嵌入图/图表区等 20+ 项） | 见 `docker/docker-compose.yml` docreader 段注释 | PDF 版式与抽取精调 |
 | `DOCREADER_EXTERNAL_HTTP_PROXY` / `_HTTPS_PROXY` | 空 | docreader 出站抓取代理 |
 
 ### OCR 图片预处理 {#image-preprocess}
@@ -341,7 +341,7 @@ AWS S3 的 `S3_ACCESS_KEY` / `S3_SECRET_KEY` 可以**同时留空**，此时走 
 
 | 名称 | 默认值 | 说明 |
 | --- | --- | --- |
-| `BROWSERSKILL_BINARY` | Docker 镜像内 `/opt/weknora/browserskill/bsk` | `bsk` 可执行文件绝对路径；原生部署需自行构建并配置，显式设为空可关闭本功能 |
+| `BROWSERSKILL_BINARY` | Docker 镜像内 `/opt/mnemos/browserskill/bsk` | `bsk` 可执行文件绝对路径；原生部署需自行构建并配置，显式设为空可关闭本功能 |
 | `BROWSERSKILL_EXTENSION_PATH` | Docker 镜像内已预设 | 供用户在「工具箱 → 浏览器连接」的「手动安装（备用）」下载的扩展 ZIP 路径 |
 | `BROWSERSKILL_PUBLIC_URL` | 空（按页面地址生成） | 仅在网关使用独立域名或路径时覆盖；远程部署必须使用 `wss://` |
 | `BROWSERSKILL_MAX_CONNECTIONS` | 32 | 单个应用实例同时在线的浏览器设备上限 |
@@ -464,4 +464,4 @@ builtin_models:
 
 ## 配置优先级速记
 
-对同一语义的配置，生效优先级为：**数据库 `system_settings`（仅注册在表内的键）> 环境变量 > config.yaml > 代码内置默认值**；租户/知识库级配置（`RetrievalConfig`、`ChunkingConfig` 等，存于数据库）在运行时覆盖全局默认。修改 `.env` 后需重启容器（`docker compose up -d app`）；开发模式 air 热重载不会重读 `.env`，需重启 dev 脚本。
+对同一语义的配置，生效优先级为：**数据库 `system_settings`（仅注册在表内的键）> 环境变量 > config.yaml > 代码内置默认值**；租户/知识库级配置（`RetrievalConfig`、`ChunkingConfig` 等，存于数据库）在运行时覆盖全局默认。修改 `.env` 后需重启容器（`docker compose -f docker/docker/docker-compose.yml --env-file .env up -d app`）；开发模式 air 热重载不会重读 `.env`，需重启 dev 脚本。

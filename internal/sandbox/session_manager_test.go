@@ -47,7 +47,7 @@ func TestExecutionOutputDir(t *testing.T) {
 			name: "rejects path outside workspace",
 			cfg: &ExecuteConfig{
 				Env: map[string]string{
-					skillOutputEnvVar: "/tmp/weknora-skill-output",
+					skillOutputEnvVar: "/tmp/mnemos-skill-output",
 				},
 			},
 			want: SessionOutputRoot,
@@ -295,14 +295,14 @@ func TestExecShellCommandKeepsOrdinaryRemoteRequest(t *testing.T) {
 		Env: map[string]string{
 			"A":                    "B",
 			"WEKNORA_SESSION_ID":   "sess-1",
-			"WEKNORA_BROWSER_ROOT": "/var/lib/weknora/browser/session",
+			"WEKNORA_BROWSER_ROOT": "/var/lib/mnemos/browser/session",
 		},
 		WorkDir: "/workspace/project",
 		User:    DefaultSandboxExecUser,
 		Timeout: time.Second,
 	}, last)
 	require.Equal(t, map[string]string{"A": "B"}, env, "caller map must not be mutated")
-	require.Equal(t, "/var/lib/weknora/browser/session", last.Env["WEKNORA_BROWSER_ROOT"])
+	require.Equal(t, "/var/lib/mnemos/browser/session", last.Env["WEKNORA_BROWSER_ROOT"])
 	require.NotEmpty(t, last.Env["WEKNORA_SESSION_ID"])
 }
 
@@ -918,7 +918,7 @@ func (b *clientBoundRecordingBootstrapper) AfterCreate(
 		return errors.New("AfterCreate must use the bound remote client")
 	}
 	_, err := b.client.Exec(ctx, handle, RemoteExecRequest{
-		Command: "echo weknora-fork-after-create",
+		Command: "echo mnemos-fork-after-create",
 		Shell:   true,
 		WorkDir: SessionWorkspaceRoot,
 		Timeout: time.Second,
@@ -965,7 +965,7 @@ func TestNewSessionBoundManagerBindsBootstrapperToClient(t *testing.T) {
 	found := false
 	client.mu.Lock()
 	for _, req := range client.execRequests {
-		if strings.Contains(req.Command, "weknora-fork-after-create") {
+		if strings.Contains(req.Command, "mnemos-fork-after-create") {
 			found = true
 			require.True(t, req.Shell)
 			require.Equal(t, SessionWorkspaceRoot, req.WorkDir)
@@ -1694,7 +1694,7 @@ func TestWorkspaceForkHoldsLeasesAndCopiesWithOneGuardedScript(t *testing.T) {
 	require.Equal(t, map[string]bool{sha: true, older: true}, reachable)
 	req := lastExecRequest(t, h.client)
 	require.Equal(t, "root", req.User)
-	require.Contains(t, req.Command, "/var/lib/weknora/sessions/c812e1edb644.git")
+	require.Contains(t, req.Command, "/var/lib/mnemos/sessions/c812e1edb644.git")
 	require.Contains(t, req.Command, userSessionRoot(userSessionB))
 	require.Contains(t, req.Command, "core.hooksPath=/dev/null")
 	require.Contains(t, req.Command, `"160000"`, "gitlinks are refused")
@@ -1873,7 +1873,7 @@ func TestWithBrowserEnvOverridesCallerValues(t *testing.T) {
 	}
 	out := withBrowserEnv(in, "sid-1", RemoteWorkspaceLayout())
 	require.Equal(t, "sid-1", out["WEKNORA_SESSION_ID"])
-	require.Equal(t, "/var/lib/weknora/browser/session", out["WEKNORA_BROWSER_ROOT"])
+	require.Equal(t, "/var/lib/mnemos/browser/session", out["WEKNORA_BROWSER_ROOT"])
 	require.Equal(t, "1", out["KEEP"])
 	require.Equal(t, "spoofed", in["WEKNORA_SESSION_ID"], "input map must not be mutated")
 }
@@ -1892,7 +1892,7 @@ func TestUserSessionExecGetsItsOwnBrowserEnv(t *testing.T) {
 	require.NoError(t, err)
 	req := lastExecRequest(t, h.client)
 	require.Equal(t, userSessionB, req.Env["WEKNORA_SESSION_ID"])
-	require.Equal(t, "/var/lib/weknora/sessions/"+userSessionB+".browser", req.Env["WEKNORA_BROWSER_ROOT"])
+	require.Equal(t, "/var/lib/mnemos/sessions/"+userSessionB+".browser", req.Env["WEKNORA_BROWSER_ROOT"])
 }
 
 func TestDesktopEnsureStyleExecCarriesTheSessionIdentity(t *testing.T) {

@@ -18,7 +18,7 @@ SCRIPT_NAME=$(basename "$0")
 
 # 显示帮助信息
 show_help() {
-    printf "%b\n" "${GREEN}WeKnora 启动脚本 v${VERSION}${NC}"
+    printf "%b\n" "${GREEN}Mnemos 启动脚本 v${VERSION}${NC}"
     printf "%b\n" "${GREEN}用法:${NC} $0 [选项]"
     echo "选项:"
     echo "  -h, --help     显示帮助信息"
@@ -37,7 +37,7 @@ show_help() {
 
 # 显示版本信息
 show_version() {
-    printf "%b\n" "${GREEN}WeKnora 启动脚本 v${VERSION}${NC}"
+    printf "%b\n" "${GREEN}Mnemos 启动脚本 v${VERSION}${NC}"
     exit 0
 }
 
@@ -58,7 +58,7 @@ log_success() {
     printf "%b\n" "${GREEN}[SUCCESS]${NC} $1"
 }
 
-# Inject build metadata into source-built images. docker-compose.yml
+# Inject build metadata into source-built images. docker/docker-compose.yml
 # interpolates app, frontend, and docreader build args. Their build contexts
 # contain no .git, so pass the source identity from the checkout explicitly.
 export_build_args() {
@@ -329,7 +329,7 @@ check_platform() {
 
 # 预拉取沙箱镜像（Agent Skills 执行所需，仅拉取不启动）
 ensure_sandbox_image() {
-    local sandbox_image="wechatopenai/weknora-sandbox:${WEKNORA_VERSION:-latest}"
+    local sandbox_image="mnemos-sandbox:${WEKNORA_VERSION:-latest}"
 
     # 检查本地是否已存在沙箱镜像
     if docker image inspect "$sandbox_image" &> /dev/null; then
@@ -342,11 +342,11 @@ ensure_sandbox_image() {
 
     # 后台拉取，不阻塞主流程
     (
-        if PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD --profile sandbox pull sandbox 2>/dev/null; then
+        if PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env --profile sandbox pull sandbox 2>/dev/null; then
             log_success "沙箱镜像拉取完成: $sandbox_image"
         else
             log_warning "沙箱镜像拉取失败，Agent Skills 功能可能不可用"
-            log_warning "可稍后手动拉取: $DOCKER_COMPOSE_BIN $DOCKER_COMPOSE_SUBCMD --profile sandbox pull sandbox"
+            log_warning "可稍后手动拉取: $DOCKER_COMPOSE_BIN $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env --profile sandbox pull sandbox"
         fi
     ) &
 
@@ -383,11 +383,11 @@ start_docker() {
 	if [ "$NO_PULL" = true ]; then
 		# 不拉取镜像，使用本地镜像
 		log_info "跳过镜像拉取，使用本地镜像..."
-		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD up --build -d
+		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up --build -d
 	else
 		# 拉取最新镜像
 		log_info "拉取最新镜像..."
-		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD up --pull always -d
+		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up --pull always -d
 	fi
     if [ $? -ne 0 ]; then
         log_error "Docker容器启动失败"
@@ -398,7 +398,7 @@ start_docker() {
 
     # 显示容器状态
     log_info "当前容器状态:"
-	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD ps
+	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env ps
 
     # 预拉取Sandbox镜像（Agent Skills 执行所需，仅拉取不启动）
     ensure_sandbox_image
@@ -421,7 +421,7 @@ stop_docker() {
     cd "$PROJECT_ROOT"
     
     # 停止所有容器
-	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD down --remove-orphans
+	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env down --remove-orphans
     if [ $? -ne 0 ]; then
         log_error "Docker容器停止失败"
         return 1
@@ -446,7 +446,7 @@ list_containers() {
     
     # 列出所有容器
     printf "%b\n" "${BLUE}当前正在运行的容器:${NC}"
-	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD ps --services | sort
+	"$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env ps --services | sort
     
     return 0
 }
@@ -475,7 +475,7 @@ pull_images() {
     
     # 拉取所有镜像
     log_info "拉取所有服务的最新镜像..."
-	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD pull
+	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env pull
     if [ $? -ne 0 ]; then
         log_error "镜像拉取失败"
         return 1
@@ -483,7 +483,7 @@ pull_images() {
 
     # 拉取 sandbox 镜像（sandbox 在 profile 中，需要单独拉取）
     log_info "拉取沙箱镜像..."
-    PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD --profile sandbox pull sandbox 2>/dev/null || \
+    PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env --profile sandbox pull sandbox 2>/dev/null || \
         log_warning "沙箱镜像拉取失败（非必需，跳过）"
 
     log_success "所有镜像已成功拉取到最新版本"
@@ -522,7 +522,7 @@ restart_container() {
     export_build_args
     
     # 检查容器是否存在
-	if ! "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD ps --services | grep -q "^$container_name$"; then
+	if ! "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env ps --services | grep -q "^$container_name$"; then
         log_error "容器 '$container_name' 不存在或未运行"
         echo "可用的容器有:"
         list_containers
@@ -531,14 +531,14 @@ restart_container() {
     
     # 构建并重启容器
     log_info "正在重新构建容器 '$container_name'..."
-	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD build "$container_name"
+	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env build "$container_name"
     if [ $? -ne 0 ]; then
         log_error "容器 '$container_name' 构建失败"
         return 1
     fi
     
     log_info "正在重启容器 '$container_name'..."
-	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD up -d --no-deps "$container_name"
+	PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up -d --no-deps "$container_name"
     if [ $? -ne 0 ]; then
         log_error "容器 '$container_name' 重启失败"
         return 1
@@ -588,7 +588,7 @@ check_environment() {
     
     # 检查沙箱镜像
     log_info "检查沙箱镜像..."
-    local sandbox_image="wechatopenai/weknora-sandbox:${WEKNORA_VERSION:-latest}"
+    local sandbox_image="mnemos-sandbox:${WEKNORA_VERSION:-latest}"
     if docker image inspect "$sandbox_image" &> /dev/null; then
         log_success "沙箱镜像已就绪: $sandbox_image"
     else
@@ -772,7 +772,7 @@ else
             printf "%b\n" "${GREEN}  - API接口: http://localhost:${APP_PORT:-8080}${NC}"
             echo ""
             log_info "正在持续输出容器日志（按 Ctrl+C 退出日志，容器不会停止）..."
-            "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD logs app docreader postgres --since=10s -f
+            "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env logs app docreader postgres --since=10s -f
         else
             log_error "部分服务启动失败，请检查日志并修复问题"
         fi
@@ -785,7 +785,7 @@ else
         printf "%b\n" "${GREEN}  - API接口: http://localhost:${APP_PORT:-8080}${NC}"
         echo ""
         log_info "正在持续输出容器日志（按 Ctrl+C 退出日志，容器不会停止）..."
-        "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD logs app docreader postgres --since=10s -f
+        "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env logs app docreader postgres --since=10s -f
     fi
 fi
 

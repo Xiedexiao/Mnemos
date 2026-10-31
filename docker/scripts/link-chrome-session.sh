@@ -9,7 +9,7 @@
 # fresh private file, which the launch restore then fills.
 set -eu
 profile="${1:?usage: link-chrome-session PROFILE}"
-shared="${WK_CHROME_SHARED:-/var/lib/weknora/browser/shared}/Default"
+shared="${WK_CHROME_SHARED:-/var/lib/mnemos/browser/shared}/Default"
 mkdir -p "$shared" "$profile/Default"
 chmod 0700 "$(dirname "$shared")" "$profile"
 exec 9>"$(dirname "$shared")/.link.lock"

@@ -494,7 +494,7 @@ func TestReadFileAllowsPathsOutsideWorkspaceInCurrentSandbox(t *testing.T) {
 		{"/tmp/task/previews/check.txt", "/tmp/task/previews/check.txt"},
 		{"/etc/os-release", "/etc/os-release"},
 		{"/home/user/config.txt", "/home/user/config.txt"},
-		{"/opt/weknora/tenant/skills/pdf/SKILL.md", "/opt/weknora/tenant/skills/pdf/SKILL.md"},
+		{"/opt/mnemos/tenant/skills/pdf/SKILL.md", "/opt/mnemos/tenant/skills/pdf/SKILL.md"},
 		{"../tmp/task/./check.txt", "/tmp/task/check.txt"},
 	} {
 		t.Run(tc.input, func(t *testing.T) {
@@ -570,11 +570,11 @@ func TestListSandboxFilesAllowsSandboxSkillImagePaths(t *testing.T) {
 	source := &fakeSandboxFileSource{}
 	result, err := NewListSandboxFilesTool(source).Execute(
 		sandboxFileTestContext(),
-		json.RawMessage(`{"path":"/opt/weknora/tenant/skills/ppt-generator"}`),
+		json.RawMessage(`{"path":"/opt/mnemos/tenant/skills/ppt-generator"}`),
 	)
 	require.NoError(t, err)
 	require.True(t, result.Success, result.Error)
-	assert.Equal(t, "/opt/weknora/tenant/skills/ppt-generator", source.listedDir)
+	assert.Equal(t, "/opt/mnemos/tenant/skills/ppt-generator", source.listedDir)
 }
 
 func TestReadFileOutsideWorkspaceStillRequiresSession(t *testing.T) {

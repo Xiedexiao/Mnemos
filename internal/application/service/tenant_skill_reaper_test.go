@@ -480,14 +480,14 @@ func TestPruneReclaimsAnAbandonedBuildThroughARepositoryPrefix(t *testing.T) {
 	fx := newReaperFixture(t)
 	fx.building("sk-2", "weknora-sk-cfg1-g2", fx.now.Add(-skillInstallStuckTTL-time.Minute))
 	fx.provider.listed = []sandbox.RemoteSnapshotRef{
-		{ID: "weknora-skill/weknora-sk-cfg1-g2", Names: []string{"weknora-skill/weknora-sk-cfg1-g2"}},
+		{ID: "mnemos-skill/weknora-sk-cfg1-g2", Names: []string{"mnemos-skill/weknora-sk-cfg1-g2"}},
 	}
 
 	n, err := fx.svc.PruneSupersededSnapshots(context.Background())
 
 	require.NoError(t, err)
 	require.Equal(t, 1, n)
-	require.Equal(t, []string{"weknora-skill/weknora-sk-cfg1-g2"}, fx.provider.deleted)
+	require.Equal(t, []string{"mnemos-skill/weknora-sk-cfg1-g2"}, fx.provider.deleted)
 }
 
 // A listing that names nothing we recognise cannot distinguish "the commit
@@ -601,10 +601,10 @@ func TestConfiguredSandboxTTLCoversTheDockerIdleWindow(t *testing.T) {
 func TestSnapshotBelongsToOtherConfig(t *testing.T) {
 	prefix := skillSnapshotNamePrefix(7, "cfg-1")
 	dockerOurs := sandbox.RemoteSnapshotRef{
-		ID: "weknora-skill/weknora-sk-t7-cfg1-g1", Names: []string{"weknora-skill/weknora-sk-t7-cfg1-g1"},
+		ID: "mnemos-skill/weknora-sk-t7-cfg1-g1", Names: []string{"mnemos-skill/weknora-sk-t7-cfg1-g1"},
 	}
 	dockerTheirs := sandbox.RemoteSnapshotRef{
-		ID: "weknora-skill/weknora-sk-t7-cfg2-g1", Names: []string{"weknora-skill/weknora-sk-t7-cfg2-g1"},
+		ID: "mnemos-skill/weknora-sk-t7-cfg2-g1", Names: []string{"mnemos-skill/weknora-sk-t7-cfg2-g1"},
 	}
 	cubeOurs := sandbox.RemoteSnapshotRef{ID: "snap-ours", Names: []string{"weknora-sk-t7-cfg1-g1"}}
 	cubeTheirs := sandbox.RemoteSnapshotRef{ID: "snap-theirs", Names: []string{"weknora-sk-t8-cfg1-g1"}}
@@ -630,7 +630,7 @@ func TestSnapshotBelongsToOtherConfig(t *testing.T) {
 	for _, snap := range kept {
 		ids = append(ids, snap.ID)
 	}
-	require.Equal(t, []string{"weknora-skill/weknora-sk-t7-cfg1-g1", "snap-ours", "snap-legacy", "snap-plain"}, ids)
+	require.Equal(t, []string{"mnemos-skill/weknora-sk-t7-cfg1-g1", "snap-ours", "snap-legacy", "snap-plain"}, ids)
 }
 
 func TestTenantSkillServiceStartIsIdempotent(t *testing.T) {

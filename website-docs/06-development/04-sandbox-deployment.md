@@ -15,7 +15,7 @@
 | `desktop` | `-desktop` | E2B 图形桌面模板基础镜像 |
 | `desktop-cube` | `-desktop-cube` | Cube 图形桌面模板，含 envd |
 
-镜像名为 `wechatopenai/weknora-sandbox:<版本><后缀>`。模板 ID 属于具体集群或账号，不应把其他部署的 ID 直接复制过来。生产模板应对应已验证的应用版本；构建 target 和发布架构以仓库 Dockerfile、发布工作流为准。
+镜像名为 `mnemos-sandbox:<版本><后缀>`。模板 ID 属于具体集群或账号，不应把其他部署的 ID 直接复制过来。生产模板应对应已验证的应用版本；构建 target 和发布架构以仓库 Dockerfile、发布工作流为准。
 
 ## Docker 部署
 
@@ -122,8 +122,8 @@ go test ./internal/sandbox -run 'TestDocker' -count=1
 真实 Docker 验证需要先构建标准镜像，会创建测试容器：
 
 ```bash
-docker build -f docker/Dockerfile.sandbox --target sandbox -t wechatopenai/weknora-sandbox:dev .
-DOCKER_INTEGRATION_IMAGE=wechatopenai/weknora-sandbox:dev \
+docker build -f docker/Dockerfile.sandbox --target sandbox -t mnemos-sandbox:dev .
+DOCKER_INTEGRATION_IMAGE=mnemos-sandbox:dev \
 go test -tags=docker_integration ./internal/sandbox \
   -run '^TestDocker.*Integration' -count=1 -v -timeout=15m
 ```

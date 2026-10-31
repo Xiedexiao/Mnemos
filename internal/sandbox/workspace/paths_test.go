@@ -84,7 +84,7 @@ func TestCleanWorkDirIn(t *testing.T) {
 	require.Equal(t, "/opt/build", got)
 	_, err = CleanWorkDirIn(remote, "/opt/build", true)
 	require.EqualError(t, err,
-		`sandbox: work dir "/opt/build" is outside allowed roots (/workspace, /opt/weknora/tenant/skills)`)
+		`sandbox: work dir "/opt/build" is outside allowed roots (/workspace, /opt/mnemos/tenant/skills)`)
 	_, err = CleanWorkDirIn(remote, "rel", false)
 	require.EqualError(t, err, `sandbox: work dir "rel" must be absolute`)
 
@@ -95,7 +95,7 @@ func TestCleanWorkDirIn(t *testing.T) {
 	}
 	_, err = CleanWorkDirIn(shared, "/opt/build", true)
 	require.EqualError(t, err,
-		`sandbox: work dir "/opt/build" is outside allowed roots (`+shared.Root+`, /opt/weknora/tenant/skills)`)
+		`sandbox: work dir "/opt/build" is outside allowed roots (`+shared.Root+`, /opt/mnemos/tenant/skills)`)
 }
 
 func TestCleanInputPathIn(t *testing.T) {

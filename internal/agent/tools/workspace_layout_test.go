@@ -141,7 +141,7 @@ func TestShellExecRemoteLayoutKeepsWholeSandboxForWorkDir(t *testing.T) {
 	tool := NewShellExecTool(&layoutShellExecutor{layout: sandbox.RemoteWorkspaceLayout()}, nil)
 	require.Equal(t, []string{"/"}, tool.allowedWorkDirRoots())
 	require.True(t, tool.workDirAllowed("/tmp/task"))
-	require.True(t, tool.workDirAllowed("/opt/weknora/tenant/skills/pdf"))
+	require.True(t, tool.workDirAllowed("/opt/mnemos/tenant/skills/pdf"))
 }
 
 func TestShellExecUsesProviderLayout(t *testing.T) {

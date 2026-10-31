@@ -457,7 +457,7 @@ func dockerSandboxMetadata(labels map[string]string) map[string]string {
 // dockerManagedLabel marks every container this backend creates. Sweeps filter
 // on it so a WeKnora deployment sharing a daemon with other workloads can
 // never delete a container it does not own.
-const dockerManagedLabel = "com.weknora.sandbox.managed"
+const dockerManagedLabel = "com.mnemos.sandbox.managed"
 
 // dockerContainerStartedAt parses the daemon's RFC3339Nano timestamps, which
 // are the zero value string "0001-01-01T00:00:00Z" when unset.

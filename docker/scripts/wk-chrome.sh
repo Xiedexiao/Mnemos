@@ -20,8 +20,8 @@ set -u
 CHROME_WK="${WK_CHROME_SHIM:-/usr/local/bin/chrome-wk}"
 DISPLAY_CMD="${WK_DISPLAY:-/usr/local/bin/wk-display}"
 AB="${WK_AB_CMD:-/usr/local/bin/agent-browser}"
-SESSIONS_ROOT="${WK_SESSIONS_ROOT:-/var/lib/weknora/sessions}"
-SINGLE_ROOT="${WK_SINGLE_BROWSER_ROOT:-/var/lib/weknora/browser/session}"
+SESSIONS_ROOT="${WK_SESSIONS_ROOT:-/var/lib/mnemos/sessions}"
+SINGLE_ROOT="${WK_SINGLE_BROWSER_ROOT:-/var/lib/mnemos/browser/session}"
 
 url=about:blank
 for a in "$@"; do

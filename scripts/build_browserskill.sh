@@ -29,7 +29,7 @@ daemon_commit="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))
 [ "$daemon_commit" = "$source_commit" ] || { echo "BrowserSkill daemon/extension baseline mismatch" >&2; exit 1; }
 mkdir -p "$output_dir"
 output_dir="$(cd "$output_dir" && pwd)"
-build_dir="$(mktemp -d /tmp/weknora-bsk-build.XXXXXX)"
+build_dir="$(mktemp -d /tmp/mnemos-bsk-build.XXXXXX)"
 trap 'rm -rf "$build_dir"' EXIT
 
 git clone --no-checkout https://github.com/Tencent/BrowserSkill.git "$build_dir/source"
@@ -39,7 +39,7 @@ git -C "$build_dir/source" checkout --detach "$source_commit"
   npx --yes pnpm@10.17.0 install --frozen-lockfile
   npx --yes pnpm@10.17.0 ext:build:zip
 )
-cp "$build_dir/source/apps/extension/dist/browser-skillextension-${extension_version}-chrome.zip" "$output_dir/browser-skill-weknora-${extension_version}.zip"
+cp "$build_dir/source/apps/extension/dist/browser-skillextension-${extension_version}-chrome.zip" "$output_dir/browser-skill-mnemos-${extension_version}.zip"
 cp "$build_dir/source/LICENSE" "$output_dir/BrowserSkill-LICENSE"
 
 # Build the daemon from the same pinned source; upstream has not published a

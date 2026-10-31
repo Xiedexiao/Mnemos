@@ -9,7 +9,7 @@
 
 ## 升级步骤
 
-所有命令在仓库根目录执行。开发环境的数据库命令使用 `docker compose -f docker-compose.dev.yml`，开发后端在宿主机上手动停止；开发 Compose 没有 `app` 服务。保留原数据卷，**不要执行 `down -v`、删除卷或换成 PG18 镜像**。
+所有命令在仓库根目录执行。开发环境的数据库命令使用 `docker compose -f docker/docker-compose.dev.yml`，开发后端在宿主机上手动停止；开发 Compose 没有 `app` 服务。保留原数据卷，**不要执行 `down -v`、删除卷或换成 PG18 镜像**。
 
 1. 停止 app 和其他数据库写入方；启用了 Langfuse 时也要停止其 web/worker，本地运行的开发后端同样需要停止。
 
@@ -32,8 +32,8 @@
 3. 使用更新后的 Compose，只替换数据库容器：
 
    ```bash
-   docker compose pull postgres
-   docker compose up -d --no-deps --wait postgres
+   docker compose -f docker/docker/docker-compose.yml --env-file .env pull postgres
+   docker compose -f docker/docker/docker-compose.yml --env-file .env up -d --no-deps --wait postgres
    ```
 
 4. 完成扩展的 SQL 升级。仅替换镜像不会更新已有数据库内的 `pg_extension` 版本。新镜像自带 0.22.x 起的完整升级脚本链，任意 0.22.x 都可以一步升级到镜像默认版本：

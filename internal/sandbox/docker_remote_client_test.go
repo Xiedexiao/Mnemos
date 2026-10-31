@@ -825,7 +825,7 @@ func TestDockerClientExecWrapsCommandWithTimeoutAndActivityMarker(t *testing.T) 
 	require.Equal(t, "/bin/sh", opts.Cmd[0])
 	require.Contains(t, opts.Cmd[2], dockerActivityMarker)
 	require.Contains(t, opts.Cmd[2], "timeout -s KILL 45")
-	require.Equal(t, []string{"weknora-exec", "python3", "/workspace/script.py", "--flag"},
+	require.Equal(t, []string{"mnemos-exec", "python3", "/workspace/script.py", "--flag"},
 		opts.Cmd[3:], "the command must reach the shell as positional args, never interpolated")
 }
 
@@ -892,7 +892,7 @@ func TestDockerClientExecShellPassesCommandAsPositionalArgument(t *testing.T) {
 	})
 	require.NoError(t, err)
 	opts := engine.execOptions[0]
-	require.Equal(t, []string{"weknora-exec", `echo "a b"; rm -rf /nope`}, opts.Cmd[3:])
+	require.Equal(t, []string{"mnemos-exec", `echo "a b"; rm -rf /nope`}, opts.Cmd[3:])
 	require.Equal(t, DefaultSandboxExecUser, opts.User,
 		"an unnamed account must resolve to the sandbox user, never to root")
 }
@@ -985,7 +985,7 @@ func TestDockerClientWriteFileRunsAsSandboxUserOverExec(t *testing.T) {
 	require.True(t, write.AttachStdin)
 	require.Equal(t, "hello", engine.execStdin.String())
 	require.Equal(t,
-		[]string{"weknora-exec", "sh", "-c", `cat > "$1"`, "weknora-write", "/workspace/input/note.txt"},
+		[]string{"mnemos-exec", "sh", "-c", `cat > "$1"`, "mnemos-write", "/workspace/input/note.txt"},
 		write.Cmd[3:],
 		"the destination must reach the shell as a positional arg, never interpolated")
 }
@@ -1003,7 +1003,7 @@ func TestDockerClientReadFileRunsAsSandboxUserOverExec(t *testing.T) {
 	require.Len(t, engine.execOptions, 1)
 	require.Equal(t, DefaultSandboxExecUser, engine.execOptions[0].User)
 	require.Equal(t,
-		[]string{"weknora-exec", "cat", "--", "/workspace/output/report.txt"},
+		[]string{"mnemos-exec", "cat", "--", "/workspace/output/report.txt"},
 		engine.execOptions[0].Cmd[3:])
 }
 
@@ -1146,7 +1146,7 @@ func TestDockerClientStatMapsEntryType(t *testing.T) {
 	require.Equal(t, RemoteEntryDir, entry.Type)
 	require.Equal(t, int64(4096), entry.Size)
 	require.Equal(t,
-		[]string{"weknora-exec", "find", "/workspace/output", "-maxdepth", "0", "-printf", `%y\t%s\t%T@\t%p\n`},
+		[]string{"mnemos-exec", "find", "/workspace/output", "-maxdepth", "0", "-printf", `%y\t%s\t%T@\t%p\n`},
 		engine.execOptions[0].Cmd[3:])
 
 	missing := newFakeDockerEngine()
@@ -1207,7 +1207,7 @@ func TestValidateDockerRemoteTLS(t *testing.T) {
 	require.NoError(t, ValidateDockerRemoteTLS("unix:///var/run/docker.sock", ""))
 	require.Error(t, ValidateDockerRemoteTLS("tcp://10.0.0.5:2376", ""),
 		"a remote daemon without TLS is a plaintext root socket")
-	require.NoError(t, ValidateDockerRemoteTLS("tcp://10.0.0.5:2376", "/etc/weknora/docker-certs"))
+	require.NoError(t, ValidateDockerRemoteTLS("tcp://10.0.0.5:2376", "/etc/mnemos/docker-certs"))
 }
 
 // File operations run as the sandbox account, so the kernel decides what is

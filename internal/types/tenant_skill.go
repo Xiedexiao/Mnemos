@@ -58,7 +58,7 @@ type TenantSkillEntity struct {
 	CatalogID string `gorm:"type:varchar(36);index"`
 
 	// Name is the SKILL.md frontmatter name and the directory under
-	// /opt/weknora/tenant/skills. Same-name reinstalls keep this value so the
+	// /opt/mnemos/tenant/skills. Same-name reinstalls keep this value so the
 	// image path stays stable.
 	Name        string `gorm:"type:varchar(255);not null"`
 	Version     string `gorm:"type:varchar(64)"`

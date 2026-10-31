@@ -7,7 +7,7 @@
 #
 # Always succeeds and never prints: an identity problem must not delay or
 # fail a browser start.
-PERSIST="${WK_MACHINE_ID:-/var/lib/weknora/browser/machine-id}"
+PERSIST="${WK_MACHINE_ID:-/var/lib/mnemos/browser/machine-id}"
 ETC="${WK_MACHINE_ID_ETC:-/etc/machine-id}"
 
 mkdir -p "$(dirname "$PERSIST")" 2>/dev/null || exit 0

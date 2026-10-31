@@ -22,7 +22,7 @@ import {
 } from "./wk-cookie-plan.mjs";
 import { PageSync } from "./wk-page-sync.mjs";
 
-export const DEFAULT_AUTH_DIR = "/var/lib/weknora/browser/auth";
+export const DEFAULT_AUTH_DIR = "/var/lib/mnemos/browser/auth";
 export const SEED_FILE = "chrome-cookie-seed.json";
 export const ROOT_STATE_FILE = ".wk-sync-state.json";
 export const SEED_VERSION = 1;

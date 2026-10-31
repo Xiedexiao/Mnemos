@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# wk-display: one virtual screen ("seat") per WeKnora session. Seat N <-> session id, screen :N.
+# wk-display: one virtual screen ("seat") per Mnemos session. Seat N <-> session id, screen :N.
 # Seats are numbered 1..SEAT_MAX. Display :0 (the shared legacy desktop) is not in the seat table.
 # No "set -e": exit codes are captured explicitly.
 #
@@ -24,7 +24,7 @@ set -u
 # as fd 7/8/9 below — websockify died exactly this way in start-desktop.sh).
 cd /
 
-SEATS_DIR="${WK_SEATS_DIR:-/var/lib/weknora/browser/.seats}"
+SEATS_DIR="${WK_SEATS_DIR:-/var/lib/mnemos/browser/.seats}"
 RUN_DIR="${WK_RUN_DIR:-/run/desktop}"
 TOKENS_DIR="${WK_TOKENS_DIR:-$RUN_DIR/tokens.d}"
 X_LOCK_DIR="${WK_X_LOCK_DIR:-/tmp}"

@@ -22,7 +22,7 @@ func (s *TenantSkillService) withInstallSteerLock(
 	sessionID string,
 	fn func(context.Context) error,
 ) error {
-	return s.withSkillLock(ctx, "weknora-skill-steer-lock:"+sessionID, fn)
+	return s.withSkillLock(ctx, "mnemos-skill-steer-lock:"+sessionID, fn)
 }
 
 // SkillInstallGuidance describes one instruction and its delivery state.

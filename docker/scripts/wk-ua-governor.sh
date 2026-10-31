@@ -3,8 +3,8 @@
 # concurrency and egress-matched time zone for every session browser.
 set -u
 umask 077
-LIB="${WK_MERGE_LIB_DIR:-/usr/local/lib/weknora}"
-LOCK_DIR="${WK_GOVERNOR_LOCK_DIR:-/var/lib/weknora/browser/auth}"
+LIB="${WK_MERGE_LIB_DIR:-/usr/local/lib/mnemos}"
+LOCK_DIR="${WK_GOVERNOR_LOCK_DIR:-/var/lib/mnemos/browser/auth}"
 mkdir -p "$LOCK_DIR" || exit 1
 exec 8>"$LOCK_DIR/.ua-governor.lock"
 flock -n 8 || exit 0

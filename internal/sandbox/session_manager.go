@@ -1714,7 +1714,7 @@ type forkSnapshotCreator interface {
 }
 
 // createForkOrProviderSnapshot uses a fork-specific commit when the client
-// has one (Docker's weknora-fork/ namespace). Cube and E2B have no extra
+// has one (Docker's mnemos-fork/ namespace). Cube and E2B have no extra
 // namespace, so they keep using CreateSnapshot.
 func createForkOrProviderSnapshot(
 	ctx context.Context,
@@ -2367,7 +2367,7 @@ func (m *SessionBoundManager) DeleteSessionWorkspaces(
 	// Refuse a symlinked parent instead of following it: an agent on this
 	// machine runs as root and may have replaced one.
 	script := `set -eu
-for p in /workspace /workspace/sessions /var/lib/weknora /var/lib/weknora/sessions; do
+for p in /workspace /workspace/sessions /var/lib/mnemos /var/lib/mnemos/sessions; do
   if [ -L "$p" ]; then echo "refusing to clean through symlinked $p" >&2; exit 4; fi
 done
 for t in ` + strings.Join(targets, " ") + `; do
@@ -2770,12 +2770,12 @@ SRC_GIT=%s
 DST_TREE=%s
 DST_GIT=%s
 SHA=%s
-for p in /workspace /workspace/sessions /var/lib/weknora /var/lib/weknora/sessions; do
+for p in /workspace /workspace/sessions /var/lib/mnemos /var/lib/mnemos/sessions; do
   if [ -L "$p" ]; then echo "refusing symlinked $p" >&2; exit 4; fi
 done
 if [ -e "$DST_TREE" ] || [ -e "$DST_GIT" ]; then echo "fork target exists" >&2; exit 5; fi
-mkdir -p /var/lib/weknora/sessions /workspace/sessions
-tmp=$(mktemp -d /var/lib/weknora/sessions/.fork.XXXXXX)
+mkdir -p /var/lib/mnemos/sessions /workspace/sessions
+tmp=$(mktemp -d /var/lib/mnemos/sessions/.fork.XXXXXX)
 trap 'rm -rf -- "$tmp"' EXIT
 g() { git -c safe.directory='*' -c core.hooksPath=/dev/null "$@"; }
 g --git-dir="$SRC_GIT" cat-file -e "$SHA^{commit}"
@@ -2817,7 +2817,7 @@ func (f *workspaceFork) Remove(targetSessionID string) error {
 		return err
 	}
 	_, err = f.run(fmt.Sprintf(`set -eu
-for p in /workspace /workspace/sessions /var/lib/weknora /var/lib/weknora/sessions; do
+for p in /workspace /workspace/sessions /var/lib/mnemos /var/lib/mnemos/sessions; do
   if [ -L "$p" ]; then echo "refusing symlinked $p" >&2; exit 4; fi
 done
 rm -rf -- %s %s`, ShellQuote(target.Root), ShellQuote(target.GitDir)))

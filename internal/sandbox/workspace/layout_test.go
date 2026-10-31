@@ -17,7 +17,7 @@ func TestRemoteLayoutKeepsTheHistoricalContract(t *testing.T) {
 	require.Equal(t, "/workspace/input", l.InputDir)
 	require.Equal(t, "/workspace/output", l.OutputDir)
 	require.Equal(t, "/workspace", l.Hint)
-	require.Equal(t, "/var/lib/weknora/workspace.git", l.GitDir)
+	require.Equal(t, "/var/lib/mnemos/workspace.git", l.GitDir)
 	require.Empty(t, l.WorkDirRoots, "a session-owned machine keeps unrestricted work_dir")
 	require.False(t, l.IsSharedRemote())
 }
@@ -39,7 +39,7 @@ func TestUserSessionLayoutUsesMachineWideWriteRoots(t *testing.T) {
 		"tools treat the machine like a session-owned one: the whole /workspace is writable")
 	require.Equal(t, []string{root + "/output", root + "/input", root, SkillsImageRoot}, l.ReadRoots)
 	require.Empty(t, l.WorkDirRoots, "no work_dir whitelist: any absolute directory is allowed")
-	require.Equal(t, "/var/lib/weknora/sessions/"+name+".git", l.GitDir)
+	require.Equal(t, "/var/lib/mnemos/sessions/"+name+".git", l.GitDir)
 	require.Equal(t, root, l.Hint)
 }
 
@@ -64,12 +64,12 @@ const browserTestSessionID = "0f8fad5b-d9cb-469f-a165-70867728950e"
 
 func TestBrowserRootLivesOutsideTheCheckpointedWorkTree(t *testing.T) {
 	remote := Remote()
-	require.Equal(t, "/var/lib/weknora/browser/session", remote.BrowserRoot)
+	require.Equal(t, "/var/lib/mnemos/browser/session", remote.BrowserRoot)
 	require.False(t, IsUnder(remote.BrowserRoot, Root))
 
 	user, err := UserSession(browserTestSessionID)
 	require.NoError(t, err)
-	require.Equal(t, "/var/lib/weknora/sessions/"+browserTestSessionID+".browser", user.BrowserRoot)
+	require.Equal(t, "/var/lib/mnemos/sessions/"+browserTestSessionID+".browser", user.BrowserRoot)
 	require.False(t, IsUnder(user.BrowserRoot, Root), "checkpoint work tree is git add -A")
 	require.False(t, IsUnder(user.BrowserRoot, user.Root))
 }
@@ -82,6 +82,6 @@ func TestBrowserRootKeepsTheDaemonSocketUnderSunPathLimit(t *testing.T) {
 }
 
 func TestNormalizedCleansBrowserRoot(t *testing.T) {
-	l := Layout{BrowserRoot: " /var/lib/weknora/browser//session/ "}.Normalized()
-	require.Equal(t, "/var/lib/weknora/browser/session", l.BrowserRoot)
+	l := Layout{BrowserRoot: " /var/lib/mnemos/browser//session/ "}.Normalized()
+	require.Equal(t, "/var/lib/mnemos/browser/session", l.BrowserRoot)
 }

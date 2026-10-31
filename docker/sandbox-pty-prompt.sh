@@ -1,7 +1,7 @@
-# WeKnora interactive PTY prompt: classic \u@\h:\W\$
+# Mnemos interactive PTY prompt: classic \u@\h:\W\$
 # (user@host:last-path-segment, # for root / $ otherwise).
 #
-# \W is the last directory only (e.g. /opt/weknora/skills → skills),
+# \W is the last directory only (e.g. /opt/mnemos/skills → skills),
 # so deep cwd does not blow the prompt width.
 #
 # Bold green (01;32) is user@host; bold blue (01;34) is the path — the
@@ -16,11 +16,11 @@
 
 [ -n "${BASH_VERSION-}" ] || return 0
 
-weknora_set_pty_prompt() {
+mnemos_set_pty_prompt() {
 	PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
 }
 
-weknora_set_pty_prompt
+mnemos_set_pty_prompt
 
 # Debian/Ubuntu interactive shortcuts. Aliases only apply in interactive
 # shells, so skill scripts still see the real ls/grep.
@@ -40,15 +40,15 @@ case "$-" in
 esac
 
 case ";${PROMPT_COMMAND-};" in
-	*weknora_set_pty_prompt*) ;;
+	*mnemos_set_pty_prompt*) ;;
 	*)
 		if [ -n "${PROMPT_COMMAND-}" ]; then
-			PROMPT_COMMAND="weknora_set_pty_prompt; ${PROMPT_COMMAND}"
+			PROMPT_COMMAND="mnemos_set_pty_prompt; ${PROMPT_COMMAND}"
 		else
-			PROMPT_COMMAND="weknora_set_pty_prompt"
+			PROMPT_COMMAND="mnemos_set_pty_prompt"
 		fi
 		;;
 esac
 # PS1 and PROMPT_COMMAND stay shell-local. Exporting PS1 makes child
 # processes look interactive (`[ -z "$PS1" ]`); exporting PROMPT_COMMAND
-# without `export -f weknora_set_pty_prompt` breaks nested bash.
+# without `export -f mnemos_set_pty_prompt` breaks nested bash.

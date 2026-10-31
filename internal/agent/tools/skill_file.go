@@ -8,7 +8,7 @@
 //
 // They are separate from write_sandbox_file / edit_sandbox_file rather than a
 // loosening of them. Those write /workspace, which is wiped before the
-// snapshot; the skill tree lives under /opt/weknora/tenant/skills and is what
+// snapshot; the skill tree lives under /opt/mnemos/tenant/skills and is what
 // the snapshot keeps. Sharing one tool would mean one path guard covering both
 // a per-session scratch area and the shared image.
 //

@@ -12,7 +12,7 @@
 
 ### 全局开关：Neo4j 环境变量 {#_1-全局开关-neo4j-环境变量}
 
-`NEO4J_ENABLE` 是知识图谱的唯一全局开关（`docker-compose.yml` 注释明确：`ENABLE_GRAPH_RAG` 自 v0.1.6 起已被 `NEO4J_ENABLE` 取代，Go 主应用不再读取）。
+`NEO4J_ENABLE` 是知识图谱的唯一全局开关（`docker/docker-compose.yml` 注释明确：`ENABLE_GRAPH_RAG` 自 v0.1.6 起已被 `NEO4J_ENABLE` 取代，Go 主应用不再读取）。
 
 | 名称 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|

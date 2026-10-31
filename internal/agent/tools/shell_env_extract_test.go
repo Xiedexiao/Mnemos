@@ -35,7 +35,7 @@ func TestExtractExportedEnvIgnoresFlagsAndURLs(t *testing.T) {
 }
 
 func TestCollectUsedSkillEnvOverlaysToolEnvOnExports(t *testing.T) {
-	command := `export BIGMODEL_API_KEY="from-command"; cd /opt/weknora/tenant/skills/bigmodel-image-video && python x.py`
+	command := `export BIGMODEL_API_KEY="from-command"; cd /opt/mnemos/tenant/skills/bigmodel-image-video && python x.py`
 	toolEnv := map[string]string{"BIGMODEL_API_KEY": "from-tool", "EXTRA": "e"}
 
 	got := collectUsedSkillEnv(command, toolEnv)

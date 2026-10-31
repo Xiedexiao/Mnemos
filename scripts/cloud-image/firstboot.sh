@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# firstboot.sh - 由 weknora-firstboot.service 在新实例首次开机时自动执行。
+# firstboot.sh - 由 mnemos-firstboot.service 在新实例首次开机时自动执行。
 # 任务: 生成随机密钥写入 .env -> 启动容器 -> 输出凭证 -> 标记完成 + 自禁用。
 #
 # 幂等性策略:
@@ -14,8 +14,8 @@ set -euo pipefail
 WEKNORA_DIR="${WEKNORA_DIR:-/opt/WeKnora}"
 ENV_FILE="${WEKNORA_DIR}/.env"
 ENV_TEMPLATE="${WEKNORA_DIR}/.env.example"
-CRED_FILE="/root/weknora-credentials.txt"
-LOG_FILE="/var/log/weknora-firstboot.log"
+CRED_FILE="/root/mnemos-credentials.txt"
+LOG_FILE="/var/log/mnemos-firstboot.log"
 MARKER="${WEKNORA_DIR}/.firstboot.done"
 
 # 提前打开 LOG_FILE, 同时把 stderr 也复制一份到 systemd journal 方便调试
@@ -98,7 +98,7 @@ chmod 0600 "${MARKER}"
 
 echo "env updated, marker written, starting docker compose..."
 cd "${WEKNORA_DIR}"
-"${DOCKER_BIN}" compose up -d
+"${DOCKER_BIN}" compose -f docker/docker-compose.yml --env-file .env up -d
 
 # 尝试拿公网 IP, 失败就用内网
 PUB_IP=$(curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null \
@@ -107,7 +107,7 @@ PUB_IP=$(curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null \
 
 cat >"${CRED_FILE}" <<INFO
 ========================================
-  WeKnora 实例初始化完成
+  Mnemos 实例初始化完成
   生成时间: $(date -Iseconds)
 ========================================
 
@@ -115,7 +115,7 @@ cat >"${CRED_FILE}" <<INFO
 
 注册后如需关闭后续注册, 编辑 ${ENV_FILE}:
     DISABLE_REGISTRATION=true
-然后执行:  cd ${WEKNORA_DIR} && docker compose up -d
+然后执行:  cd ${WEKNORA_DIR} && docker compose -f docker/docker-compose.yml --env-file .env up -d
 
 下列随机凭证已写入 ${ENV_FILE}, 请妥善保存(仅 root 可读):
   DB_PASSWORD     = ${DB_PWD}
@@ -133,7 +133,7 @@ INFO
 echo "credentials written to ${CRED_FILE}"
 
 # 仅停掉 unit, 不删 unit 文件 (否则当前正在运行的 oneshot 可能被 systemd 标记 failed)。
-# 下次重启时, weknora-firstboot.service 通过 ConditionPathExists=!${MARKER} 自动跳过。
-systemctl disable weknora-firstboot.service || true
+# 下次重启时, mnemos-firstboot.service 通过 ConditionPathExists=!${MARKER} 自动跳过。
+systemctl disable mnemos-firstboot.service || true
 
 echo "==== firstboot finished at $(date -Iseconds) ===="

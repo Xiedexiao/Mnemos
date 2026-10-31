@@ -537,7 +537,7 @@ func (s *agentService) resolveKBAndDocInfos(
 //
 // The skill installer is the exception: write_sandbox_file only accepts
 // /workspace, the installer must write .weknora/requirements.json under
-// /opt/weknora/tenant/skills, and its prompt forbids touching /workspace
+// /opt/mnemos/tenant/skills, and its prompt forbids touching /workspace
 // (that tree is wiped before the snapshot). Offering the file tools made
 // the first write of every install fail, then fall back to a shell heredoc.
 // Install mode gets write_skill_file / edit_skill_file instead, which write

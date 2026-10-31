@@ -55,8 +55,8 @@ WeKnora 通过 BrowserSkill daemon 和 [BrowserSkill](https://github.com/Tencent
 需要 Git、Node.js、Python 3、Rust/Cargo 和 C 编译器，Linux 还需要 CMake。固定源码版本由 `scripts/browserskill-release.json` 管理，直接构建上游源码，不应用额外补丁，产物输出到 `artifacts/browserskill/`。使用对应操作系统与架构的 daemon，并按实际安装路径配置：
 
 ```dotenv
-BROWSERSKILL_BINARY=/opt/weknora/browserskill/bsk
-BROWSERSKILL_EXTENSION_PATH=/opt/weknora/browserskill/browser-skill-weknora-0.3.1.zip
+BROWSERSKILL_BINARY=/opt/mnemos/browserskill/bsk
+BROWSERSKILL_EXTENSION_PATH=/opt/mnemos/browserskill/browser-skill-weknora-0.3.1.zip
 BROWSERSKILL_MAX_CONNECTIONS=32
 ```
 
@@ -66,7 +66,7 @@ BROWSERSKILL_MAX_CONNECTIONS=32
 BROWSERSKILL_PUBLIC_URL=wss://weknora.example.com/api/v1/local-browser/extension
 ```
 
-本机可用 localhost WS，远端要求浏览器信任的 WSS 证书。内网可以使用受信任的企业 CA。显式设置 `BROWSERSKILL_BINARY=` 可关闭能力；修改 Docker 环境变量后使用 `docker compose up -d app frontend` 重建容器。
+本机可用 localhost WS，远端要求浏览器信任的 WSS 证书。内网可以使用受信任的企业 CA。显式设置 `BROWSERSKILL_BINARY=` 可关闭能力；修改 Docker 环境变量后使用 `docker compose -f docker/docker/docker-compose.yml --env-file .env up -d app frontend` 重建容器。
 
 配套扩展和 daemon 必须一同升级，扩展需要 0.3.1 及以上（Chrome 应用商店、Edge 加载项或配套 ZIP 均可）。覆盖原解压目录并重新加载可保留扩展 ID，重新安装导致 ID 改变时需要重新配对。分发时保留 `BrowserSkill-LICENSE`。
 

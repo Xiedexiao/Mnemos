@@ -34,7 +34,7 @@ import (
 // dockerIdleTTLLabel records the TTL each container was created with, so a
 // sweep triggered by one workspace config never applies its own TTL to a
 // container belonging to another.
-const dockerIdleTTLLabel = "com.weknora.sandbox.idle-ttl-seconds"
+const dockerIdleTTLLabel = "com.mnemos.sandbox.idle-ttl-seconds"
 
 // dockerSweepMinInterval bounds how often one daemon is swept, no matter how
 // many requests trigger it. Sweeping is a list plus one stat per container;

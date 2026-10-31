@@ -83,7 +83,7 @@ func TestDockerKeepAliveRunsANoOpExecThatTouchesTheActivityMarker(t *testing.T) 
 	require.Len(t, engine.execOptions, 1)
 	cmd := engine.execOptions[0].Cmd
 	require.Contains(t, cmd[2], dockerActivityMarker)
-	require.Equal(t, []string{"weknora-exec", "true"}, cmd[3:])
+	require.Equal(t, []string{"mnemos-exec", "true"}, cmd[3:])
 }
 
 func TestKeepAliverFromSeesThroughLangfuse(t *testing.T) {

@@ -2,7 +2,7 @@
 
 # Show help
 help:
-	@echo "WeKnora Makefile 帮助"
+	@echo "Mnemos Makefile 帮助"
 	@echo ""
 	@echo "基础命令:"
 	@echo "  build             构建应用"
@@ -13,9 +13,9 @@ help:
 	@echo "  clean             清理构建文件"
 	@echo ""
 	@echo "Docker 命令:"
-	@echo "  docker-build-app       构建应用 Docker 镜像 (wechatopenai/weknora-app)"
-	@echo "  docker-build-docreader 构建文档读取器镜像 (wechatopenai/weknora-docreader)"
-	@echo "  docker-build-frontend  构建前端镜像 (wechatopenai/weknora-ui)"
+	@echo "  docker-build-app       构建应用 Docker 镜像 (mnemos-app)"
+	@echo "  docker-build-docreader 构建文档读取器镜像 (mnemos-docreader)"
+	@echo "  docker-build-frontend  构建前端镜像 (mnemos-ui)"
 	@echo "  docker-build-all       构建所有 Docker 镜像"
 	@echo "  docker-run            运行 Docker 容器"
 	@echo "  docker-stop           停止 Docker 容器"
@@ -77,7 +77,7 @@ BINARY_NAME=WeKnora
 MAIN_PATH=./cmd/server
 
 # Docker related variables
-DOCKER_IMAGE=wechatopenai/weknora-app
+DOCKER_IMAGE=mnemos-app
 DOCKER_TAG=latest
 
 # Platform detection
@@ -152,26 +152,28 @@ docker-build-docreader:
 	docker build --platform $(PLATFORM) \
 		--build-arg VERSION_ARG="$$VERSION" \
 		--build-arg COMMIT_ID_ARG="$$COMMIT_ID" \
-		-f docker/Dockerfile.docreader -t wechatopenai/weknora-docreader:latest .
+		-f docker/Dockerfile.docreader -t mnemos-docreader:latest .
 
 # Build frontend Docker image (multi-stage: npm runs inside the builder stage)
 docker-build-frontend:
 	@eval $$(./scripts/get_version.sh env); \
 	docker build --platform $(PLATFORM) \
 		--build-arg VITE_FRONTEND_COMMIT="$$COMMIT_ID" \
-		-f frontend/Dockerfile -t wechatopenai/weknora-ui:latest frontend/
+		-f frontend/Dockerfile -t mnemos-ui:latest frontend/
 
 # Build all Docker images
 docker-build-all: docker-build-app docker-build-docreader docker-build-frontend
 
 # Run Docker container (传统方式)
-# Touch .env if missing — docker-compose.yml's `env_file: [.env]` is required
-# for ${ENV} interpolation in builtin_models.yaml and would otherwise refuse
-# to parse on fresh clones. `start-all` handles this via check_env_file; this
-# direct path needs its own guard.
+# Touch .env if missing — docker/docker-compose.yml's `env_file: [../.env]` is
+# required for ${ENV} interpolation in builtin_models.yaml and would otherwise
+# refuse to parse on fresh clones. `start-all` handles this via check_env_file;
+# this direct path needs its own guard.
+# The compose file lives under docker/ (project dir = docker/), so always pass
+# -f and --env-file explicitly and run make from the repo root.
 docker-run:
 	@[ -f .env ] || ([ -f .env.example ] && cp .env.example .env || touch .env)
-	docker-compose up
+	docker-compose -f docker/docker-compose.yml --env-file .env up
 
 # 使用新脚本启动所有服务
 start-all:
@@ -191,7 +193,7 @@ stop-all:
 
 # Stop Docker container (传统方式)
 docker-stop:
-	docker-compose down
+	docker-compose -f docker/docker-compose.yml --env-file .env down
 
 # 从源码构建镜像相关命令
 build-images:
@@ -212,8 +214,8 @@ clean-images:
 # Restart Docker container (stop, start)
 docker-restart:
 	@[ -f .env ] || ([ -f .env.example ] && cp .env.example .env || touch .env)
-	docker-compose stop -t 60
-	docker-compose up
+	docker-compose -f docker/docker-compose.yml --env-file .env stop -t 60
+	docker-compose -f docker/docker-compose.yml --env-file .env up
 
 # Database migrations
 migrate-up:
@@ -336,14 +338,14 @@ download_spatial:
 
 clean-db:
 	@echo "Cleaning database..."
-	@if [ $$(docker volume ls -q -f name=weknora_postgres-data) ]; then \
-		docker volume rm weknora_postgres-data; \
+	@if [ $$(docker volume ls -q -f name=mnemos_postgres-data) ]; then \
+		docker volume rm mnemos_postgres-data; \
 	fi
-	@if [ $$(docker volume ls -q -f name=weknora_minio_data) ]; then \
-		docker volume rm weknora_minio_data; \
+	@if [ $$(docker volume ls -q -f name=mnemos_minio_data) ]; then \
+		docker volume rm mnemos_minio_data; \
 	fi
-	@if [ $$(docker volume ls -q -f name=weknora_redis_data) ]; then \
-		docker volume rm weknora_redis_data; \
+	@if [ $$(docker volume ls -q -f name=mnemos_redis_data) ]; then \
+		docker volume rm mnemos_redis_data; \
 	fi
 
 # Environment check

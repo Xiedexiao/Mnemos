@@ -146,7 +146,7 @@ func TestInstallShellExecStillHonoursAnExplicitWorkDir(t *testing.T) {
 // A run that somehow carries no valid skill directory must not invent one, and
 // must not send commands to a path outside the allowed roots.
 func TestInstallShellExecFallsBackToWorkspaceWithoutAValidSkillDir(t *testing.T) {
-	for _, dir := range []string{"", sandbox.SkillsImageRoot, "/etc", "/opt/weknora/tenant/skills/a/b"} {
+	for _, dir := range []string{"", sandbox.SkillsImageRoot, "/etc", "/opt/mnemos/tenant/skills/a/b"} {
 		inner := &fakeInstallShellExecutor{}
 
 		result, err := NewInstallShellExecTool(inner, dir).Execute(
@@ -330,7 +330,7 @@ func TestShellExecDoesNotCaptureWithoutAnExplicitSkillName(t *testing.T) {
 	tool := NewShellExecTool(&fakeShellExecutor{}, nil).WithEnvCapture(recorder.capture).WithSkillEnvironment(shellTestSkillEnvironment(t))
 
 	result, err := tool.Execute(shellExecTestContext(), json.RawMessage(
-		`{"command":"export USER_TOKEN=from-command; cd /opt/weknora/tenant/skills/pdf-tools && python x.py"}`,
+		`{"command":"export USER_TOKEN=from-command; cd /opt/mnemos/tenant/skills/pdf-tools && python x.py"}`,
 	))
 
 	require.NoError(t, err)
@@ -492,7 +492,7 @@ print(len(doc.paragraphs))
 
 func TestSkillNameFromShellCommandExtractsImageSkill(t *testing.T) {
 	assert.Equal(t, "meeting-and-brief", skillNameFromShellCommand(
-		`/opt/weknora/tenant/skills/meeting-and-brief/.venv/bin/python -c "print(1)"`,
+		`/opt/mnemos/tenant/skills/meeting-and-brief/.venv/bin/python -c "print(1)"`,
 	))
 	assert.Empty(t, skillNameFromShellCommand(`python3 -c "print(1)"`))
 }
@@ -505,8 +505,8 @@ func TestShellExecAllowsAnInstallThatMentionsTheSkillTree(t *testing.T) {
 	tool := NewShellExecTool(executor, nil)
 
 	result, err := tool.Execute(shellExecTestContext(), json.RawMessage(
-		`{"command":"/opt/weknora/tenant/skills/foo/.venv/bin/python -m pip install -r `+
-			`/opt/weknora/tenant/skills/foo/requirements.txt"}`,
+		`{"command":"/opt/mnemos/tenant/skills/foo/.venv/bin/python -m pip install -r `+
+			`/opt/mnemos/tenant/skills/foo/requirements.txt"}`,
 	))
 	require.NoError(t, err)
 	require.True(t, result.Success, result.Error)
@@ -518,7 +518,7 @@ func TestInstallShellExecStillPipsIntoTheSkillTree(t *testing.T) {
 	tool := NewInstallShellExecTool(inner, installShellSkillDir)
 
 	result, err := tool.Execute(shellExecTestContext(), json.RawMessage(
-		`{"command":"pip install python-docx","work_dir":"/opt/weknora/tenant/skills/律师助手"}`,
+		`{"command":"pip install python-docx","work_dir":"/opt/mnemos/tenant/skills/律师助手"}`,
 	))
 	require.NoError(t, err)
 	require.True(t, result.Success, result.Error)
@@ -528,11 +528,11 @@ func TestInstallShellExecStillPipsIntoTheSkillTree(t *testing.T) {
 func TestShellExecHintsWhenVenvHasNoPip(t *testing.T) {
 	tool := NewShellExecTool(&fakeShellExecutor{result: &sandbox.ExecuteResult{
 		ExitCode: 1,
-		Stderr:   "/opt/weknora/tenant/skills/律师助手/.venv/bin/python: No module named pip\n",
+		Stderr:   "/opt/mnemos/tenant/skills/律师助手/.venv/bin/python: No module named pip\n",
 	}}, nil)
 
 	result, err := tool.Execute(shellExecTestContext(), json.RawMessage(
-		`{"command":"/opt/weknora/tenant/skills/律师助手/.venv/bin/python /opt/weknora/tenant/skills/律师助手/scripts/install_deps.py --word --yes"}`,
+		`{"command":"/opt/mnemos/tenant/skills/律师助手/.venv/bin/python /opt/mnemos/tenant/skills/律师助手/scripts/install_deps.py --word --yes"}`,
 	))
 	require.NoError(t, err)
 	require.True(t, result.Success)

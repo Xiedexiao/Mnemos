@@ -17,7 +17,7 @@ docker rm -f "$C" >/dev/null 2>&1
 docker run -d --name "$C" --entrypoint sleep "$IMG" infinity >/dev/null
 trap 'docker rm -f "$C" >/dev/null 2>&1' EXIT
 
-root() { echo "/var/lib/weknora/sessions/$1.browser"; }
+root() { echo "/var/lib/mnemos/sessions/$1.browser"; }
 ab() { local s=$1; shift; docker exec -e WEKNORA_SESSION_ID="$s" -e WEKNORA_BROWSER_ROOT="$(root "$s")" "$C" agent-browser "$@"; }
 dx() { docker exec "$C" sh -c "$1"; }
 
@@ -65,7 +65,7 @@ assert_contains "B owns a seat" "$B" "$LIST"
 
 # Count daemon socket path bytes without a trailing newline. Linux sun_path
 # is 108 bytes; keep paths within the wrapper's 104-byte budget.
-SOCK="$(dx 'for f in /var/lib/weknora/sessions/*.browser/home/.agent-browser/*.sock; do [ -e "$f" ] && printf "%s\n" "$(printf %s "$f" | wc -c)"; done')"
+SOCK="$(dx 'for f in /var/lib/mnemos/sessions/*.browser/home/.agent-browser/*.sock; do [ -e "$f" ] && printf "%s\n" "$(printf %s "$f" | wc -c)"; done')"
 assert_eq "one daemon socket per session" 2 "$(echo "$SOCK" | grep -c '[0-9]')"
 for n in $SOCK; do
   if [ "$n" -le 104 ]; then pass "socket path length $n"; else fail "socket path too long: $n"; fi
@@ -84,7 +84,7 @@ BW="$(dx "DISPLAY=:$BS xdotool search --pid $BPID 2>/dev/null | head -1")"
 if [ -n "$BW" ]; then pass "B window is on its own display :$BS"; else fail "B window missing on :$BS"; fi
 
 # vault -> fresh session gets the cookie
-dx "mkdir -p /var/lib/weknora/browser/auth && printf '%s' '{\"version\":1,\"cookies\":[{\"name\":\"smokecookie\",\"value\":\"v1\",\"domain\":\"127.0.0.1\",\"path\":\"/\",\"expires\":-1}]}' > /var/lib/weknora/browser/auth/chrome-cookie-seed.json"
+dx "mkdir -p /var/lib/mnemos/browser/auth && printf '%s' '{\"version\":1,\"cookies\":[{\"name\":\"smokecookie\",\"value\":\"v1\",\"domain\":\"127.0.0.1\",\"path\":\"/\",\"expires\":-1}]}' > /var/lib/mnemos/browser/auth/chrome-cookie-seed.json"
 ab "$A" close >/dev/null
 ab "$A" open "$URL" >/dev/null; sleep 1
 assert_contains "vault cookie visible in A" smokecookie "$(ab "$A" cookies get 2>&1)"

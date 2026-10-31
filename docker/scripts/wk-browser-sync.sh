@@ -4,8 +4,8 @@
 # --capture are one-shot passes for the wrapper and wk-auth.
 set -u
 umask 077
-LIB="${WK_BROWSER_LIB_DIR:-/usr/local/lib/weknora}"
-AUTH="${WK_BROWSER_AUTH_DIR:-/var/lib/weknora/browser/auth}"
+LIB="${WK_BROWSER_LIB_DIR:-/usr/local/lib/mnemos}"
+AUTH="${WK_BROWSER_AUTH_DIR:-/var/lib/mnemos/browser/auth}"
 export WK_BROWSER_AUTH_DIR="$AUTH"
 mkdir -p "$AUTH" || exit 1
 chmod 0700 "$AUTH"

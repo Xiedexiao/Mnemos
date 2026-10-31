@@ -21,7 +21,7 @@
 //
 // Run like the rest of the conformance suite:
 //
-//	DOCKER_INTEGRATION_IMAGE=wechatopenai/weknora-sandbox:dev \
+//	DOCKER_INTEGRATION_IMAGE=mnemos-sandbox:dev \
 //	go test -tags=docker_integration ./internal/sandbox \
 //	  -run '^TestDocker3910' -count=1 -v -timeout=15m
 package sandbox

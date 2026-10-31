@@ -125,7 +125,7 @@ func TestStartDesktopScriptBoundsXProbesUnderTheLock(t *testing.T) {
 }
 
 func TestStartDesktopScriptClosesLockFDInEveryDaemon(t *testing.T) {
-	// Reproduced against wechatopenai/weknora-sandbox:main-desktop: Xvfb,
+	// Reproduced against mnemos-sandbox:main-desktop: Xvfb,
 	// xfce4-session, dbus-launch, x11vnc and websockify all inherited fd 9
 	// and kept holding the flock after the script exited. Killing x11vnc and
 	// websockify then left Xvfb/XFCE holding it, so the next run blocked on

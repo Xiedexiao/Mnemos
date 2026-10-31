@@ -51,7 +51,7 @@ const (
 	ToolWriteSandboxFile = "write_sandbox_file"
 	ToolEditSandboxFile  = "edit_sandbox_file"
 	// ToolWriteSkillFile / ToolEditSkillFile write the skill tree under
-	// /opt/weknora/tenant/skills rather than /workspace, and exist only for
+	// /opt/mnemos/tenant/skills rather than /workspace, and exist only for
 	// the built-in skill installer. They are scoped to the one skill being
 	// installed; see internal/agent/tools/skill_file.go.
 	//

@@ -28,8 +28,8 @@ temp/
 logs/
 *.pid
 
-WeKnora
-WeKnora-lite
+Mnemos
+Mnemos-lite
 cmd/desktop/build/bin/
 /models/
 test/data/mswag.txt
@@ -46,7 +46,7 @@ web/
 /server
 frontend/.vite
 frontend/chrome-extension/
-WeKnora-Chrome-Extension
+Mnemos-Chrome-Extension
 packages/protoc-3.19.4-linux-x86_64.zip
 
 Claude.md

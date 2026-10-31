@@ -577,7 +577,7 @@ func TestResolveEffectiveConfigRejectsResolvedPrivateDockerHostWithoutOptIn(t *t
 		SandboxType: "docker",
 		Docker: &types.DockerSandboxConfig{
 			Image:       "weknora:test",
-			TLSCertPath: "/etc/weknora/docker-certs",
+			TLSCertPath: "/etc/mnemos/docker-certs",
 		},
 	}, DefaultConfig())
 	require.ErrorIs(t, err, ErrUnsafeOutboundURL)
@@ -717,13 +717,13 @@ func TestResolveEffectiveConfigUsesSkillSnapshotAsDockerImage(t *testing.T) {
 			Image: "weknora/sandbox:base", Host: "unix:///var/run/docker.sock",
 		}
 		cfg.SkillImage = &types.SkillImageConfig{
-			SnapshotID: "weknora-skill/weknora-sk-cfg1-g1", OwnerFingerprint: fp,
+			SnapshotID: "mnemos-skill/weknora-sk-cfg1-g1", OwnerFingerprint: fp,
 		}
 
 		eff, err := ResolveEffectiveConfig(&cfg, global)
 
 		require.NoError(t, err)
-		require.Equal(t, "weknora-skill/weknora-sk-cfg1-g1", eff.DockerImage)
+		require.Equal(t, "mnemos-skill/weknora-sk-cfg1-g1", eff.DockerImage)
 	})
 
 	t.Run("fingerprint mismatch falls back to the base image", func(t *testing.T) {
@@ -732,7 +732,7 @@ func TestResolveEffectiveConfigUsesSkillSnapshotAsDockerImage(t *testing.T) {
 			Image: "weknora/sandbox:base", Host: "unix:///var/run/docker.sock",
 		}
 		cfg.SkillImage = &types.SkillImageConfig{
-			SnapshotID: "weknora-skill/weknora-sk-cfg1-g1", OwnerFingerprint: "another-daemon",
+			SnapshotID: "mnemos-skill/weknora-sk-cfg1-g1", OwnerFingerprint: "another-daemon",
 		}
 
 		eff, err := ResolveEffectiveConfig(&cfg, global)
@@ -753,7 +753,7 @@ func TestResolveEffectiveConfigUsesSkillSnapshotAsDockerImage(t *testing.T) {
 				SandboxType: "docker",
 				Docker:      &types.DockerSandboxConfig{Image: "weknora/sandbox:base"},
 				SkillImage: &types.SkillImageConfig{
-					SnapshotID: "weknora-skill/weknora-sk-cfg1-g1",
+					SnapshotID: "mnemos-skill/weknora-sk-cfg1-g1",
 					OwnerFingerprint: SkillOwnerFingerprint(&types.TenantSandboxConfig{
 						SandboxType: "docker",
 						Docker:      &types.DockerSandboxConfig{Image: "weknora/sandbox:base"},
@@ -772,7 +772,7 @@ func TestResolveEffectiveConfigUsesSkillSnapshotAsDockerImage(t *testing.T) {
 			eff, err := ResolveEffectiveConfig(cfg, global)
 
 			require.NoError(t, err)
-			require.Equal(t, "weknora-skill/weknora-sk-cfg1-g1", eff.DockerImage,
+			require.Equal(t, "mnemos-skill/weknora-sk-cfg1-g1", eff.DockerImage,
 				"DOCKER_HOST=%s must not retire the config's skill image", host)
 			require.True(t, SkillImageActive(cfg))
 		}
@@ -787,7 +787,7 @@ func TestResolveEffectiveConfigUsesSkillSnapshotAsDockerImage(t *testing.T) {
 			TLSCertPath: "/certs",
 		}
 		cfg.SkillImage = &types.SkillImageConfig{
-			SnapshotID: "weknora-skill/weknora-sk-cfg1-g1", OwnerFingerprint: fp,
+			SnapshotID: "mnemos-skill/weknora-sk-cfg1-g1", OwnerFingerprint: fp,
 		}
 
 		eff, err := ResolveEffectiveConfig(&cfg, global)
@@ -879,7 +879,7 @@ func TestSkillImageActiveAgreesWithTheResolvedTemplate(t *testing.T) {
 					Host:  "unix:///var/run/docker.sock",
 				},
 				SkillImage: &types.SkillImageConfig{
-					SnapshotID: "weknora-skill/weknora-sk-cfg1-g1",
+					SnapshotID: "mnemos-skill/weknora-sk-cfg1-g1",
 					OwnerFingerprint: SkillImageFingerprint(
 						"docker", "", "unix:///var/run/docker.sock",
 					),

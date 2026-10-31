@@ -22,7 +22,7 @@ func TestSubmitScriptEmbedsJobAndYield(t *testing.T) {
 	job := ShellJobMeta{ID: "sj_0123", Command: "TOKEN=1 make build", WorkDir: "/workspace"}
 	script, marker := ShellJobSubmitScript(job, "TOKEN=1 make build", 10000)
 	require.True(t, strings.HasPrefix(marker, shellJobMarkerPrefix))
-	require.Contains(t, script, "/var/lib/weknora/jobs/sj_0123")
+	require.Contains(t, script, "/var/lib/mnemos/jobs/sj_0123")
 	require.Contains(t, script, marker)   // 结尾行标记
 	require.Contains(t, script, "10000")  // yield 轮询上限
 	require.Contains(t, script, "setsid") // wrapper 脱管启动
@@ -49,11 +49,11 @@ func TestSubmitScriptPersistsMaskedMetaNotExecCommand(t *testing.T) {
 func TestSubmitScriptDockerFollowsBackendNotSandboxID(t *testing.T) {
 	job := ShellJobMeta{ID: "sj_0123", SandboxID: "abc123def"}
 	script, _ := ShellJobSubmitScript(job, "true", 1)
-	require.NotContains(t, script, "weknora-sandbox-activity")
+	require.NotContains(t, script, "mnemos-sandbox-activity")
 	script, _ = ShellJobSubmitScriptWithBackend(job, "true", 1, true)
-	require.Contains(t, script, "weknora-sandbox-activity")
+	require.Contains(t, script, "mnemos-sandbox-activity")
 	script, _ = ShellJobSubmitScriptWithBackend(job, "true", 1, false)
-	require.NotContains(t, script, "weknora-sandbox-activity")
+	require.NotContains(t, script, "mnemos-sandbox-activity")
 }
 
 func TestWrapperScriptRotatesAndTrapsTerm(t *testing.T) {
@@ -63,7 +63,7 @@ func TestWrapperScriptRotatesAndTrapsTerm(t *testing.T) {
 	require.Contains(t, script, "kill -")                   // 杀命令进程组
 	require.Contains(t, script, "8192")                     // .head 保留 8 KiB
 	require.Contains(t, script, "16777216")                 // 16 MiB 轮转阈值
-	require.Contains(t, script, "weknora-sandbox-activity") // docker touch
+	require.Contains(t, script, "mnemos-sandbox-activity") // docker touch
 	require.Contains(t, script, "touch_pid")
 	require.Contains(t, script, ">>") // 追加写，轮转截断无空洞
 	// 终态只写一次：构建残留的 printf … > /dev/null 不能留下。
@@ -71,7 +71,7 @@ func TestWrapperScriptRotatesAndTrapsTerm(t *testing.T) {
 	require.Contains(t, script, "cancelled")
 	require.Contains(t, script, `%Y-%m-%dT%H:%M:%S.%3NZ`)
 	plain := shellJobWrapperScript(job, "sleep 100", false)
-	require.NotContains(t, plain, "weknora-sandbox-activity")
+	require.NotContains(t, plain, "mnemos-sandbox-activity")
 	require.Contains(t, plain, "TOUCH=0")
 	require.NotContains(t, plain, "> /dev/null")
 	requireShellSyntax(t, script)
@@ -298,7 +298,7 @@ func TestKillOrphansScriptSkipsPidOne(t *testing.T) {
 	require.Contains(t, script, "TOUCH=77")
 	require.Contains(t, script, "kill -TERM -$PGID")
 	require.Contains(t, script, "kill -KILL -$PGID")
-	require.Contains(t, script, "weknora-sandbox-activity")
+	require.Contains(t, script, "mnemos-sandbox-activity")
 	require.Contains(t, script, `-gt 1`)
 	require.Contains(t, script, "\ntrue\n")
 	idle := ShellJobKillOrphansScript(1, 0)

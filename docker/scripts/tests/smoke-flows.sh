@@ -25,7 +25,7 @@ docker rm -f "$C" >/dev/null 2>&1
 docker run -d --name "$C" --entrypoint sleep "$IMG" infinity >/dev/null
 trap 'docker rm -f "$C" >/dev/null 2>&1' EXIT
 
-root() { echo "/var/lib/weknora/sessions/$1.browser"; }
+root() { echo "/var/lib/mnemos/sessions/$1.browser"; }
 ab() { local s=$1; shift; docker exec -e WEKNORA_SESSION_ID="$s" -e WEKNORA_BROWSER_ROOT="$(root "$s")" "$C" agent-browser "$@"; }
 dx() { docker exec "$C" sh -c "$1"; }
 say() { echo; echo "===== $1"; }
@@ -61,7 +61,7 @@ dxin /tmp/wk-daemon.sh <<'HELPER'
 # usage: wk-daemon.sh <sid> -> agent-browser-l if that session's daemon is alive
 for p in $(ls /proc | grep -E '^[0-9]+$'); do
   [ -r "/proc/$p/environ" ] || continue
-  tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "HOME=/var/lib/weknora/sessions/$1.browser/home" || continue
+  tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "HOME=/var/lib/mnemos/sessions/$1.browser/home" || continue
   tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q agent-browser-linux && { echo agent-browser-l; exit 0; }
 done
 echo none
@@ -70,7 +70,7 @@ dxin /tmp/wk-place.sh <<'HELPER'
 #!/bin/sh
 # usage: wk-place.sh <sid> <url>; prints where the window landed at open time
 SID=$1; URL=$2
-R=/var/lib/weknora/sessions/$SID.browser
+R=/var/lib/mnemos/sessions/$SID.browser
 export WEKNORA_SESSION_ID=$SID WEKNORA_BROWSER_ROOT=$R
 s=$(date +%s%N)
 agent-browser --headed open "$URL" >/tmp/place.out 2>&1; rc=$?
@@ -201,11 +201,11 @@ ev "cookies set"; blk "$SET"
 SAVE="$(docker exec -e WEKNORA_SESSION_ID="$A" -e WEKNORA_BROWSER_ROOT="$(root "$A")" "$C" timeout 30 wk-auth save 2>&1)"; RC=$?
 assert_eq "wk-auth save exits 0" 0 "$RC"
 ev "wk-auth save"; blk "$SAVE"
-assert_eq "vault exists mode 600" "600" "$(dx 'stat -c %a /var/lib/weknora/browser/auth/chrome-cookie-seed.json 2>/dev/null')"
-VAULT="$(dx 'cat /var/lib/weknora/browser/auth/chrome-cookie-seed.json 2>/dev/null')"
-assert_eq "vault is valid JSON" ok "$(dx 'python3 -c "import json;json.load(open(\"/var/lib/weknora/browser/auth/chrome-cookie-seed.json\"));print(\"ok\")" 2>&1')"
+assert_eq "vault exists mode 600" "600" "$(dx 'stat -c %a /var/lib/mnemos/browser/auth/chrome-cookie-seed.json 2>/dev/null')"
+VAULT="$(dx 'cat /var/lib/mnemos/browser/auth/chrome-cookie-seed.json 2>/dev/null')"
+assert_eq "vault is valid JSON" ok "$(dx 'python3 -c "import json;json.load(open(\"/var/lib/mnemos/browser/auth/chrome-cookie-seed.json\"));print(\"ok\")" 2>&1')"
 assert_contains "vault holds the cookie" '"vaultcookie"' "$VAULT"
-ev "vault"; blk "$(dx 'ls -l /var/lib/weknora/browser/auth/chrome-cookie-seed.json; cat /var/lib/weknora/browser/auth/chrome-cookie-seed.json')"
+ev "vault"; blk "$(dx 'ls -l /var/lib/mnemos/browser/auth/chrome-cookie-seed.json; cat /var/lib/mnemos/browser/auth/chrome-cookie-seed.json')"
 
 ab "$B" open "$URL" >/dev/null
 GOT="$(ab "$B" cookies get 2>&1)"

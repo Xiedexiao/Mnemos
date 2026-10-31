@@ -1,12 +1,12 @@
 #!/bin/sh
-# Idempotent desktop stack for WeKnora sandbox images.
+# Idempotent desktop stack for Mnemos sandbox images.
 # Safe to re-run after pause/resume; serialised with flock so concurrent Exec
 # (dual tabs, retries, multiple replicas) cannot split the VNC secret.
 set -eu
 export DISPLAY=:0
 # UTF-8 for every daemon this script starts (XFCE session, xfce4-terminal,
 # mousepad). Without it they inherit POSIX/C from python:slim and UTF-8
-# files render as mojibake; the WeKnora terminal tab is unaffected because
+# files render as mojibake; the Mnemos terminal tab is unaffected because
 # it is drawn in the browser. Prefer an image-provided LANG, fall back here
 # so a wrapped older image still starts a UTF-8 session.
 export LANG="${LANG:-C.UTF-8}"

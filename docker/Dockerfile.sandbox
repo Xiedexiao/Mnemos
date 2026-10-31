@@ -1,4 +1,4 @@
-# WeKnora Sandbox Image
+# Mnemos Sandbox Image
 # Pre-built environment for executing agent skill scripts in Docker sandbox
 # Multi-stage build, minimal dependencies
 #
@@ -70,7 +70,7 @@ RUN npm install -g pnpm
 # curl is not optional: the sandbox connectivity check probes egress with it,
 # and skills that fetch a URL expect it to be there. The compression tools are
 # here because skill bundles and their assets arrive archived. git backs
-# per-turn workspace checkpoints (object store at /var/lib/weknora/workspace.git,
+# per-turn workspace checkpoints (object store at /var/lib/mnemos/workspace.git,
 # work tree /workspace) that session fork and rewind roll back to.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
@@ -107,10 +107,10 @@ RUN mkdir -p /workspace/input /workspace/output && \
 # Classic user@host:path prompt (colored). E2B's provisioner later appends
 # `PS1='\w $ '`; the script reapplies this prompt via PROMPT_COMMAND so
 # Cube, Docker, and E2B all show the same Debian-style line.
-COPY docker/sandbox-pty-prompt.sh /etc/weknora/pty-prompt.sh
-RUN echo '. /etc/weknora/pty-prompt.sh' > /etc/profile.d/zz-weknora-prompt.sh && \
-    echo '. /etc/weknora/pty-prompt.sh' >> /root/.bashrc && \
-    echo '. /etc/weknora/pty-prompt.sh' >> /home/user/.bashrc
+COPY docker/sandbox-pty-prompt.sh /etc/mnemos/pty-prompt.sh
+RUN echo '. /etc/mnemos/pty-prompt.sh' > /etc/profile.d/zz-mnemos-prompt.sh && \
+    echo '. /etc/mnemos/pty-prompt.sh' >> /root/.bashrc && \
+    echo '. /etc/mnemos/pty-prompt.sh' >> /home/user/.bashrc
 
 WORKDIR /workspace
 USER root
@@ -119,7 +119,7 @@ USER root
 #
 # envd is what Cube talks to for everything — the readiness probe that decides
 # whether a template build succeeds, plus every later exec and file call. It
-# runs as root and selects the account named in each request. WeKnora names
+# runs as root and selects the account named in each request. Mnemos names
 # root by default, matching the runtime stage.
 #
 # Built for amd64 and arm64: cubesandbox-base ships both, and Cube runs on
@@ -151,7 +151,7 @@ ENTRYPOINT ["/usr/local/bin/cube-entrypoint.sh"]
 #
 # Debian package names (runtime is python:3.12-slim, not Ubuntu). Do not run
 # `yes | unminimize` — Debian has no such command. Do not clone noVNC; the
-# WeKnora frontend uses @novnc/novnc and the sandbox only needs websockify.
+# Mnemos frontend uses @novnc/novnc and the sandbox only needs websockify.
 # procps supplies pgrep for the start script; util-linux supplies flock.
 FROM runtime AS desktop-runtime
 
@@ -163,7 +163,7 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 # XFCE apps (mousepad, xfce4-terminal) decode files with the process locale.
 # python:slim defaults to POSIX/C, which is why the desktop shows mojibake
-# while the WeKnora terminal tab does not: that tab is xterm.js in the
+# while the Mnemos terminal tab does not: that tab is xterm.js in the
 # browser, and Cube/E2B already stamp LANG/LC_ALL on the envd PTY.
 # C.UTF-8 is built into glibc; do not pull locales-all.
 ENV LANG=C.UTF-8
@@ -251,7 +251,7 @@ RUN chmod 0755 /root/Desktop/google-chrome.desktop \
 # in (Dice), which ties the Google session to that one browser; when another
 # session browser then presents the synced cookies, Google revokes the session
 # for every browser.
-COPY docker/desktop/chrome-managed-policies.json /etc/opt/chrome/policies/managed/weknora.json
+COPY docker/desktop/chrome-managed-policies.json /etc/opt/chrome/policies/managed/mnemos.json
 
 # The command name "agent-browser" is the isolation wrapper; the real binary
 # stays under /opt and is only called by absolute path.
@@ -259,9 +259,9 @@ COPY docker/desktop/chrome-managed-policies.json /etc/opt/chrome/policies/manage
 # wk-browser-sync shares login state between session browsers and restores it
 # at launch; wk-auth save is a one-shot capture through it. Node supplies
 # fetch/WebSocket.
-COPY docker/scripts/agent-browser-wrapper.sh docker/scripts/wk-display.sh /usr/local/lib/weknora/
-COPY docker/scripts/cdp-cookies.mjs docker/scripts/wk-browser-sync.mjs docker/scripts/wk-cookie-plan.mjs docker/scripts/wk-page-sync.mjs /usr/local/lib/weknora/
-COPY docker/scripts/wk-ua-governor.mjs docker/scripts/wk-fingerprint-profiles.mjs docker/scripts/wk-egress-timezone.mjs docker/scripts/wk-locale-match.mjs /usr/local/lib/weknora/
+COPY docker/scripts/agent-browser-wrapper.sh docker/scripts/wk-display.sh /usr/local/lib/mnemos/
+COPY docker/scripts/cdp-cookies.mjs docker/scripts/wk-browser-sync.mjs docker/scripts/wk-cookie-plan.mjs docker/scripts/wk-page-sync.mjs /usr/local/lib/mnemos/
+COPY docker/scripts/wk-ua-governor.mjs docker/scripts/wk-fingerprint-profiles.mjs docker/scripts/wk-egress-timezone.mjs docker/scripts/wk-locale-match.mjs /usr/local/lib/mnemos/
 RUN node -e 'if (typeof WebSocket !== "function" || typeof fetch !== "function") process.exit(1)'
 COPY docker/scripts/wk-auth.sh /usr/local/bin/wk-auth
 COPY docker/scripts/chrome-wk.sh /usr/local/bin/chrome-wk
@@ -270,13 +270,13 @@ COPY docker/scripts/wk-browser-sync.sh /usr/local/bin/wk-browser-sync
 COPY docker/scripts/wk-chrome.sh /usr/local/bin/wk-chrome
 COPY docker/scripts/wk-ua-governor.sh /usr/local/bin/wk-ua-governor
 COPY docker/scripts/link-chrome-session.sh /usr/local/bin/link-chrome-session
-RUN chmod 0755 /usr/local/lib/weknora/agent-browser-wrapper.sh /usr/local/lib/weknora/wk-display.sh \
+RUN chmod 0755 /usr/local/lib/mnemos/agent-browser-wrapper.sh /usr/local/lib/mnemos/wk-display.sh \
         /usr/local/bin/wk-auth /usr/local/bin/chrome-wk \
         /usr/local/bin/wk-machine-id /usr/local/bin/wk-browser-sync /usr/local/bin/wk-chrome \
         /usr/local/bin/wk-ua-governor /usr/local/bin/link-chrome-session \
-    && ln -s /usr/local/lib/weknora/agent-browser-wrapper.sh /usr/local/bin/agent-browser \
-    && ln -s /usr/local/lib/weknora/wk-display.sh /usr/local/bin/wk-display \
-    && mkdir -p /var/lib/weknora/browser/auth && chmod 0700 /var/lib/weknora/browser
+    && ln -s /usr/local/lib/mnemos/agent-browser-wrapper.sh /usr/local/bin/agent-browser \
+    && ln -s /usr/local/lib/mnemos/wk-display.sh /usr/local/bin/wk-display \
+    && mkdir -p /var/lib/mnemos/browser/auth && chmod 0700 /var/lib/mnemos/browser
 
 # Stage 5: published desktop image (E2B / future Docker desktop).
 FROM desktop-runtime AS desktop

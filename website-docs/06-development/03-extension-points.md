@@ -277,7 +277,7 @@ if slices.Contains(retrieveDriver, "postgres") {
 
    仿照上例为新引擎加分支，用 `retriever.NewKVHybridRetrieveEngine(repo, 引擎类型)` 包装后注册；
    如需支持知识库间移动文档时复用已有向量，再实现可选接口 `KnowledgeIndexMover`（`MoveKnowledgeIndices`：保留 chunk ID 与向量，只改所属知识库，且可安全重试）；未实现时复用向量的移动会被拒绝，只能改用重新解析模式；
-4. 若引擎需要独立部署，在 `docker-compose.dev.yml` 加一个带 profile 的服务（参考 `qdrant`/`opensearch`），并在 `.env.example` 补连接变量。
+4. 若引擎需要独立部署，在 `docker/docker-compose.dev.yml` 加一个带 profile 的服务（参考 `qdrant`/`opensearch`），并在 `.env.example` 补连接变量。
 
 ---
 

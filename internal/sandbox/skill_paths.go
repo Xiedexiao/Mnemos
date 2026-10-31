@@ -30,7 +30,7 @@ func IsHostSkillTarget(configID string) bool {
 	return strings.TrimSpace(configID) == HostSkillTargetID
 }
 
-const skillShellArgv0 = "weknora-skill"
+const skillShellArgv0 = "mnemos-skill"
 
 // ErrInvalidSkillName is returned when a skill name would escape SkillsImageRoot
 // or is not a single path segment.
@@ -131,7 +131,7 @@ func ValidatedOutputDirIn(l WorkspaceLayout, dir string) (string, bool) {
 }
 
 // ValidatedImageSkillDir reports whether skillDir is exactly one installed
-// skill directory under SkillsImageRoot (for example /opt/weknora/tenant/skills/pdf).
+// skill directory under SkillsImageRoot (for example /opt/mnemos/tenant/skills/pdf).
 func ValidatedImageSkillDir(skillDir string) (string, bool) {
 	return ValidatedSkillDirUnder(SkillsImageRoot, skillDir)
 }

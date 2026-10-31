@@ -4,8 +4,8 @@ import { dirname, join, resolve } from "node:path";
 const PROC_ENTRY_GONE_CODES = new Set(["ENOENT", "ESRCH", "EACCES"]);
 
 export function discoverBrowserEndpoints({
-  sessionsDir = process.env.WK_BROWSER_SESSIONS_DIR ?? process.env.WK_SESSIONS_ROOT ?? "/var/lib/weknora/sessions",
-  sharedRoot = process.env.WK_BROWSER_SHARED_ROOT ?? "/var/lib/weknora/browser/session",
+  sessionsDir = process.env.WK_BROWSER_SESSIONS_DIR ?? process.env.WK_SESSIONS_ROOT ?? "/var/lib/mnemos/sessions",
+  sharedRoot = process.env.WK_BROWSER_SHARED_ROOT ?? "/var/lib/mnemos/browser/session",
   procRoot = process.env.WK_BROWSER_PROC_ROOT ?? "/proc",
   onUnreadable = () => {},
   includeLaunching = false,

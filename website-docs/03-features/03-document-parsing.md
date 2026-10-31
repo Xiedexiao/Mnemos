@@ -462,7 +462,7 @@ Python 依赖（`pyproject.toml` + `uv.lock` 锁定）：`grpcio`、`pypdfium2`�
 
 #### 启用方式 {#_8-1-启用方式}
 
-解析库是 Rust 静态库，需要 Rust 工具链构建。官方 Docker 镜像（`wechatopenai/weknora-app`）和 `docker compose build` **默认链接** anydoc，设置页可直接选用。本地 `go build` 默认不链接：未加 `-tags anydoc` 时该引擎在「解析引擎」列表里显示为不可用，其它引擎不受影响。
+解析库是 Rust 静态库，需要 Rust 工具链构建。官方 Docker 镜像（`mnemos-app`）和 `docker compose -f docker/docker/docker-compose.yml --env-file .env build` **默认链接** anydoc，设置页可直接选用。本地 `go build` 默认不链接：未加 `-tags anydoc` 时该引擎在「解析引擎」列表里显示为不可用，其它引擎不受影响。
 
 ```bash
 make build-anydoc                  # 构建静态库 + 带 anydoc 标签的二进制
@@ -474,7 +474,7 @@ Docker 镜像默认 `WITH_ANYDOC=1`。若要跳过 Rust 工具链、缩短构建
 
 ```bash
 docker build -f docker/Dockerfile.app --build-arg WITH_ANYDOC=0 -t weknora-app .
-# 或在 .env 里设 WITH_ANYDOC=0 再 docker compose build
+# 或在 .env 里设 WITH_ANYDOC=0 再 docker compose -f docker/docker/docker-compose.yml --env-file .env build
 ```
 
 显式解析规则优先。未配置规则时，已链接 anydoc 且它支持的复杂格式默认优先走 anydoc；PDF 除外，默认仍走 builtin（anydoc 只抽取 PDF 文字层，会丢失图片、表格和版面，而 builtin 能逐页识别扫描页并交给 OCR）。简单格式继续用 Go SimpleFormatReader。未链接 anydoc 的 PPT/PPTX 默认回退 markitdown。需要固定引擎时，可在知识库解析设置中显式指定（包括把 `pdf` 指定给 anydoc），而不依赖部署的编译选项。

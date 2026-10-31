@@ -304,7 +304,7 @@ func shellJobWrapperScript(job ShellJobMeta, execCommand string, docker bool) st
 		shSingleQuote(execCommand))
 	b.WriteString("C=$!;\n")
 	if docker {
-		b.WriteString("( while :; do sleep 30; touch /var/lib/weknora-sandbox-activity; done ) &\n")
+		b.WriteString("( while :; do sleep 30; touch /var/lib/mnemos-sandbox-activity; done ) &\n")
 		b.WriteString("TOUCH=$!;\n")
 	} else {
 		b.WriteString("TOUCH=0;\n")
@@ -351,7 +351,7 @@ if [ "$PGID" -gt 1 ] && [ -d "/proc/$PGID" ]; then
   kill -KILL -$PGID 2>/dev/null || true
 fi
 if [ "$TOUCH" -gt 1 ] && [ -r "/proc/$TOUCH/cmdline" ] &&
-  tr '\0' ' ' < "/proc/$TOUCH/cmdline" | grep -F -q weknora-sandbox-activity; then
+  tr '\0' ' ' < "/proc/$TOUCH/cmdline" | grep -F -q mnemos-sandbox-activity; then
   kill -KILL "$TOUCH" 2>/dev/null || true
 fi
 true

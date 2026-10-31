@@ -1,5 +1,5 @@
 [Unit]
-Description=WeKnora Lite - Knowledge Base Management System
+Description=Mnemos Lite - Knowledge Base Management System
 After=network.target
 
 [Service]
@@ -8,7 +8,7 @@ User=weknora
 Group=weknora
 WorkingDirectory=/opt/weknora
 EnvironmentFile=/opt/weknora/.env.lite
-ExecStart=/opt/weknora/WeKnora-lite
+ExecStart=/opt/weknora/Mnemos-lite
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65536

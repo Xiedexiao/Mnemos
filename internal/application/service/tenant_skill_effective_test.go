@@ -115,7 +115,7 @@ func TestEffectiveTenantSkillsInjectsReadySkillsOnDocker(t *testing.T) {
 	fx.configs.entity.Config.E2B = nil
 	fx.configs.entity.Config.Docker = &types.DockerSandboxConfig{Image: "weknora/sandbox:base", Host: host}
 	fx.configs.entity.Config.SkillImage = &types.SkillImageConfig{
-		SnapshotID:       "weknora-skill/weknora-sk-cfg1-g1",
+		SnapshotID:       "mnemos-skill/weknora-sk-cfg1-g1",
 		Generation:       1,
 		OwnerFingerprint: sandbox.SkillImageFingerprint("docker", "", host),
 	}
