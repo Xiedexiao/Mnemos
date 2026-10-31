@@ -2257,6 +2257,11 @@ func (h *Handler) completeAssistantMessage(
 	}
 	h.ackBackgroundNotices(ctx, assistantMessage)
 
+	// Evidence Pack（KnowAxis V3.0 §13.4）：问题 + 候选 + 权限快照 + 回答 +
+	// 引用固化存档，按 request_id 可回放整条链路。best-effort：失败仅告警，
+	// 不影响问答主链路。
+	h.saveEvidencePack(ctx, assistantMessage, userQuery)
+
 	// Asynchronously index the Q&A pair into the chat history knowledge base for vector search.
 	// Use WithoutCancel so the goroutine survives after the HTTP request context is done.
 	bgCtx := context.WithoutCancel(ctx)
@@ -2277,6 +2282,67 @@ func (h *Handler) completeAssistantMessage(
 		go h.recordTurnMemory(bgCtx, assistantMessage, userQuery, userMessageID)
 	}
 	return nil
+}
+
+// saveEvidencePack persists the per-request Evidence Pack after the assistant
+// message finalizes (V3.0 §13.4): question, retrieval candidates, citations,
+// answer, model/prompt versions and refusal state, keyed by request_id so the
+// whole chain can be replayed for auditing. Best-effort by design.
+func (h *Handler) saveEvidencePack(
+	ctx context.Context, assistantMessage *types.Message, userQuery string,
+) {
+	if h.evidenceService == nil || assistantMessage.RequestID == "" {
+		return
+	}
+	tenantID, _ := types.TenantIDFromContext(ctx)
+	userID, _ := types.UserIDFromContext(ctx)
+	pack := &types.EvidencePack{
+		TenantID:     tenantID,
+		RequestID:    assistantMessage.RequestID,
+		SessionID:    assistantMessage.SessionID,
+		MessageID:    assistantMessage.ID,
+		UserID:       userID,
+		Question:     userQuery,
+		Answer:       assistantMessage.Content,
+		ModelVersion: assistantMessage.ModelID,
+		PromptVersion: "v1",
+	}
+	refs := assistantMessage.KnowledgeReferences
+	candidates := make([]types.EvidenceCandidate, 0, len(refs))
+	citations := make([]types.EvidenceCitation, 0, len(refs))
+	for i, ref := range refs {
+		if ref == nil {
+			continue
+		}
+		snippet := ref.Content
+		if len(snippet) > 900 {
+			snippet = snippet[:900] // rune-safe enough for a forensic snapshot; body kept in the message
+		}
+		candidates = append(candidates, types.EvidenceCandidate{
+			KnowledgeID: ref.KnowledgeID,
+			ChunkID:     ref.ID,
+			Score:       float64(ref.Score),
+			Snippet:     snippet,
+		})
+		citations = append(citations, types.EvidenceCitation{
+			Index:       i + 1,
+			KnowledgeID: ref.KnowledgeID,
+			ChunkID:     ref.ID,
+			Title:       ref.KnowledgeTitle,
+		})
+	}
+	pack.SetCandidates(candidates)
+	pack.SetCitations(citations)
+	pack.SetContextSnapshot(types.EvidenceContextSnapshot{
+		CandidatesShown:  len(candidates),
+		CandidatesTotal:  len(candidates),
+	})
+	if assistantMessage.IsFallback {
+		pack.Refusal = string(types.EvidenceRefusalNoEvidence)
+	}
+	if _, err := h.evidenceService.Save(ctx, pack); err != nil {
+		logger.Warnf(ctx, "evidence pack save failed for request %s: %v", pack.RequestID, err)
+	}
 }
 
 // recordTurnMemory runs the long-term memory write path for a finished turn.

@@ -84,6 +84,10 @@ type knowledgeService struct {
 	// which has a no-op fallback. See knowledge_span_tracker.go.
 	spanTracker SpanTracker
 	audit       interfaces.AuditLogService
+	// recycleBin registers soft-deleted knowledge into the recycle bin
+	// (V3.0 §5.5, 30-day restore window). Optional: nil (Lite/test harness)
+	// skips the enqueue entirely.
+	recycleBin interfaces.RecycleBinService
 }
 
 const (
@@ -121,6 +125,7 @@ func NewKnowledgeService(
 	taskPendingRepo interfaces.TaskPendingOpsRepository,
 	spanTracker SpanTracker,
 	audit interfaces.AuditLogService,
+	recycleBin interfaces.RecycleBinService,
 ) (interfaces.KnowledgeService, error) {
 	return &knowledgeService{
 		config:          config,
@@ -150,6 +155,7 @@ func NewKnowledgeService(
 		taskPendingRepo: taskPendingRepo,
 		spanTracker:     spanTracker,
 		audit:           audit,
+		recycleBin:      recycleBin,
 	}, nil
 }
 

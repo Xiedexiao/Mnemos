@@ -58,6 +58,9 @@ type Handler struct {
 	// selected agent so the sandbox is created with the same config a
 	// conversation turn would use.
 	terminalService *service.SandboxTerminalService
+	// evidenceService persists the per-request Evidence Pack (V3.0 §13.4)
+	// after each assistant message finalizes. Optional: nil (Lite) skips it.
+	evidenceService interfaces.EvidencePackService
 	desktopService  *service.SandboxDesktopService
 	desktopTickets  service.SandboxDesktopTicketStore
 	desktopLast     service.SandboxDesktopLastStore
@@ -118,6 +121,7 @@ func NewHandler(
 	rewindService *service.SessionRewindService,
 	approvedProjectDirs HostProjectDirsLoader,
 	backgroundWork *service.BackgroundWork,
+	evidenceService interfaces.EvidencePackService,
 ) *Handler {
 	h := &Handler{
 		browserSkill:          browserSkill,
@@ -149,6 +153,7 @@ func NewHandler(
 		redis:                 rdb,
 		approvedProjectDirs:   approvedProjectDirs,
 		background:            backgroundWork,
+		evidenceService:       evidenceService,
 		attachmentProcessor: NewAttachmentProcessor(
 			fileService,
 			documentReader,

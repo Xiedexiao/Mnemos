@@ -623,6 +623,22 @@ func (s *knowledgeService) executeKnowledgeDelete(plan *knowledgeDeletePlan, sin
 		}
 	}
 
+	// D 期回收站（KnowAxis V3.0 §5.5）：行已软删（deleted_at 已落库），登记
+	// 回收站（best-effort，失败仅告警不阻断删除管线）；30 天后由 PurgeDue
+	// 物理清理，期间可恢复。
+	if s.recycleBin != nil {
+		deletedBy := types.CallerFromContext(ctx).UserID
+		for _, knowledge := range knowledgeList {
+			title := knowledge.Title
+			if title == "" {
+				title = knowledge.FileName
+			}
+			if err := s.recycleBin.EnqueueKnowledge(ctx, knowledge.ID, title, deletedBy); err != nil {
+				logger.Warnf(ctx, "recycle-bin enqueue failed for %s: %v", knowledge.ID, err)
+			}
+		}
+	}
+
 	storageAdjust := int64(0)
 	for _, knowledge := range knowledgeList {
 		if knowledge.FilePath != "" {
