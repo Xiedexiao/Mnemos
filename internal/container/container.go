@@ -282,6 +282,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(func(s *service.FreshnessReviewScheduler) interfaces.FreshnessService { return s }))
 	must(container.Provide(service.NewModelGatewayService))
 	must(container.Provide(repository.NewModelGatewayRepository))
+	must(container.Provide(handler.NewModelGatewayHandler))
 	must(container.Provide(service.NewKnowledgeBaseService))
 	must(container.Provide(service.NewGraphSearchService))
 	must(container.Provide(service.NewOrganizationService))
