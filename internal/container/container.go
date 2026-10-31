@@ -218,6 +218,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewTaskPendingOpsRepository))
 	must(container.Provide(repository.NewTaskDeadLetterRepository))
 	must(container.Provide(repository.NewSandboxAllocationRepository))
+	// Ontology schema governance (Phase B stage 1, KnowAxis V3.0 §8).
+	must(container.Provide(repository.NewOntologyRepository))
 
 	// MCP manager for managing MCP client connections
 	logger.Debugf(ctx, "[Container] Registering MCP manager...")
@@ -272,6 +274,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewTenantInvitationService))
 	must(container.Provide(service.NewAuditLogService))
 	must(container.Provide(service.NewKnowledgeLifecycleService))
+	must(container.Provide(service.NewOntologyService))
 	must(container.Provide(service.NewFeedbackService))
 	must(container.Provide(service.NewQualityTaskService))
 	must(container.Provide(service.NewAuditLogRetentionRunner))
@@ -697,6 +700,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewKnowledgeACLService))
 	must(container.Provide(service.NewReviewService))
 	must(container.Provide(handler.NewKnowledgeACLHandler))
+	must(container.Provide(handler.NewOntologyHandler))
 	must(container.Provide(handler.NewReviewHandler))
 	must(container.Provide(repository.NewShareLinkRepository))
 	must(container.Provide(service.NewShareLinkService))
