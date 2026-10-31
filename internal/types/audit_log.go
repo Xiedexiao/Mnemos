@@ -230,6 +230,13 @@ type AuditLog struct {
 	Outcome       AuditOutcome `json:"outcome"        gorm:"type:varchar(16);default:success" extensions:"x-agent"`
 	Details       JSON         `json:"details"        gorm:"type:jsonb;default:'{}'" extensions:"x-agent,x-agent-keys=title|trigger|via|processing_status"`
 	CreatedAt     time.Time    `json:"created_at"     gorm:"index:idx_audit_logs_tenant_id_desc,priority:2,sort:desc" extensions:"x-agent"`
+	// PrevHash is the row_hash of the previous entry of the same tenant
+	// (empty for the genesis row). Written by the repository inside the
+	// insert transaction; callers must not set it (KnowAxis V3.0 §6.7).
+	PrevHash string `json:"prev_hash" gorm:"type:varchar(64);not null;default:''"`
+	// RowHash = sha256(prev_hash + canonical fields). Unique per row; makes
+	// the per-tenant audit stream tamper-evident (append-only + hash chain).
+	RowHash string `json:"row_hash" gorm:"type:varchar(64);not null;default:'';uniqueIndex:idx_audit_logs_row_hash"`
 }
 
 // TableName pins the table name even if a future GORM convention

@@ -2,6 +2,9 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
@@ -23,12 +26,68 @@ func NewAuditLogRepository(db *gorm.DB) interfaces.AuditLogRepository {
 	return &auditLogRepository{db: db}
 }
 
-// Create inserts a single audit row. Validation is light — Action is
-// the only required field at the schema level; CreatedAt is filled by
-// the database default if zero. Service-layer Log() fills both before
-// calling here so this is mostly a pass-through.
+// Create inserts a single audit row and chains it onto the tenant's hash
+// chain (KnowAxis V3.0 §6.7): inside one transaction it takes a per-tenant
+// advisory lock (Postgres only; other dialects skip the lock but still
+// chain on the previously observed row), reads the latest row_hash, computes
+// this row's hash over the canonical field tuple and persists both. The
+// unique index on row_hash makes concurrent mis-chains fail loudly instead
+// of silently forking the chain. Validation is light — Action is the only
+// required field at the schema level.
 func (r *auditLogRepository) Create(ctx context.Context, entry *types.AuditLog) error {
-	return r.db.WithContext(ctx).Create(entry).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if tx.Dialector.Name() == "postgres" {
+			// 64-bit key space: tenant IDs are small positives; the offset
+			// avoids clashing with other advisory-lock users.
+			if err := tx.Exec("SELECT pg_advisory_xact_lock(7101, $1)", entry.TenantID).Error; err != nil {
+				return err
+			}
+		}
+		var prev string
+		if err := tx.Model(&types.AuditLog{}).
+			Where("tenant_id = ?", entry.TenantID).
+			Order("id DESC").
+			Limit(1).
+			Pluck("row_hash", &prev).Error; err != nil {
+			return err
+		}
+		entry.PrevHash = prev
+		entry.RowHash = computeAuditRowHash(entry)
+		return tx.Create(entry).Error
+	})
+}
+
+// computeAuditRowHash derives the tamper-evidence hash over the canonical
+// field tuple. The field order is part of the contract: changing it
+// invalidates every chain recorded before the change, so any adjustment must
+// ship with a migration note and a verify-window.
+func computeAuditRowHash(entry *types.AuditLog) string {
+	canonical := fmt.Sprintf("%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+		entry.TenantID,
+		entry.ActorUserID,
+		entry.ActorRole,
+		string(entry.Action),
+		entry.ScopeType,
+		entry.ScopeID,
+		entry.TargetType,
+		entry.TargetID,
+		entry.TargetUserID,
+		string(entry.Outcome),
+		entry.Details,
+		entry.CreatedAt.UTC().Format(time.RFC3339Nano),
+	)
+	sum := sha256.Sum256([]byte(entry.PrevHash + "\n" + canonical))
+	return hex.EncodeToString(sum[:])
+}
+
+// GetLastRowHash returns the newest row_hash of one tenant ("" when none).
+func (r *auditLogRepository) GetLastRowHash(ctx context.Context, tenantID uint64) (string, error) {
+	var hash string
+	err := r.db.WithContext(ctx).Model(&types.AuditLog{}).
+		Where("tenant_id = ?", tenantID).
+		Order("id DESC").Limit(1).
+		Pluck("row_hash", &hash).Error
+	return hash, err
 }
 
 // auditLogListLimitMax is the hard ceiling regardless of caller input.
