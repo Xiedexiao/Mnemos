@@ -57,6 +57,7 @@ type RouterParams struct {
 	KnowledgeLifecycleHandler    *handler.KnowledgeLifecycleHandler
 	KnowledgeACLHandler          *handler.KnowledgeACLHandler
 	FeedbackHandler              *handler.FeedbackHandler
+	ShareLinkHandler             *handler.ShareLinkHandler
 	ChunkHandler                 *handler.ChunkHandler
 	SessionHandler               *session.Handler
 	MessageHandler               *handler.MessageHandler
@@ -181,6 +182,9 @@ func NewRouter(params RouterParams) *gin.Engine {
 	// IM 回调路由（在认证中间件之前注册，使用各平台自身的签名验证）
 	RegisterIMRoutes(r, params.IMHandler)
 
+	// 知识外链公开访问（token 自鉴权：到期/撤销即时失效，必须先于全局 Auth）
+	RegisterShareLinkPublicRoutes(&r.RouterGroup, params.ShareLinkHandler)
+
 	// Web embed 公开路由（使用 publish token 鉴权，不走全局 Auth）
 	RegisterEmbedPublicRoutes(
 		r,
@@ -304,6 +308,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterKnowledgeLifecycleRoutes(v1, params.KnowledgeLifecycleHandler, rbacGuards)
 		RegisterQualityRoutes(v1, rbacGuards, params.FeedbackHandler)
 		RegisterKnowledgeACLRoutes(v1, params.KnowledgeACLHandler, rbacGuards)
+		RegisterShareLinkRoutes(v1, rbacGuards, params.ShareLinkHandler)
 		RegisterGraphSearchRoutes(v1, params.GraphSearchHandler, rbacGuards)
 		RegisterFAQRoutes(v1, params.FAQHandler, rbacGuards)
 		RegisterChunkRoutes(v1, params.ChunkHandler, rbacGuards)
