@@ -100,8 +100,8 @@ https://github.com/user-attachments/assets/de0e490a-e738-405e-bb3a-64b63edd7278
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
 cp .env.example .env    # 必要に応じて .env を編集（詳細はファイル内のコメント参照）
-docker compose -f docker/docker/docker-compose.yml --env-file .env pull     # 最新イメージを取得
-docker compose -f docker/docker/docker-compose.yml --env-file .env up -d    # コアサービスを起動
+docker compose -f docker/docker-compose.yml --env-file .env build     # イメージをローカルでビルド
+docker compose -f docker/docker-compose.yml --env-file .env up -d    # コアサービスを起動
 ```
 
 起動後、**[http://localhost](http://localhost)** にアクセスし、オンボーディングガイドに沿って設定してください。サンプルデータ付きの手順は[クイックスタート](https://weknora.weixin.qq.com/docs/01-getting-started/03-quickstart)（中国語）を参照してください。
@@ -128,9 +128,9 @@ docker compose -f docker/docker/docker-compose.yml --env-file .env up -d    # �
 | `langfuse` | トレーシング (Langfuse) |
 
 ```bash
-docker compose -f docker/docker/docker-compose.yml --env-file .env --profile neo4j --profile minio pull
-docker compose -f docker/docker/docker-compose.yml --env-file .env --profile neo4j --profile minio up -d
-docker compose -f docker/docker/docker-compose.yml --env-file .env down     # サービスを停止
+docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio pull
+docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio up -d
+docker compose -f docker/docker-compose.yml --env-file .env down     # サービスを停止
 ```
 
 ### アップグレード
@@ -139,12 +139,12 @@ docker compose -f docker/docker/docker-compose.yml --env-file .env down     # �
 
 ```bash
 # .env の WEKNORA_VERSION を対象バージョン（例: 0.9.0）に設定、または latest のまま
-docker compose -f docker/docker/docker-compose.yml --env-file .env pull     # WEKNORA_VERSION に一致するイメージを取得
-docker compose -f docker/docker/docker-compose.yml --env-file .env up -d    # 新しいイメージでコンテナを再作成
+docker compose -f docker/docker-compose.yml --env-file .env build     # WEKNORA_VERSION タグでイメージをビルド
+docker compose -f docker/docker-compose.yml --env-file .env up -d    # 新しいイメージでコンテナを再作成
 ```
 
 > [!NOTE]
-> `docker compose -f docker/docker/docker-compose.yml --env-file .env up -d` のみではローカルキャッシュのイメージが再利用され、Web UI の表示バージョンがダウンロードした release と一致しない場合があります。アップグレードする前に[アップグレードの注意事項](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes)を確認してください。
+> `docker compose -f docker/docker-compose.yml --env-file .env up -d` のみではローカルキャッシュのイメージが再利用され、Web UI の表示バージョンがダウンロードした release と一致しない場合があります。アップグレードする前に[アップグレードの注意事項](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes)を確認してください。
 
 ### その他のデプロイ方法
 

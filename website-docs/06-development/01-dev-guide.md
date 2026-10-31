@@ -311,7 +311,7 @@ make fmt && make lint && make test
 在项目 `.env` 中设置 `GIN_MODE=debug`，然后重新创建 app 容器，使环境变量生效（仅执行 `docker compose restart app` 不会更新容器环境）：
 
 ```bash
-docker compose -f docker/docker/docker-compose.yml --env-file .env up -d --no-deps --force-recreate app
+docker compose -f docker/docker-compose.yml --env-file .env up -d --no-deps --force-recreate app
 docker compose exec app printenv GIN_MODE
 docker compose port app 8080
 ```

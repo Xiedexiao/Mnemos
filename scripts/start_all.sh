@@ -380,14 +380,16 @@ start_docker() {
     # 启动基本服务
     log_info "启动核心服务容器..."
 	# 统一通过已检测到的 Compose 命令启动
+	# 镜像为本地构建的短名（mnemos-app 等），Docker Hub 上不存在，
+	# 缺失时由 compose 按服务 build 段现场构建。
 	if [ "$NO_PULL" = true ]; then
 		# 不拉取镜像，使用本地镜像
 		log_info "跳过镜像拉取，使用本地镜像..."
 		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up --build -d
 	else
-		# 拉取最新镜像
-		log_info "拉取最新镜像..."
-		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up --pull always -d
+		# 默认策略：本地缺失才构建/拉取
+		log_info "启动服务（本地缺失的镜像会自动构建）..."
+		PLATFORM=$PLATFORM "$DOCKER_COMPOSE_BIN" $DOCKER_COMPOSE_SUBCMD -f docker/docker-compose.yml --env-file .env up -d
 	fi
     if [ $? -ne 0 ]; then
         log_error "Docker容器启动失败"

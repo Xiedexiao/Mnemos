@@ -110,8 +110,8 @@ https://github.com/user-attachments/assets/de0e490a-e738-405e-bb3a-64b63edd7278
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
 cp .env.example .env    # 필요에 따라 .env 편집 (파일 내 주석 참고)
-docker compose -f docker/docker/docker-compose.yml --env-file .env pull     # 최신 이미지 가져오기
-docker compose -f docker/docker/docker-compose.yml --env-file .env up -d    # 코어 서비스 시작
+docker compose -f docker/docker-compose.yml --env-file .env build     # 이미지를 로컬에서 빌드
+docker compose -f docker/docker-compose.yml --env-file .env up -d    # 코어 서비스 시작
 ```
 
 시작 후 **[http://localhost](http://localhost)** 에 접속해 온보딩 가이드에 따라 설정하세요. 샘플 데이터를 사용하는 전체 과정은 [빠른 시작](https://weknora.weixin.qq.com/docs/01-getting-started/03-quickstart)(중국어)을 참고하세요.
@@ -138,9 +138,9 @@ docker compose -f docker/docker/docker-compose.yml --env-file .env up -d    # �
 | `langfuse` | 트레이싱 (Langfuse) |
 
 ```bash
-docker compose -f docker/docker/docker-compose.yml --env-file .env --profile neo4j --profile minio pull
-docker compose -f docker/docker/docker-compose.yml --env-file .env --profile neo4j --profile minio up -d
-docker compose -f docker/docker/docker-compose.yml --env-file .env down     # 서비스 중지
+docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio pull
+docker compose -f docker/docker-compose.yml --env-file .env --profile neo4j --profile minio up -d
+docker compose -f docker/docker-compose.yml --env-file .env down     # 서비스 중지
 ```
 
 ### 업그레이드
@@ -149,12 +149,12 @@ docker compose -f docker/docker/docker-compose.yml --env-file .env down     # �
 
 ```bash
 # .env에서 WEKNORA_VERSION을 대상 버전(예: 0.9.0)으로 설정하거나 latest 유지
-docker compose -f docker/docker/docker-compose.yml --env-file .env pull     # WEKNORA_VERSION에 맞는 이미지 가져오기
-docker compose -f docker/docker/docker-compose.yml --env-file .env up -d    # 새 이미지로 컨테이너 재생성
+docker compose -f docker/docker-compose.yml --env-file .env build     # WEKNORA_VERSION 태그로 이미지 빌드
+docker compose -f docker/docker-compose.yml --env-file .env up -d    # 새 이미지로 컨테이너 재생성
 ```
 
 > [!NOTE]
-> `docker compose -f docker/docker/docker-compose.yml --env-file .env up -d`만 실행하면 로컬 캐시 이미지가 재사용되어 Web UI 버전이 다운로드한 release와 일치하지 않을 수 있습니다. 업그레이드하기 전에 [업그레이드 안내](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes)를 확인하세요.
+> `docker compose -f docker/docker-compose.yml --env-file .env up -d`만 실행하면 로컬 캐시 이미지가 재사용되어 Web UI 버전이 다운로드한 release와 일치하지 않을 수 있습니다. 업그레이드하기 전에 [업그레이드 안내](https://weknora.weixin.qq.com/docs/07-releases/v0.9.0#upgrade-notes)를 확인하세요.
 
 ### 기타 배포 방식
 

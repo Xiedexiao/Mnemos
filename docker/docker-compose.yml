@@ -54,9 +54,9 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:
-      - data-files:/data/files
-      - docreader-tmp:/tmp/docreader:ro
-      - ../config/config.yaml:/app/config/config.yaml
+      - ./data/app/data-files:/data/files
+      - ./data/app/docreader-tmp:/tmp/docreader:ro
+      - ./data/app/config/config.yaml:/app/config/config.yaml
       # Docker 沙箱默认关闭（见 WEKNORA_SANDBOX_DOCKER_ENABLED）。需要本机 daemon 时
       # 同时设 true 并挂载实际 socket——这等同宿主机 root，仅私有化单机。
       # 入口脚本会按 socket GID 把 appuser 加入对应组（compose group_add 在 gosu 后无效）。
