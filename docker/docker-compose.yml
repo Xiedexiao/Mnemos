@@ -428,7 +428,7 @@ services:
     container_name: mnemos-sandbox
     build:
       context: ..
-      dockerfile: Dockerfile.sandbox
+      dockerfile: docker/Dockerfile.sandbox
       target: sandbox
     profiles:
       - full
@@ -441,7 +441,7 @@ services:
     # builds can set them explicitly to identify the resulting image.
     build:
       context: ..
-      dockerfile: Dockerfile.docreader
+      dockerfile: docker/Dockerfile.docreader
       args:
         - APT_MIRROR=${APT_MIRROR:-}
         - PLAYWRIGHT_DOWNLOAD_HOST=${PLAYWRIGHT_DOWNLOAD_HOST:-}
@@ -619,7 +619,7 @@ services:
   # 适合内网/单机部署；对接外部集群时改 ELASTICSEARCH_* 指向并注释本服务。
   # 宿主机要求: vm.max_map_count >= 262144 (Linux: sudo sysctl -w vm.max_map_count=262144)
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.6
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
     container_name: mnemos-elasticsearch
     environment:
       - discovery.type=single-node
@@ -645,7 +645,7 @@ services:
       start_period: 90s
 
   redis:
-    image: redis:7-alpine
+    image: redis:7
     container_name: mnemos-redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     restart: always
