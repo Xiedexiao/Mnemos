@@ -726,6 +726,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewKnowledgeHealthHandler))
 	must(container.Provide(repository.NewModelGatewayRepository))
 	must(container.Provide(service.NewModelGatewayService))
+	must(container.Provide(repository.NewModelGatewayRepository))
+	must(container.Provide(service.NewModelGatewayService))
 	must(container.Provide(handler.NewModelGatewayHandler))
 	must(container.Provide(repository.NewExportRequestRepository))
 	must(container.Provide(repository.NewDLPRepository))
