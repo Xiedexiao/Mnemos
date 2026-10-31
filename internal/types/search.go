@@ -272,8 +272,14 @@ type SearchParams struct {
 	// Turns vector matching off, leaving keyword matching only.
 	DisableVectorMatch bool `json:"disable_vector_match" extensions:"x-agent"`
 	// Limits the search to these documents of the knowledge base.
-	KnowledgeIDs    []string `json:"knowledge_ids" extensions:"x-agent,x-agent-maximum=20"`
-	TagIDs          []string `json:"tag_ids"` // Tag IDs for filtering (used for FAQ priority filtering)
+	KnowledgeIDs []string `json:"knowledge_ids" extensions:"x-agent,x-agent-maximum=20"`
+	// ExcludeKnowledgeIDs drops these knowledge IDs from recall. The knowledge
+	// base service fills it from the lifecycle state machine (draft, pending
+	// review, expired, replaced, delisted, archived entries never back answers;
+	// V3.0 §7.1). Explicit IDs win: when KnowledgeIDs is set, the caller asked
+	// for specific documents and lifecycle filtering still applies to the rest.
+	ExcludeKnowledgeIDs []string `json:"exclude_knowledge_ids,omitempty"`
+	TagIDs              []string `json:"tag_ids"` // Tag IDs for filtering (used for FAQ priority filtering)
 	ScopeTagIDs     []string `json:"scope_tag_ids,omitempty"`
 	OnlyRecommended bool     `json:"only_recommended"`
 	// KnowledgeBaseIDs overrides the single KB ID passed to HybridSearch,

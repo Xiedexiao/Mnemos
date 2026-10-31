@@ -237,6 +237,28 @@ type Knowledge struct {
 	ProcessedAt *time.Time `json:"processed_at" extensions:"x-agent"`
 	// Error message of the knowledge
 	ErrorMessage string `json:"error_message" extensions:"x-agent"`
+	// LifecycleStatus is the governance state of this knowledge entry
+	// (KnowAxis V3.0 §7.1). It decides search/QA behaviour; legacy rows start
+	// as "valid" so existing deployments keep working unchanged.
+	LifecycleStatus string `json:"lifecycle_status" gorm:"type:varchar(32);not null;default:'valid'" extensions:"x-agent"`
+	// Classification is the data sensitivity level (public/internal/secret/
+	// confidential). Final visibility = classification allowance ∩ ACL.
+	Classification string `json:"classification" gorm:"type:varchar(16);not null;default:'internal'" extensions:"x-agent"`
+	// EffectiveAt marks when the entry becomes effective (pending_effective →
+	// valid is evaluated lazily on read, never by a silent cron flip).
+	EffectiveAt *time.Time `json:"effective_at"`
+	// ExpiresAt marks when the entry stops backing answers (read-time expiry).
+	ExpiresAt *time.Time `json:"expires_at"`
+	// ReviewCycleDays is the review cadence in days; 0 disables the cycle.
+	ReviewCycleDays int `json:"review_cycle_days" gorm:"not null;default:0"`
+	// LastReviewedAt / LastReviewedBy record the latest "confirmed valid"
+	// review action, shown on the reading page as the verification badge.
+	LastReviewedAt *time.Time `json:"last_reviewed_at"`
+	LastReviewedBy string `json:"last_reviewed_by" gorm:"type:varchar(36);not null;default:''"`
+	// ReplacedByID points at the newer knowledge that replaced this entry.
+	ReplacedByID string `json:"replaced_by_id" gorm:"type:varchar(36);not null;default:''"`
+	// CurrentVersion is the latest published version number.
+	CurrentVersion int `json:"current_version" gorm:"not null;default:1"`
 	// Deletion time of the knowledge
 	DeletedAt gorm.DeletedAt `json:"deleted_at"         gorm:"index"`
 	// Knowledge base name (not stored in database, populated on query)

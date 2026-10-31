@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"mime/multipart"
+	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/hibiken/asynq"
@@ -277,6 +278,13 @@ type KnowledgeRepository interface {
 	// GetKnowledgeBatchByIDOnly returns knowledge by IDs without tenant filter
 	// (for shared-KB resolution; callers check permissions on every row).
 	GetKnowledgeBatchByIDOnly(ctx context.Context, ids []string) ([]*types.Knowledge, error)
+	// GetLifecycleExcludedKnowledgeIDs returns the IDs of non-deleted knowledge
+	// entries in the given knowledge bases whose effective lifecycle state must
+	// not back search or QA (draft/pending review/expired/replaced/conflict/
+	// delisted/archived, plus read-time expiry of valid rows). Called by the
+	// search service before recall so unauthorized/stale content never reaches
+	// the candidate set (KnowAxis V3.0 §7.1 + §2.7 权限先行).
+	GetLifecycleExcludedKnowledgeIDs(ctx context.Context, knowledgeBaseIDs []string, now time.Time) ([]string, error)
 	// CheckKnowledgeExists checks if knowledge already exists.
 	// For file types, check by fileHash or (fileName+fileSize).
 	// For URL types, check by URL.
@@ -389,4 +397,29 @@ type KnowledgeRepository interface {
 	// aggregate a knowledge-base description: every enabled document that has
 	// finished parsing (completed or finalizing), without content columns.
 	ListKnowledgeProfileRows(ctx context.Context, tenantID uint64, kbID string) ([]*types.KnowledgeProfileRow, error)
+}
+
+// KnowledgeVersionRepository persists immutable published-version snapshots
+// (KnowAxis V3.0 §7.4). Rows are append-only; versions are never edited.
+type KnowledgeVersionRepository interface {
+	// CreateKnowledgeVersion inserts one published-version snapshot.
+	CreateKnowledgeVersion(ctx context.Context, version *types.KnowledgeVersion) error
+	// ListKnowledgeVersions returns the version history, newest first.
+	ListKnowledgeVersions(ctx context.Context, knowledgeID string, limit int) ([]*types.KnowledgeVersion, error)
+	// GetLatestKnowledgeVersion returns the newest snapshot or nil.
+	GetLatestKnowledgeVersion(ctx context.Context, knowledgeID string) (*types.KnowledgeVersion, error)
+}
+
+// KnowledgeLifecycleService owns the lifecycle state machine (V3.0 §7.1).
+// Every state change goes through here so transitions stay legal, audited and
+// version-snapshotted. Action and input types live in the types package.
+type KnowledgeLifecycleService interface {
+	// Transition validates and applies one action, returning the updated row.
+	Transition(ctx context.Context, input *types.KnowledgeLifecycleTransitionInput) (*types.Knowledge, error)
+	// GetResolved loads one knowledge entry and its read-time behaviour.
+	GetResolved(ctx context.Context, knowledgeID string) (*types.Knowledge, types.KnowledgeLifecycleResolved, error)
+	// ListVersions returns the published-version history, newest first.
+	ListVersions(ctx context.Context, knowledgeID string, limit int) ([]*types.KnowledgeVersion, error)
+	// ResolvedForDisplay computes the read-time behaviour of one entry.
+	ResolvedForDisplay(k *types.Knowledge, now time.Time) types.KnowledgeLifecycleResolved
 }

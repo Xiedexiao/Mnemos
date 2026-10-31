@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS knowledge_versions;
+DROP INDEX IF EXISTS idx_knowledges_lifecycle;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS current_version;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS replaced_by_id;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS last_reviewed_by;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS last_reviewed_at;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS review_cycle_days;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS expires_at;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS effective_at;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS classification;
+ALTER TABLE knowledges DROP COLUMN IF EXISTS lifecycle_status;

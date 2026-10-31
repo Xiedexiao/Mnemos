@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Tencent/WeKnora/internal/application/service/retriever"
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
@@ -252,6 +253,18 @@ func (s *knowledgeBaseService) hybridSearchCandidates(ctx context.Context,
 	// engine resolution downstream.
 	if err := s.authorizeKBAccess(ctx, kbs); err != nil {
 		return nil, err
+	}
+
+	// Lifecycle gate (KnowAxis V3.0 §7.1): drop entries whose effective state
+	// must not back answers before recall happens. Query-time resolution keeps
+	// effective/expiry windows correct without a cron flipping states.
+	excludedKnowledgeIDs, lifecycleErr := s.kgRepo.GetLifecycleExcludedKnowledgeIDs(
+		ctx, searchKBIDs, time.Now(),
+	)
+	if lifecycleErr != nil {
+		logger.Warnf(ctx, "Failed to resolve lifecycle exclusions, searching without them: %v", lifecycleErr)
+	} else if len(excludedKnowledgeIDs) > 0 {
+		params.ExcludeKnowledgeIDs = append(params.ExcludeKnowledgeIDs, excludedKnowledgeIDs...)
 	}
 
 	// Explicit embedding-model consistency check. Multi-KB searches that
@@ -547,6 +560,7 @@ func (s *knowledgeBaseService) buildRetrievalParams(
 				Threshold:                     params.VectorThreshold,
 				RetrieverType:                 types.VectorRetrieverType,
 				KnowledgeIDs:                  params.KnowledgeIDs,
+				ExcludeKnowledgeIDs:           params.ExcludeKnowledgeIDs,
 				TagIDs:                        params.TagIDs,
 				KnowledgeType:                 knowledgeType,
 				ExcludeGeneratedQuestionKBIDs: generatedQuestionKBIDs(kbIDs, questionOffKBIDs),
@@ -577,6 +591,7 @@ func (s *knowledgeBaseService) buildRetrievalParams(
 			Threshold:                     params.KeywordThreshold,
 			RetrieverType:                 types.KeywordsRetrieverType,
 			KnowledgeIDs:                  params.KnowledgeIDs,
+			ExcludeKnowledgeIDs:           params.ExcludeKnowledgeIDs,
 			TagIDs:                        params.TagIDs,
 			ExcludeGeneratedQuestionKBIDs: generatedQuestionKBIDs(docKeywordKBIDs, questionOffKBIDs),
 		})

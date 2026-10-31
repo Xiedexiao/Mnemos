@@ -27,6 +27,44 @@ func escapeLikeKeyword(keyword string) string {
 	return keyword
 }
 
+// knowledgeLifecycleSearchableStatuses lists the lifecycle states that may
+// appear in search results. Everything else is excluded from recall.
+var knowledgeLifecycleSearchableStatuses = []string{
+	string(types.KnowledgeLifecycleValid),
+	string(types.KnowledgeLifecyclePendingReviewCycle),
+	string(types.KnowledgeLifecycleStale),
+}
+
+// GetLifecycleExcludedKnowledgeIDs returns IDs of entries whose effective
+// lifecycle state must not back search or QA. Scheduled windows are evaluated
+// in SQL at read time: a valid row past expires_at (or before effective_at)
+// behaves as expired / not-yet-effective without any cron flipping states.
+func (r *knowledgeRepository) GetLifecycleExcludedKnowledgeIDs(
+	ctx context.Context,
+	knowledgeBaseIDs []string,
+	now time.Time,
+) ([]string, error) {
+	if len(knowledgeBaseIDs) == 0 {
+		return nil, nil
+	}
+	var ids []string
+	err := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Where("knowledge_base_id IN ?", knowledgeBaseIDs).
+		Where(
+			"lifecycle_status NOT IN ?"+
+				" OR (lifecycle_status = ? AND expires_at IS NOT NULL AND expires_at < ?)"+
+				" OR (lifecycle_status = ? AND effective_at IS NOT NULL AND effective_at > ?)",
+			knowledgeLifecycleSearchableStatuses,
+			string(types.KnowledgeLifecycleValid), now,
+			string(types.KnowledgeLifecycleValid), now,
+		).
+		Pluck("id", &ids).Error
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 // omitFieldsOnUpdate defines fields to omit when updating knowledge.
 //
 // PendingSubtasksCount is deliberately omitted from every full-row Save:
@@ -1193,4 +1231,41 @@ func (r *knowledgeRepository) ListIDsByTagIDs(
 		Distinct("knowledges.id").
 		Pluck("knowledges.id", &ids).Error
 	return ids, err
+}
+
+// CreateKnowledgeVersion inserts one immutable published-version snapshot.
+func (r *knowledgeRepository) CreateKnowledgeVersion(ctx context.Context, version *types.KnowledgeVersion) error {
+	return r.db.WithContext(ctx).Create(version).Error
+}
+
+// ListKnowledgeVersions returns the version history of one knowledge entry,
+// newest first.
+func (r *knowledgeRepository) ListKnowledgeVersions(ctx context.Context, knowledgeID string, limit int) ([]*types.KnowledgeVersion, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	var versions []*types.KnowledgeVersion
+	err := r.db.WithContext(ctx).
+		Where("knowledge_id = ?", knowledgeID).
+		Order("version DESC").
+		Limit(limit).
+		Find(&versions).Error
+	return versions, err
+}
+
+// GetLatestKnowledgeVersion returns the newest published snapshot or nil when
+// the entry has never been published.
+func (r *knowledgeRepository) GetLatestKnowledgeVersion(ctx context.Context, knowledgeID string) (*types.KnowledgeVersion, error) {
+	var version types.KnowledgeVersion
+	err := r.db.WithContext(ctx).
+		Where("knowledge_id = ?", knowledgeID).
+		Order("version DESC").
+		First(&version).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &version, nil
 }
