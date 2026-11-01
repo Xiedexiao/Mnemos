@@ -60,6 +60,7 @@ type RouterParams struct {
 	ChangeRequestHandler         *handler.ChangeRequestHandler
 	GlossaryHandler              *handler.GlossaryHandler
 	KnowledgeCandidateHandler    *handler.KnowledgeCandidateHandler
+	SymbolIndexHandler           *handler.SymbolIndexHandler
 	CommentHandler               *handler.CommentHandler
 	RecycleBinHandler            *handler.RecycleBinHandler
 	GoldenSetHandler             *handler.GoldenSetHandler
@@ -327,6 +328,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterChangeRequestRoutes(v1, rbacGuards, params.ChangeRequestHandler)
 		RegisterGlossaryRoutes(v1, params.GlossaryHandler, rbacGuards)
 		RegisterKnowledgeCandidateRoutes(v1, rbacGuards, params.KnowledgeCandidateHandler)
+		RegisterSymbolIndexRoutes(v1, params.SymbolIndexHandler, rbacGuards)
 		RegisterCommentRecycleRoutes(v1, params.CommentHandler, params.RecycleBinHandler, rbacGuards)
 		RegisterGoldenSetRoutes(v1, params.GoldenSetHandler, rbacGuards)
 		RegisterKnowledgeHealthRoutes(v1, params.KnowledgeHealthHandler, rbacGuards)

@@ -28,6 +28,9 @@ type PluginSearch struct {
 	// glossaryService drives term/alias query expansion (V3.0 §4.4 术语表
 	// 驱动搜索同义词). Optional: nil (Lite) skips glossary expansion.
 	glossaryService interfaces.GlossaryService
+	// symbolIndexService drives the exact-match channel (V3.0 §12.7 精确
+	// 命中: 编号/错误码/型号). Optional: nil (Lite) skips the exact channel.
+	symbolIndexService interfaces.SymbolIndexService
 }
 
 func NewPluginSearch(eventManager *EventManager,
@@ -41,6 +44,7 @@ func NewPluginSearch(eventManager *EventManager,
 	webSearchStateService interfaces.WebSearchStateService,
 	webSearchProviderRepo interfaces.WebSearchProviderRepository,
 	glossaryService interfaces.GlossaryService,
+	symbolIndexService interfaces.SymbolIndexService,
 ) *PluginSearch {
 	res := &PluginSearch{
 		knowledgeBaseService:  knowledgeBaseService,
@@ -53,6 +57,7 @@ func NewPluginSearch(eventManager *EventManager,
 		webSearchStateService: webSearchStateService,
 		webSearchProviderRepo: webSearchProviderRepo,
 		glossaryService:       glossaryService,
+		symbolIndexService:    symbolIndexService,
 	}
 	eventManager.Register(res)
 	return res
@@ -100,7 +105,7 @@ func (p *PluginSearch) OnEvent(ctx context.Context,
 	allResults := make([]*types.SearchResult, 0)
 	var kbSearchErr error
 
-	wg.Add(2)
+	wg.Add(3)
 	// Goroutine 1: Knowledge base search using SearchTargets
 	go func() {
 		defer wg.Done()
@@ -120,6 +125,33 @@ func (p *PluginSearch) OnEvent(ctx context.Context,
 		if len(webResults) > 0 {
 			mu.Lock()
 			allResults = append(allResults, webResults...)
+			mu.Unlock()
+		}
+	}()
+
+	// Goroutine 3: 精确符号通道（V3.0 §12.7）：编号/错误码/型号等值命中，
+	// Score=1.0 压过融合分。best-effort：失败不阻断主检索。
+	go func() {
+		defer wg.Done()
+		if p.symbolIndexService == nil {
+			return
+		}
+		queryText := chatManage.RewriteQuery
+		if queryText == "" {
+			queryText = chatManage.Query
+		}
+		if queryText == "" {
+			return
+		}
+		hits, err := p.symbolIndexService.ExactLookup(ctx, chatManage.TenantID, chatManage.KnowledgeBaseIDs, queryText)
+		if err != nil {
+			pipelineWarn(ctx, "Search", "symbol_exact_lookup_error", map[string]interface{}{"error": err.Error()})
+			return
+		}
+		exact := p.materializeSymbolHits(ctx, chatManage.TenantID, hits)
+		if len(exact) > 0 {
+			mu.Lock()
+			allResults = append(allResults, exact...)
 			mu.Unlock()
 		}
 	}()
