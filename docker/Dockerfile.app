@@ -24,7 +24,7 @@ RUN mkdir -p ${CARGO_HOME} && \
     n=0; while [ $n -lt 5 ]; do \
       RUSTUP_DIST_SERVER=https://mirrors.tuna.tsinghua.edu.cn/rustup \
       RUSTUP_UPDATE_ROOT=https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup \
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable && break; \
+      timeout 600 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable && break; \
       n=$((n+1)); echo "rustup attempt $n failed, retrying in 20s"; sleep 20; \
     done && [ -x ${CARGO_HOME}/bin/cargo ]
 COPY scripts/build_browserskill.sh scripts/browserskill-release.json ./scripts/
@@ -91,7 +91,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
         export RUSTUP_DIST_SERVER=https://mirrors.tuna.tsinghua.edu.cn/rustup && \
         export RUSTUP_UPDATE_ROOT=https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup && \
         n=0; while [ $n -lt 5 ]; do \
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+          timeout 600 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
               | sh -s -- -y --profile minimal --default-toolchain stable && break; \
           n=$((n+1)); echo "rustup attempt $n failed, retrying in 20s"; sleep 20; \
         done && [ -x ${CARGO_HOME}/bin/cargo ] && \
