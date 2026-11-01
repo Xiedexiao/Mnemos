@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS chunk_extraction_cache;
+DROP INDEX IF EXISTS idx_graph_commits_tenant_time;
+DROP TABLE IF EXISTS graph_commits;
+DROP INDEX IF EXISTS idx_graph_facts_target_entity;
+DROP INDEX IF EXISTS idx_graph_facts_source_entity;
+DROP INDEX IF EXISTS idx_graph_facts_tenant_relation_confidence;
+DROP TABLE IF EXISTS graph_facts;
+DROP INDEX IF EXISTS idx_graph_entities_source_knowledge;
+DROP INDEX IF EXISTS idx_graph_entities_tenant_schema_confidence;
+DROP TABLE IF EXISTS graph_entities;
