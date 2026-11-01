@@ -34,10 +34,11 @@ const (
 // validated against the state machine, published versions are snapshotted and
 // every action writes an audit event (V3.0 §7.1 hard rules: no silent flips).
 type knowledgeLifecycleService struct {
-	kgRepo      interfaces.KnowledgeRepository
-	versionRepo interfaces.KnowledgeVersionRepository
-	audit       interfaces.AuditLogService
-	now         func() time.Time
+	kgRepo       interfaces.KnowledgeRepository
+	versionRepo  interfaces.KnowledgeVersionRepository
+	audit        interfaces.AuditLogService
+	gamification interfaces.GamificationService
+	now          func() time.Time
 }
 
 // NewKnowledgeLifecycleService constructs the lifecycle service.
@@ -45,12 +46,14 @@ func NewKnowledgeLifecycleService(
 	kgRepo interfaces.KnowledgeRepository,
 	versionRepo interfaces.KnowledgeVersionRepository,
 	audit interfaces.AuditLogService,
+	gamification interfaces.GamificationService,
 ) interfaces.KnowledgeLifecycleService {
 	return &knowledgeLifecycleService{
-		kgRepo:      kgRepo,
-		versionRepo: versionRepo,
-		audit:       audit,
-		now:         time.Now,
+		kgRepo:       kgRepo,
+		versionRepo:  versionRepo,
+		audit:        audit,
+		gamification: gamification,
+		now:          time.Now,
 	}
 }
 
@@ -182,6 +185,16 @@ func (s *knowledgeLifecycleService) Transition(
 	updated, err := s.kgRepo.GetKnowledgeByIDOnly(ctx, input.KnowledgeID)
 	if err != nil {
 		return nil, err
+	}
+
+	// 行为埋点（KnowAxis V3.0 §15.4）：发布即"知识创建"加分。幂等键为
+	// (knowledge_created, knowledge, knowledge.ID)，重复发布/复审放行不会
+	// 重复记分；加分失败只记日志，不阻断生命周期转换。
+	if input.Action == types.KnowledgeLifecycleActionPublish && s.gamification != nil {
+		if _, err := s.gamification.AwardPoints(ctx, updated.TenantID, input.ActorID,
+			types.PointsActionKnowledgeCreated, "knowledge", updated.ID); err != nil {
+			logger.Warnf(ctx, "failed to award knowledge_created points for knowledge %s: %v", updated.ID, err)
+		}
 	}
 
 	s.logTransition(ctx, knowledge, updated, input)
