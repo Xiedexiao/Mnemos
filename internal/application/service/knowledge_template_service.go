@@ -120,17 +120,18 @@ func validateFieldDefinitions(fields []*types.KnowledgeField) error {
 		if !fieldType.Valid() {
 			return apperrors.NewBadRequestError("unknown field type: " + field.FieldType)
 		}
-		if field.Rules != nil {
-			rules := field.ParsedRules()
-			// 无效正则在提交期拒绝：否则每次录入都会静默跳过校验。
-			if rules.Pattern != "" {
-				if _, err := regexp.Compile(rules.Pattern); err != nil {
-					return apperrors.NewBadRequestError(
-						"field " + field.FieldKey + " has an invalid pattern")
-				}
+		// 规则始终解析（Rules 可能是 nil，ParsedRules 返回空约束），否则
+		// "select 没有 options" 这种不可执行的配置会漏过校验，等到录入时
+		// 才发现枚举约束根本不存在。
+		rules := field.ParsedRules()
+		if rules.Pattern != "" {
+			if _, err := regexp.Compile(rules.Pattern); err != nil {
+				return apperrors.NewBadRequestError(
+					"field " + field.FieldKey + " has an invalid pattern")
 			}
-			if (fieldType == types.FieldTypeSelect || fieldType == types.FieldTypeMultiselect) &&
-				len(rules.Options) == 0 {
+		}
+		if fieldType == types.FieldTypeSelect || fieldType == types.FieldTypeMultiselect {
+			if len(rules.Options) == 0 {
 				return apperrors.NewBadRequestError(
 					"select field " + field.FieldKey + " needs options")
 			}
