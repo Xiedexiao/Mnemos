@@ -45,6 +45,10 @@ var (
 	ErrCandidateLevelGate = errors.New("knowledge candidate: L3 publication requires an Admin reviewer and non-AMBIGUOUS confidence")
 	// ErrCandidateKBNotFound 发布目标 KB 不存在（或不在本租户）。
 	ErrCandidateKBNotFound = errors.New("knowledge candidate: target knowledge base not found")
+	// ErrCandidateSourceUnavailable 引用为知识来源的证据已不可解析（被删除或
+	// 跨租户）。派生知识无法证明自己不比源证据更可见，因此不得发布（§2.4：
+	// 派生权限取源证据交集，交集为空则不可发布）。
+	ErrCandidateSourceUnavailable = errors.New("knowledge candidate: a cited source knowledge is unavailable, so the derived permission ceiling cannot be computed")
 )
 
 const (
@@ -323,7 +327,15 @@ func (s *candidateService) PublishCandidate(
 		}
 	}
 
-	knowledge, err := s.createManualKnowledgeFromCandidate(ctx, tenantID, candidate, kbID)
+	// 派生权限门禁（§2.4）：案例/FAQ 等派生知识的可见范围取全部源证据的
+	// 交集，不得因为标成 L2 就比原始工单更可见。这里计算源证据的最严密级，
+	// 让新知识继承它，而不是落到 KB 默认的 internal。
+	derived, err := s.derivedPermission(ctx, tenantID, candidate)
+	if err != nil {
+		return nil, err
+	}
+
+	knowledge, err := s.createManualKnowledgeFromCandidate(ctx, tenantID, candidate, kbID, derived)
 	if err != nil {
 		return nil, err
 	}
@@ -353,8 +365,32 @@ func (s *candidateService) PublishCandidate(
 //     knowaxis_candidate_source_type）；
 //   - 解析状态直接 completed：正文内联在 manual metadata，无解析管线可跑
 //     （v1 不入 chunk/向量检索，检索接入为后续版本）。
+//
+// derivedPermission resolves the classification a published candidate must
+// inherit from its source evidence (V3.0 §2.4 派生交集).
+//
+// Unresolvable evidence is a hard error rather than a silent default: if a cited
+// source document no longer exists or lives in another tenant, the derived entry
+// cannot prove its visible range does not exceed the source, so it must not
+// publish.
+func (s *candidateService) derivedPermission(
+	ctx context.Context, tenantID uint64, candidate *types.KnowledgeCandidate,
+) (types.KnowledgeClassification, error) {
+	resolver := &derivedPermissionResolver{knowledges: s.knowledges}
+	sourceIDs := candidateSourceKnowledgeIDs(candidate)
+	strictest, missing, err := resolver.derivedClassification(ctx, tenantID, sourceIDs)
+	if err != nil {
+		return types.KnowledgeClassificationInternal, err
+	}
+	if missing > 0 {
+		return types.KnowledgeClassificationInternal, ErrCandidateSourceUnavailable
+	}
+	return strictest, nil
+}
+
 func (s *candidateService) createManualKnowledgeFromCandidate(
 	ctx context.Context, tenantID uint64, candidate *types.KnowledgeCandidate, kbID string,
+	classification types.KnowledgeClassification,
 ) (*types.Knowledge, error) {
 	card := candidate.CardStruct()
 	content := types.KnowledgeCandidateMarkdown(card)
@@ -380,11 +416,14 @@ func (s *candidateService) createManualKnowledgeFromCandidate(
 		ParseStatus:     types.ParseStatusCompleted,
 		EnableStatus:    "enabled",
 		LifecycleStatus: string(types.KnowledgeLifecycleValid),
-		CustomMetadata:  types.JSON(customMeta),
-		FileName:        fmt.Sprintf("%s.md", candidate.Title),
-		FileType:        types.KnowledgeTypeManual,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		// 继承源证据的最严密级（§2.4）；没有可解析源证据时按 internal 处理，
+		// 由调用方决定是否允许发布。
+		Classification: string(classification),
+		CustomMetadata: types.JSON(customMeta),
+		FileName:       fmt.Sprintf("%s.md", candidate.Title),
+		FileType:       types.KnowledgeTypeManual,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	if err := knowledge.SetManualMetadata(
 		types.NewManualKnowledgeMetadata(content, types.ManualKnowledgeStatusPublish, 1),

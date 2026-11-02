@@ -727,6 +727,12 @@ func (s *sessionService) KnowledgeQAByEvent(ctx context.Context,
 		// emitted after the pipeline returned — by then the `complete` event had
 		// already closed the stream, so the frontend only saw citations on refresh.
 		if eventType == types.CHAT_COMPLETION_STREAM {
+			// 拒答矩阵（§13.5）：生成之前先对候选集分类。只有过期证据或证据
+			// 互相冲突的问题不能像正常回答一样输出；命中硬拒答就转 fallback，
+			// 命中"可答但需提示"则把提示挂到 ChatManage 上由输出阶段附言。
+			if s.applyRefusalAssessment(ctx, chatManage) {
+				return nil
+			}
 			emitKnowledgeReferencesEvent(ctx, chatManage)
 		}
 		err := s.eventManager.Trigger(stageCtx, eventType, chatManage)
@@ -1031,7 +1037,15 @@ func (s *sessionService) handleFallbackResponse(ctx context.Context, chatManage 
 // handleFixedFallback handles fixed fallback response
 func (s *sessionService) handleFixedFallback(ctx context.Context, chatManage *types.ChatManage) {
 	fallbackContent := chatManage.FallbackResponse
-	chatManage.ChatResponse = &types.ChatResponse{Content: fallbackContent}
+	// 拒答矩阵的硬拒答（§13.5）用场景化的说明替代通用兜底文案：用户需要
+	// 知道"是过期了"还是"没有依据"，而不是一句"抱歉无法回答"。
+	if notice := refusalNoticeFor(chatManage.RefusalMarker); notice != "" {
+		fallbackContent = notice
+	}
+	chatManage.ChatResponse = &types.ChatResponse{
+		Content:       fallbackContent,
+		RefusalMarker: chatManage.RefusalMarker,
+	}
 	s.emitFallbackAnswer(ctx, chatManage, fallbackContent)
 }
 
@@ -1283,7 +1297,10 @@ func (s *sessionService) consumeFallbackStream(
 
 			// Update ChatResponse with final content when done
 			if response.Done {
-				chatManage.ChatResponse = &types.ChatResponse{Content: finalContent}
+				chatManage.ChatResponse = &types.ChatResponse{
+					Content:       finalContent,
+					RefusalMarker: chatManage.RefusalMarker,
+				}
 				streamCompleted = true
 				logger.Infof(ctx, "Fallback streaming response completed")
 				break

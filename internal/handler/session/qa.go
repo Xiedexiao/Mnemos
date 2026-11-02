@@ -773,6 +773,9 @@ type sseStreamContext struct {
 	// mode releases on completion (the pipeline returns before the stream
 	// finishes); agent mode releases when AgentQA returns.
 	releaseTurn func()
+	// refusalMarker records the §13.5 case this turn hit, so the Evidence Pack
+	// can state why the answer was refused or caveated.
+	refusalMarker types.EvidencePackRefusal
 }
 
 // setupSSEStream sets up the SSE streaming context
@@ -1513,6 +1516,11 @@ func (h *Handler) executeQA(reqCtx *qaRequestContext, mode qaMode, generateTitle
 			if data.IsFallback {
 				streamCtx.assistantMessage.IsFallback = true
 			}
+			// §13.5 拒答矩阵：把本轮命中的场景记在消息上，Evidence Pack
+			// 落盘时读它，审计才能区分"没有依据"与"只有过期依据"。
+			if data.RefusalMarker != "" {
+				streamCtx.refusalMarker = types.EvidencePackRefusal(data.RefusalMarker)
+			}
 			if data.Truncated {
 				markQuickAnswerTruncated(streamCtx.assistantMessage)
 			}
@@ -2218,7 +2226,7 @@ func (h *Handler) completeStreamAssistantMessage(
 		}
 	}
 	persist := func() error {
-		return h.completeAssistantMessage(ctx, streamCtx.assistantMessage, query, userMessageID)
+		return h.completeAssistantMessage(ctx, streamCtx.assistantMessage, query, userMessageID, streamCtx.refusalMarker)
 	}
 	if streamCtx.streamHandler != nil && streamCtx.streamHandler.Suspension() != nil {
 		// The turn is not over: indexing, memory and follow-ups run when the
@@ -2248,6 +2256,7 @@ func (h *Handler) completeStreamAssistantMessage(
 // and asynchronously indexes the Q&A pair into the chat history knowledge base.
 func (h *Handler) completeAssistantMessage(
 	ctx context.Context, assistantMessage *types.Message, userQuery, userMessageID string,
+	refusalMarker types.EvidencePackRefusal,
 ) error {
 	assistantMessage.UpdatedAt = time.Now()
 	assistantMessage.IsCompleted = true
@@ -2263,7 +2272,7 @@ func (h *Handler) completeAssistantMessage(
 	// Evidence Pack（KnowAxis V3.0 §13.4）：问题 + 候选 + 权限快照 + 回答 +
 	// 引用固化存档，按 request_id 可回放整条链路。best-effort：失败仅告警，
 	// 不影响问答主链路。
-	h.saveEvidencePack(ctx, assistantMessage, userQuery)
+	h.saveEvidencePack(ctx, assistantMessage, userQuery, refusalMarker)
 
 	// Asynchronously index the Q&A pair into the chat history knowledge base for vector search.
 	// Use WithoutCancel so the goroutine survives after the HTTP request context is done.
@@ -2315,6 +2324,7 @@ func (h *Handler) maskAssistantOutput(ctx context.Context, assistantMessage *typ
 // whole chain can be replayed for auditing. Best-effort by design.
 func (h *Handler) saveEvidencePack(
 	ctx context.Context, assistantMessage *types.Message, userQuery string,
+	refusalMarker types.EvidencePackRefusal,
 ) {
 	if h.evidenceService == nil || assistantMessage.RequestID == "" {
 		return
@@ -2322,14 +2332,14 @@ func (h *Handler) saveEvidencePack(
 	tenantID, _ := types.TenantIDFromContext(ctx)
 	userID, _ := types.UserIDFromContext(ctx)
 	pack := &types.EvidencePack{
-		TenantID:     tenantID,
-		RequestID:    assistantMessage.RequestID,
-		SessionID:    assistantMessage.SessionID,
-		MessageID:    assistantMessage.ID,
-		UserID:       userID,
-		Question:     userQuery,
-		Answer:       assistantMessage.Content,
-		ModelVersion: assistantMessage.ModelID,
+		TenantID:      tenantID,
+		RequestID:     assistantMessage.RequestID,
+		SessionID:     assistantMessage.SessionID,
+		MessageID:     assistantMessage.ID,
+		UserID:        userID,
+		Question:      userQuery,
+		Answer:        assistantMessage.Content,
+		ModelVersion:  assistantMessage.ModelID,
 		PromptVersion: "v1",
 	}
 	refs := assistantMessage.KnowledgeReferences
@@ -2359,14 +2369,19 @@ func (h *Handler) saveEvidencePack(
 	pack.SetCandidates(candidates)
 	pack.SetCitations(citations)
 	pack.SetContextSnapshot(types.EvidenceContextSnapshot{
-		CandidatesShown:  len(candidates),
-		CandidatesTotal:  len(candidates),
+		CandidatesShown: len(candidates),
+		CandidatesTotal: len(candidates),
 	})
 	// 权限基线（§2.6/§13.4）：记录回答时刻的密级、lifecycle 与权限版本，
 	// 回放时可核对"这条证据当时是否可读"。权限版本来自 epoch 账本——撤权
 	// 或升密后版本前进，审计因此能看出答案是基于哪个授权状态给出的。
 	pack.SetPermissionSnapshot(h.evidencePermissionSnapshot(ctx, assistantMessage.KnowledgeReferences))
-	if assistantMessage.IsFallback {
+	// 拒答标记：矩阵判定的场景优先于"无依据"兜底，因为前者更具体
+	// （过期/冲突/越权），审计据此区分拒答原因。
+	switch {
+	case refusalMarker != types.EvidenceRefusalNone:
+		pack.Refusal = string(refusalMarker)
+	case assistantMessage.IsFallback:
 		pack.Refusal = string(types.EvidenceRefusalNoEvidence)
 	}
 	if _, err := h.evidenceService.Save(ctx, pack); err != nil {

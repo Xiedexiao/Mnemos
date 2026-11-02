@@ -226,6 +226,11 @@ type ChatResponse struct {
 	// chunks were streamed, so the natural-stop branch can close the same
 	// stream with a Done marker. Empty when AnswerStreamed is false.
 	AnswerEventID string `json:"-"`
+	// RefusalMarker records which §13.5 refusal case this turn hit (empty for a
+	// normal answer). Transient: the handler copies it onto the Evidence Pack.
+	RefusalMarker EvidencePackRefusal `json:"-"`
+	// RefusalNotice is the caveat qualifying an otherwise-answerable reply.
+	RefusalNotice string `json:"-"`
 }
 
 // Response type

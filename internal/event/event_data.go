@@ -216,6 +216,13 @@ type AgentFinalAnswerData struct {
 	Content    string `json:"content"`
 	Done       bool   `json:"done"`
 	IsFallback bool   `json:"is_fallback,omitempty"` // True when response is a fallback (no knowledge base match)
+	// RefusalMarker reports which §13.5 refusal case produced this answer
+	// (empty for a normal answer). Carried on the Done marker so the handler
+	// can record it on the Evidence Pack and the persisted message.
+	RefusalMarker string `json:"refusal_marker,omitempty"`
+	// RefusalNotice is the caveat that qualifies an answer allowed under a
+	// caveat (stale evidence, no official source).
+	RefusalNotice string `json:"refusal_notice,omitempty"`
 	// Truncated marks an answer the provider cut off at the completion-token
 	// cap. The text is what the model had produced when the cap hit, not a
 	// finished answer, so a client should say so rather than present it as

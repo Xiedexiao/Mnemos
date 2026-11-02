@@ -353,6 +353,10 @@ func writeCandidateError(c *gin.Context, ctx context.Context, err error) {
 	case errors.Is(err, service.ErrCandidateNotFound),
 		errors.Is(err, service.ErrCandidateKBNotFound):
 		c.Error(apperrors.NewNotFoundError(err.Error()))
+	case errors.Is(err, service.ErrCandidateSourceUnavailable):
+		// 派生权限无法证明不比源证据更宽（§2.4）：这是拒绝发布的业务冲突，
+		// 不是服务端故障。
+		c.Error(apperrors.NewConflictError(err.Error()))
 	case errors.Is(err, service.ErrCandidateTenantMissing):
 		c.Error(apperrors.NewUnauthorizedError(err.Error()))
 	default:

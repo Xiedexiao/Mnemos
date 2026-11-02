@@ -53,6 +53,14 @@ type PipelineRequest struct {
 	FallbackStrategy FallbackStrategy `json:"fallback_strategy"`
 	FallbackResponse string           `json:"fallback_response"`
 	FallbackPrompt   string           `json:"fallback_prompt"`
+	// RefusalMarker records which §13.5 refusal case this turn hit (empty when
+	// the answer is normal). Written to the Evidence Pack so an audit can tell
+	// "refused because every source was expired" from "answered normally".
+	RefusalMarker EvidencePackRefusal `json:"refusal_marker,omitempty"`
+	// RefusalNotice is the caveat appended to an answer that is allowed but
+	// qualified (stale-only evidence, or a high-risk question without an
+	// official source).
+	RefusalNotice string `json:"refusal_notice,omitempty"`
 	// CitationEnabled controls only final knowledge/web source citations. Nil
 	// defaults to true for requests and agents created before this option existed.
 	CitationEnabled *bool `json:"citation_enabled,omitempty"`

@@ -264,14 +264,22 @@ func (p *PluginChatCompletionStream) OnEvent(ctx context.Context,
 						answerProduced = true
 					}
 					closeThinking()
+					// 答案正文先于附言输出；附言（§13.5 的可答但需提示场景）
+					// 在 Done 之前追加，这样持久化的消息正文本身就带提示，
+					// 而不只是实时流里显示一次。
+					if response.Done && chatManage.RefusalNotice != "" {
+						response.Content += "\n\n> " + chatManage.RefusalNotice
+					}
 					eventBus.Emit(ctx, types.Event{
 						ID:        answerID,
 						Type:      types.EventType(event.EventAgentFinalAnswer),
 						SessionID: chatManage.SessionID,
 						Data: event.AgentFinalAnswerData{
-							Content:   response.Content,
-							Done:      response.Done,
-							Truncated: truncated,
+							Content:       response.Content,
+							Done:          response.Done,
+							Truncated:     truncated,
+							RefusalMarker: string(chatManage.RefusalMarker),
+							RefusalNotice: chatManage.RefusalNotice,
 						},
 					})
 				}

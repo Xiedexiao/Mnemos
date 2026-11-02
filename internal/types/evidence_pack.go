@@ -34,12 +34,88 @@ const (
 	EvidenceRefusalConflict EvidencePackRefusal = "conflict"
 	// EvidenceRefusalNoEvidence 检索无依据（无候选或全部被阈值拒绝）。
 	EvidenceRefusalNoEvidence EvidencePackRefusal = "no_evidence"
+	// EvidenceRefusalOutOfScope 问题要求越权信息：拒答且不得透露存在性
+	// （§13.5 "问题要求越权信息"）。与 refused 分开是因为两者的对外话术
+	// 不同——越权必须连"有没有这条内容"都不能暗示。
+	EvidenceRefusalOutOfScope EvidencePackRefusal = "out_of_scope"
+	// EvidenceRefusalExpiredOnly 只有过期证据：提示过期，不给当前结论
+	// （§13.5 "只有过期证据"）。
+	EvidenceRefusalExpiredOnly EvidencePackRefusal = "expired_only"
+	// EvidenceRefusalStaleOnly 只有待复审/疑似过期证据：可以回答但必须带上
+	// 时效提示，且不作为权威依据（§7.1 状态行为表）。
+	EvidenceRefusalStaleOnly EvidencePackRefusal = "stale_only"
+	// EvidenceRefusalSpeculative 问题要求无依据推测：拒答并给出"需要哪些
+	// 信息"的追问（§13.5 "要求无依据推测"）。
+	EvidenceRefusalSpeculative EvidencePackRefusal = "speculative"
+	// EvidenceRefusalNoOfficialSource 高风险决策缺少官方来源：只给参考证据，
+	// 不给最终建议（§13.5 最后一行）。
+	EvidenceRefusalNoOfficialSource EvidencePackRefusal = "no_official_source"
 )
+
+// RefusalScenario describes one §13.5 refusal case: the marker stored on the
+// pack, the user-facing explanation, and whether a caveat still allows an
+// answer. The caveat cases are deliberately separate from the hard refusals so
+// a caller cannot turn "answering with a warning" into "answering normally".
+type RefusalScenario struct {
+	// Marker is the refusal value written to the Evidence Pack.
+	Marker EvidencePackRefusal `json:"marker"`
+	// Message is what the user sees.
+	Message string `json:"message"`
+	// AllowsAnswer is true when evidence still backs a useful answer, subject
+	// to the caveat in Message.
+	AllowsAnswer bool `json:"allows_answer"`
+	// HidesExistence is true when the reply must not reveal that matching
+	// content exists at all (§2.10 存在性不泄露).
+	HidesExistence bool `json:"hides_existence"`
+}
+
+// RefusalScenarios is the §13.5 matrix, keyed by marker. It is the single
+// source of truth for refusal wording so the answer path, the IM bot and the
+// Evidence Pack all describe the same situation the same way.
+var RefusalScenarios = map[EvidencePackRefusal]RefusalScenario{
+	EvidenceRefusalNoEvidence: {
+		Marker:  EvidenceRefusalNoEvidence,
+		Message: "知识库中没有找到可以支撑这个问题的依据。建议补充相关知识或咨询领域专家。",
+	},
+	EvidenceRefusalOutOfScope: {
+		Marker:         EvidenceRefusalOutOfScope,
+		Message:        "这个问题超出了你当前的访问范围。",
+		HidesExistence: true,
+	},
+	EvidenceRefusalRefused: {
+		Marker:  EvidenceRefusalRefused,
+		Message: "该问题涉及受限内容，无法回答。",
+	},
+	EvidenceRefusalConflict: {
+		Marker:  EvidenceRefusalConflict,
+		Message: "现有权威资料之间存在冲突，暂不给出唯一结论，请先确认适用版本。",
+	},
+	EvidenceRefusalExpiredOnly: {
+		Marker:  EvidenceRefusalExpiredOnly,
+		Message: "只找到已过期的依据，不作为当前结论。请确认最新版本后再判断。",
+	},
+	EvidenceRefusalStaleOnly: {
+		Marker:       EvidenceRefusalStaleOnly,
+		Message:      "以下依据已到复审期或疑似过期，仅供参考，请以最新发布版本为准。",
+		AllowsAnswer: true,
+	},
+	EvidenceRefusalSpeculative: {
+		Marker:  EvidenceRefusalSpeculative,
+		Message: "知识库中没有依据支持该推测。要回答这个问题，还需要：具体设备/型号、版本号与发生时间。",
+	},
+	EvidenceRefusalNoOfficialSource: {
+		Marker:       EvidenceRefusalNoOfficialSource,
+		Message:      "这是高风险决策事项，但缺少官方来源。以下仅为参考资料，不构成最终建议。",
+		AllowsAnswer: true,
+	},
+}
 
 // Valid 报告该拒绝标记是否在白名单内（请求体/管道写入的入参校验）。
 func (r EvidencePackRefusal) Valid() bool {
 	switch r {
-	case EvidenceRefusalNone, EvidenceRefusalRefused, EvidenceRefusalConflict, EvidenceRefusalNoEvidence:
+	case EvidenceRefusalNone, EvidenceRefusalRefused, EvidenceRefusalConflict, EvidenceRefusalNoEvidence,
+		EvidenceRefusalOutOfScope, EvidenceRefusalExpiredOnly, EvidenceRefusalStaleOnly,
+		EvidenceRefusalSpeculative, EvidenceRefusalNoOfficialSource:
 		return true
 	default:
 		return false
