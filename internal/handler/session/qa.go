@@ -776,6 +776,9 @@ type sseStreamContext struct {
 	// refusalMarker records the §13.5 case this turn hit, so the Evidence Pack
 	// can state why the answer was refused or caveated.
 	refusalMarker types.EvidencePackRefusal
+	// promptVersion is the "<template>@v<n>" tag of the prompt that produced
+	// the answer (§16.5), recorded on the pack for reproducibility.
+	promptVersion string
 }
 
 // setupSSEStream sets up the SSE streaming context
@@ -1521,6 +1524,9 @@ func (h *Handler) executeQA(reqCtx *qaRequestContext, mode qaMode, generateTitle
 			if data.RefusalMarker != "" {
 				streamCtx.refusalMarker = types.EvidencePackRefusal(data.RefusalMarker)
 			}
+			if data.PromptVersion != "" {
+				streamCtx.promptVersion = data.PromptVersion
+			}
 			if data.Truncated {
 				markQuickAnswerTruncated(streamCtx.assistantMessage)
 			}
@@ -2226,7 +2232,8 @@ func (h *Handler) completeStreamAssistantMessage(
 		}
 	}
 	persist := func() error {
-		return h.completeAssistantMessage(ctx, streamCtx.assistantMessage, query, userMessageID, streamCtx.refusalMarker)
+		return h.completeAssistantMessage(ctx, streamCtx.assistantMessage, query, userMessageID,
+			streamCtx.refusalMarker, streamCtx.promptVersion)
 	}
 	if streamCtx.streamHandler != nil && streamCtx.streamHandler.Suspension() != nil {
 		// The turn is not over: indexing, memory and follow-ups run when the
@@ -2256,7 +2263,7 @@ func (h *Handler) completeStreamAssistantMessage(
 // and asynchronously indexes the Q&A pair into the chat history knowledge base.
 func (h *Handler) completeAssistantMessage(
 	ctx context.Context, assistantMessage *types.Message, userQuery, userMessageID string,
-	refusalMarker types.EvidencePackRefusal,
+	refusalMarker types.EvidencePackRefusal, promptVersion string,
 ) error {
 	assistantMessage.UpdatedAt = time.Now()
 	assistantMessage.IsCompleted = true
@@ -2272,7 +2279,7 @@ func (h *Handler) completeAssistantMessage(
 	// Evidence Pack（KnowAxis V3.0 §13.4）：问题 + 候选 + 权限快照 + 回答 +
 	// 引用固化存档，按 request_id 可回放整条链路。best-effort：失败仅告警，
 	// 不影响问答主链路。
-	h.saveEvidencePack(ctx, assistantMessage, userQuery, refusalMarker)
+	h.saveEvidencePack(ctx, assistantMessage, userQuery, refusalMarker, promptVersion)
 
 	// Asynchronously index the Q&A pair into the chat history knowledge base for vector search.
 	// Use WithoutCancel so the goroutine survives after the HTTP request context is done.
@@ -2324,7 +2331,7 @@ func (h *Handler) maskAssistantOutput(ctx context.Context, assistantMessage *typ
 // whole chain can be replayed for auditing. Best-effort by design.
 func (h *Handler) saveEvidencePack(
 	ctx context.Context, assistantMessage *types.Message, userQuery string,
-	refusalMarker types.EvidencePackRefusal,
+	refusalMarker types.EvidencePackRefusal, promptVersion string,
 ) {
 	if h.evidenceService == nil || assistantMessage.RequestID == "" {
 		return
@@ -2332,15 +2339,17 @@ func (h *Handler) saveEvidencePack(
 	tenantID, _ := types.TenantIDFromContext(ctx)
 	userID, _ := types.UserIDFromContext(ctx)
 	pack := &types.EvidencePack{
-		TenantID:      tenantID,
-		RequestID:     assistantMessage.RequestID,
-		SessionID:     assistantMessage.SessionID,
-		MessageID:     assistantMessage.ID,
-		UserID:        userID,
-		Question:      userQuery,
-		Answer:        assistantMessage.Content,
-		ModelVersion:  assistantMessage.ModelID,
-		PromptVersion: "v1",
+		TenantID:     tenantID,
+		RequestID:    assistantMessage.RequestID,
+		SessionID:    assistantMessage.SessionID,
+		MessageID:    assistantMessage.ID,
+		UserID:       userID,
+		Question:     userQuery,
+		Answer:       assistantMessage.Content,
+		ModelVersion: assistantMessage.ModelID,
+		// Prompt 版本（§16.5）：记录本轮实际使用的模板版本，便于回答复现。
+		// 空表示用内置模板；此前这里硬编码 "v1"，等于所有回答都自称同一版。
+		PromptVersion: promptVersion,
 	}
 	refs := assistantMessage.KnowledgeReferences
 	candidates := make([]types.EvidenceCandidate, 0, len(refs))

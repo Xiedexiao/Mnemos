@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/application/access"
@@ -29,6 +30,9 @@ type KnowledgePostProcessService struct {
 	pendingRepo   interfaces.TaskPendingOpsRepository
 	redisClient   *redis.Client
 	spanTracker   SpanTracker
+	// symbols builds the exact-match symbol index (§12.7). Optional: nil skips
+	// it, which keeps Lite/test harnesses working.
+	symbols interfaces.SymbolIndexService
 }
 
 func NewKnowledgePostProcessService(
@@ -40,6 +44,7 @@ func NewKnowledgePostProcessService(
 	pendingRepo interfaces.TaskPendingOpsRepository,
 	redisClient *redis.Client,
 	spanTracker SpanTracker,
+	symbols interfaces.SymbolIndexService,
 ) interfaces.TaskHandler {
 	return &KnowledgePostProcessService{
 		knowledgeRepo: knowledgeRepo,
@@ -50,6 +55,7 @@ func NewKnowledgePostProcessService(
 		pendingRepo:   pendingRepo,
 		redisClient:   redisClient,
 		spanTracker:   spanTracker,
+		symbols:       symbols,
 	}
 }
 
@@ -77,6 +83,41 @@ func (s *KnowledgePostProcessService) finishRunningMultimodalStage(
 		return
 	}
 	s.tracker().EndSpan(ctx, mm, nil)
+}
+
+// indexSymbolsForKnowledge rebuilds the exact-match symbol index for one
+// knowledge entry (§12.7).
+//
+// Best-effort: a failure here degrades precise lookup for this document but must
+// not fail the whole post-process, which also drives summary, questions, graph
+// and wiki generation.
+func (s *KnowledgePostProcessService) indexSymbolsForKnowledge(
+	ctx context.Context, payload types.KnowledgePostProcessPayload, chunks []*types.Chunk,
+) {
+	if s.symbols == nil || len(chunks) == 0 {
+		return
+	}
+	// 重建而非增量：chunk 内容变了之后旧符号没有 diff 机制可依，先删后灌
+	// 才能保证"搜不到已经不存在的编号"。
+	if err := s.symbols.DeleteByKnowledge(ctx, payload.TenantID, payload.KnowledgeID); err != nil {
+		logger.Warnf(ctx, "[KnowledgePostProcess] symbol index cleanup failed for %s: %v",
+			payload.KnowledgeID, err)
+	}
+	indexed := 0
+	for _, chunk := range chunks {
+		if chunk == nil || strings.TrimSpace(chunk.Content) == "" {
+			continue
+		}
+		if _, err := s.symbols.IndexSymbols(ctx, payload.TenantID, payload.KnowledgeBaseID,
+			payload.KnowledgeID, chunk.ID, chunk.Content); err != nil {
+			logger.Warnf(ctx, "[KnowledgePostProcess] symbol indexing failed for chunk %s: %v",
+				chunk.ID, err)
+			continue
+		}
+		indexed++
+	}
+	logger.Infof(ctx, "[KnowledgePostProcess] symbol index rebuilt for %s (%d chunk(s))",
+		payload.KnowledgeID, indexed)
 }
 
 // Handle implements asynq handler for TypeKnowledgePostProcess.
@@ -195,6 +236,12 @@ func (s *KnowledgePostProcessService) Handle(ctx context.Context, task *asynq.Ta
 			textChunks = append(textChunks, c)
 		}
 	}
+
+	// 精确符号索引（§12.7）：制度编号、设备号、图号、物料号、错误码走精确
+	// 通道，普通分词会把 SOP-EQ-012 切碎。这一步此前完全没有生产方——索引
+	// 只能靠手工 POST 建立，因此"精确定位到第几条"从未真正生效。
+	// 先按知识清理旧行再重建，避免 chunk 改写后残留失效符号。
+	s.indexSymbolsForKnowledge(ctx, payload, textChunks)
 
 	graphChunks := selectGraphChunks(textChunks)
 

@@ -31,15 +31,19 @@ func IsLengthFinishReason(reason string) bool {
 // as a plugin that can be registered to EventManager
 type PluginChatCompletionStream struct {
 	modelService interfaces.ModelService // Interface for model operations
+	// gateway records per-call token usage (§16.5 成本). Optional: nil skips it.
+	gateway interfaces.ModelGatewayService
 }
 
 // NewPluginChatCompletionStream creates a new PluginChatCompletionStream instance
 // and registers it with the EventManager
 func NewPluginChatCompletionStream(eventManager *EventManager,
 	modelService interfaces.ModelService,
+	gateway interfaces.ModelGatewayService,
 ) *PluginChatCompletionStream {
 	res := &PluginChatCompletionStream{
 		modelService: modelService,
+		gateway:      gateway,
 	}
 	eventManager.Register(res)
 	return res
@@ -264,6 +268,14 @@ func (p *PluginChatCompletionStream) OnEvent(ctx context.Context,
 						answerProduced = true
 					}
 					closeThinking()
+					// 用量台账（§16.5）：流式是问答主路径，这里不记的话成本
+					// 看板只会统计到非流式调用。一次流只在 Done 上记一次。
+					if response.Done && p.gateway != nil {
+						if tenantID, ok := types.TenantIDFromContext(ctx); ok && tenantID != 0 {
+							_ = p.gateway.RecordUsage(ctx, tenantID, chatManage.ChatModelID,
+								int64(response.Usage.PromptTokens), int64(response.Usage.CompletionTokens))
+						}
+					}
 					// 答案正文先于附言输出；附言（§13.5 的可答但需提示场景）
 					// 在 Done 之前追加，这样持久化的消息正文本身就带提示，
 					// 而不只是实时流里显示一次。
@@ -280,6 +292,7 @@ func (p *PluginChatCompletionStream) OnEvent(ctx context.Context,
 							Truncated:     truncated,
 							RefusalMarker: string(chatManage.RefusalMarker),
 							RefusalNotice: chatManage.RefusalNotice,
+							PromptVersion: chatManage.PromptVersionTag,
 						},
 					})
 				}

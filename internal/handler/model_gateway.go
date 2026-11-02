@@ -279,6 +279,19 @@ func (h *ModelGatewayHandler) LatestPromptVersion(c *gin.Context) {
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /model-gateway/prompts/{key}/versions [post]
+// ListPromptTemplates godoc
+// @Summary      可覆盖的 Prompt 模板清单
+// @Description  返回平台内置、可由租户在 prompt_versions 中覆盖的模板键（§16.5）。配合 GET /model-gateway/prompts/:key/latest 使用：先看哪些可覆盖，再读当前生效版本。
+// @Tags         模型网关
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "{success, data: [string]}"
+// @Security     Bearer
+// @Security     ApiKeyAuth
+// @Router       /model-gateway/prompts [get]
+func (h *ModelGatewayHandler) ListPromptTemplates(c *gin.Context) {
+	c.JSON(200, gin.H{"success": true, "data": types.PromptTemplateKeys()})
+}
+
 func (h *ModelGatewayHandler) SavePromptVersion(c *gin.Context) {
 	ctx := c.Request.Context()
 	var req savePromptVersionRequest

@@ -127,7 +127,7 @@ func TestKnowledgeQASharedKBStreamsWithOwnerModel(t *testing.T) {
 		t.Run("override="+override, func(t *testing.T) {
 			ctx, svc, models := sharedChatFixture()
 			svc.eventManager = chatpipeline.NewEventManager()
-			chatpipeline.NewPluginChatCompletionStream(svc.eventManager, models)
+			chatpipeline.NewPluginChatCompletionStream(svc.eventManager, models, nil)
 			bus := event.NewEventBus()
 			done := make(chan event.AgentFinalAnswerData, 1)
 			bus.On(event.EventAgentFinalAnswer, func(_ context.Context, evt event.Event) error {
@@ -186,7 +186,7 @@ func TestSharedKBMissingModelReturnsPipelineError(t *testing.T) {
 	ctx, svc, models := sharedChatFixture()
 	delete(models.modelsByID, "owner-model")
 	svc.eventManager = chatpipeline.NewEventManager()
-	chatpipeline.NewPluginChatCompletionStream(svc.eventManager, models)
+	chatpipeline.NewPluginChatCompletionStream(svc.eventManager, models, nil)
 	err := svc.KnowledgeQA(ctx, &types.QARequest{
 		Session: &types.Session{ID: "session-b", TenantID: 2}, TurnLeaseHeld: true,
 		KnowledgeBaseIDs: []string{"shared"}, Query: "question",

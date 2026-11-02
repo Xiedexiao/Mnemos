@@ -223,6 +223,9 @@ type AgentFinalAnswerData struct {
 	// RefusalNotice is the caveat that qualifies an answer allowed under a
 	// caveat (stale evidence, no official source).
 	RefusalNotice string `json:"refusal_notice,omitempty"`
+	// PromptVersion is the "<template>@v<n>" tag of the tenant prompt version
+	// that produced this answer; empty means the built-in template (§16.5).
+	PromptVersion string `json:"prompt_version,omitempty"`
 	// Truncated marks an answer the provider cut off at the completion-token
 	// cap. The text is what the model had produced when the cap hit, not a
 	// finished answer, so a client should say so rather than present it as

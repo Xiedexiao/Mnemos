@@ -611,6 +611,13 @@ func (s *knowledgeService) executeKnowledgeDelete(plan *knowledgeDeletePlan, sin
 		if err := s.repo.DeleteKnowledgeTagRelations(ctx, knowledgeID); err != nil {
 			logger.Warnf(ctx, "Failed to delete tag relations for knowledge %s: %v", knowledgeID, err)
 		}
+		// 精确符号索引必须随文档一起清掉（§12.7）：残留行会让"编号检索"
+		// 指向一篇已经不存在的文档，用户点进去得到 404。
+		if s.symbolIndex != nil {
+			if err := s.symbolIndex.DeleteByKnowledge(ctx, tenantInfo.ID, knowledgeID); err != nil {
+				logger.Warnf(ctx, "Failed to delete symbol index for knowledge %s: %v", knowledgeID, err)
+			}
+		}
 	}
 	// 6. Delete the knowledge rows FIRST, then drop their physical files. See
 	// Deferring file removal until the rows are

@@ -231,6 +231,11 @@ type ChatResponse struct {
 	RefusalMarker EvidencePackRefusal `json:"-"`
 	// RefusalNotice is the caveat qualifying an otherwise-answerable reply.
 	RefusalNotice string `json:"-"`
+	// PromptVersion is the "<template>@v<n>" tag of the prompt that produced
+	// this answer (empty when the built-in template was used). Recorded on the
+	// Evidence Pack so "the same question now answers differently" can be
+	// traced to a prompt change instead of being blamed on the model (§16.5).
+	PromptVersion string `json:"-"`
 }
 
 // Response type

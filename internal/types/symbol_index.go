@@ -28,9 +28,12 @@ const (
 	SymbolTypeModel = "model"
 	// SymbolTypeErrorCode 错误码（E023 / E-23 这类单字母 E 前缀形）。
 	SymbolTypeErrorCode = "error_code"
-	// SymbolTypePartNumber 零件号（形状与 code 难区分，v1 启发式不判定，
-	// 留给人工标注为 custom/part_number）。
+	// SymbolTypePartNumber 零件号 / 物料号（PN-4471、PART-88231 这类带
+	// 前缀的形状）。
 	SymbolTypePartNumber = "part_number"
+	// SymbolTypeDrawingNumber 图号（D-100、DWG-2024-01），§12.7 把它列为
+	// 独立的精确通道：图纸版本替代查询依赖它。
+	SymbolTypeDrawingNumber = "drawing_number"
 	// SymbolTypeCustom 人工/外部指定的自定义类别。
 	SymbolTypeCustom = "custom"
 )
@@ -39,7 +42,7 @@ const (
 func IsValidSymbolType(t string) bool {
 	switch t {
 	case SymbolTypeCode, SymbolTypeDocumentNumber, SymbolTypeModel,
-		SymbolTypeErrorCode, SymbolTypePartNumber, SymbolTypeCustom:
+		SymbolTypeErrorCode, SymbolTypePartNumber, SymbolTypeDrawingNumber, SymbolTypeCustom:
 		return true
 	default:
 		return false

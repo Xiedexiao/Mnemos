@@ -61,6 +61,9 @@ type PipelineRequest struct {
 	// qualified (stale-only evidence, or a high-risk question without an
 	// official source).
 	RefusalNotice string `json:"refusal_notice,omitempty"`
+	// PromptVersionTag is the "<template>@v<n>" tag of the tenant prompt version
+	// that produced this answer (§16.5). Empty means the built-in template.
+	PromptVersionTag string `json:"prompt_version,omitempty"`
 	// CitationEnabled controls only final knowledge/web source citations. Nil
 	// defaults to true for requests and agents created before this option existed.
 	CitationEnabled *bool `json:"citation_enabled,omitempty"`

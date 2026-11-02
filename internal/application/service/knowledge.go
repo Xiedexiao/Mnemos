@@ -91,6 +91,10 @@ type knowledgeService struct {
 	// aclRepo resets per-document grants when a document changes space
 	// (V3.0 §2.3 移动一律重置为继承). Optional: nil skips the reset.
 	aclRepo interfaces.KnowledgeACLRepository
+	// symbolIndex is cleaned up when a document is deleted so exact-number
+	// search never points at a document that no longer exists (§12.7).
+	// Optional: nil skips the cleanup.
+	symbolIndex interfaces.SymbolIndexService
 }
 
 const (
@@ -130,6 +134,7 @@ func NewKnowledgeService(
 	audit interfaces.AuditLogService,
 	recycleBin interfaces.RecycleBinService,
 	aclRepo interfaces.KnowledgeACLRepository,
+	symbolIndex interfaces.SymbolIndexService,
 ) (interfaces.KnowledgeService, error) {
 	return &knowledgeService{
 		config:          config,
@@ -161,6 +166,7 @@ func NewKnowledgeService(
 		audit:           audit,
 		recycleBin:      recycleBin,
 		aclRepo:         aclRepo,
+		symbolIndex:     symbolIndex,
 	}, nil
 }
 

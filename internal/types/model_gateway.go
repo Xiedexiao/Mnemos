@@ -226,3 +226,24 @@ type ModelUsageSummaryRow struct {
 //   - 注入防护：Prompt 版本化是审计与回滚的基础；提示词注入检测是独立
 //     的安全层，不进本表。
 // ============================================================================
+
+// PromptTemplateKeys lists the built-in prompt templates a tenant may override
+// through prompt_versions (KnowAxis V3.0 §16.5). The keys match the file names
+// under config/prompt_templates without the .yaml suffix, which is also what the
+// resolver looks up at request time.
+func PromptTemplateKeys() []string {
+	return []string{
+		"system_prompt",
+		"context_template",
+		"rewrite",
+		"fallback",
+		"generate_session_title",
+		"generate_summary",
+		"generate_kb_description",
+		"keywords_extraction",
+		"agent_system_prompt",
+		"graph_extraction",
+		"generate_questions",
+		"intent_prompts",
+	}
+}

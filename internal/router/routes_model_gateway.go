@@ -41,6 +41,9 @@ func RegisterModelGatewayRoutes(r *gin.RouterGroup, h *handler.ModelGatewayHandl
 	prompts := r.Group("/model-gateway/prompts")
 	{
 		// 版本读取（读）= Viewer+。
+		// 可覆盖的模板清单（读）= Viewer+；必须在 /:key 通配段之前无冲突：
+		// 它是 /model-gateway/prompts 的静态根，与 /:key/... 不共享节点。
+		prompts.GET("", g.Viewer(), h.ListPromptTemplates)
 		prompts.GET("/:key/versions", g.Viewer(), h.ListPromptVersions)
 		prompts.GET("/:key/versions/:version", g.Viewer(), h.GetPromptVersion)
 		prompts.GET("/:key/latest", g.Viewer(), h.LatestPromptVersion)

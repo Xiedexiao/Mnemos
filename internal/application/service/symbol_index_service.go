@@ -50,6 +50,13 @@ var (
 	// symbolDocumentShape is the multi-segment document number:
 	// ≥3 separator-joined segments (SOP-EQ-012, GB-50316-2016).
 	symbolDocumentShape = regexp.MustCompile(`^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+){2,}$`)
+	// symbolDrawingShape is the drawing-number prefix convention used by most
+	// industrial PDM systems (D-100, DWG-2024-01). §12.7 lists 图号 as its own
+	// exact-match channel, so a D/DWG/DRAW prefix is worth distinguishing.
+	symbolDrawingShape = regexp.MustCompile(`^(?:D|DWG|DRAW)[-_][A-Z0-9]+(?:[-_][A-Z0-9]+)*$`)
+	// symbolPartShape is the material/part-number prefix convention
+	// (PN-4471, PART-88231, MAT-09).
+	symbolPartShape = regexp.MustCompile(`^(?:PN|PART|MAT|MATL)[-_][A-Z0-9]+$`)
 )
 
 // symbolIndexService implements interfaces.SymbolIndexService.
@@ -232,6 +239,12 @@ func isSymbolCandidate(tok string) bool {
 // code 难区分，v1 不判定（枚举保留，人工标注走 custom）。
 func classifySymbol(tok string) string {
 	switch {
+	case symbolDrawingShape.MatchString(tok):
+		// 图号优先于文档编号判定：D-100 V4 这类图纸编号会被多段规则同时
+		// 命中，但运维按图号检索才符合习惯。
+		return types.SymbolTypeDrawingNumber
+	case symbolPartShape.MatchString(tok):
+		return types.SymbolTypePartNumber
 	case symbolErrorCodeShape.MatchString(tok), symbolErrorCodeNameShape.MatchString(tok):
 		return types.SymbolTypeErrorCode
 	case symbolModelShape.MatchString(tok):
