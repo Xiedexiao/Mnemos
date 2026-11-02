@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/application/service/retriever"
@@ -189,9 +190,16 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 	// copy, so this stays local to the call.
 	params.MatchCount = normalizedMatchCount(params.MatchCount)
 
+	searchStarted := time.Now()
 	chunks, err := s.hybridSearchCandidates(ctx, id, params)
-	if err != nil || len(chunks) == 0 {
+	if err != nil {
 		return nil, err
+	}
+	if len(chunks) == 0 {
+		// 零结果也是质量信号（§12.5）：先记日志，再由缺口聚合决定是否
+		// 进入补知识清单。记录绝不反过来影响这次搜索的返回。
+		s.recordSearchTelemetry(ctx, params, id, 0, 0, 0, time.Since(searchStarted))
+		return nil, nil
 	}
 
 	recordImageRecallDecision(ctx, "fusion.candidate_selection", "",
@@ -204,7 +212,47 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 		chunks = chunks[:params.MatchCount]
 	}
 
-	return s.processSearchResults(ctx, chunks, params.SkipContextEnrichment)
+	results, processErr := s.processSearchResults(ctx, chunks, params.SkipContextEnrichment)
+	if processErr != nil {
+		return nil, processErr
+	}
+	topScore := 0.0
+	if len(results) > 0 && results[0] != nil {
+		topScore = results[0].Score
+	}
+	s.recordSearchTelemetry(ctx, params, id, len(results), 0, topScore, time.Since(searchStarted))
+	return results, nil
+}
+
+// recordSearchTelemetry writes the §12.5 query log and feeds the knowledge-gap
+// aggregator on zero-result queries.
+//
+// It is called on every exit of HybridSearch, including errors, because a query
+// that returned nothing is the most valuable signal for the gap list — dropping
+// it would leave the operator with only the successful half of the picture.
+func (s *knowledgeBaseService) recordSearchTelemetry(
+	ctx context.Context, params types.SearchParams, kbID string,
+	resultCount, permissionFiltered int, topScore float64, elapsed time.Duration,
+) {
+	if s.quality == nil {
+		return
+	}
+	kbIDs := params.KnowledgeBaseIDs
+	if len(kbIDs) == 0 && kbID != "" {
+		kbIDs = []string{kbID}
+	}
+	s.quality.RecordResult(ctx, types.SearchChannelHybrid, params.QueryText,
+		kbIDs, resultCount, permissionFiltered, topScore, elapsed)
+	if resultCount == 0 && strings.TrimSpace(params.QueryText) != "" {
+		// 缺口聚合按租户 + 归一化问题聚簇，重复出现才会被运营看到。
+		if s.gaps != nil {
+			tenantID, _ := types.TenantIDFromContext(ctx)
+			if _, err := s.gaps.Observe(ctx, tenantID, params.QueryText,
+				types.KnowledgeGapSourceSearchZeroResult); err != nil {
+				logger.Warnf(ctx, "failed to observe knowledge gap: %v", err)
+			}
+		}
+	}
 }
 
 // hybridSearchCandidates runs retrieval, fusion and FAQ post-processing for

@@ -68,6 +68,12 @@ type knowledgeBaseService struct {
 	audit           interfaces.AuditLogService
 	resourceCatalog interfaces.ResourceCatalog
 	wikiRepo        interfaces.WikiPageRepository
+	// quality records query telemetry (§12.5): zero-result analysis, hot
+	// queries and the knowledge-gap feed all read it. Optional: nil disables
+	// logging only.
+	quality interfaces.SearchQualityService
+	// gaps clusters zero-result queries into the gap list (§14.4). Optional.
+	gaps interfaces.KnowledgeGapService
 }
 
 // NewKnowledgeBaseService creates a new knowledge base service
@@ -93,6 +99,8 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 	audit interfaces.AuditLogService,
 	resourceCatalog interfaces.ResourceCatalog,
 	wikiRepo interfaces.WikiPageRepository,
+	quality interfaces.SearchQualityService,
+	gaps interfaces.KnowledgeGapService,
 ) interfaces.KnowledgeBaseService {
 	return &knowledgeBaseService{
 		repo:            repo,
@@ -117,6 +125,8 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 		audit:           audit,
 		resourceCatalog: resourceCatalog,
 		wikiRepo:        wikiRepo,
+		quality:         quality,
+		gaps:            gaps,
 	}
 }
 
