@@ -71,6 +71,13 @@ func (s *sessionService) KnowledgeQA(
 		return err
 	}
 
+	// 官方答案优先（§13.7）：高频高风险问题有经过审批的标准口径时，直接
+	// 返回它，而不是每次让模型从片段里重新组织答案。命中在问答主链路的
+	// 最前面，避免既消耗检索与生成、又给出与官方口径不一致的措辞。
+	if s.tryOfficialAnswer(ctx, req, eventBus, knowledgeBaseIDs) {
+		return nil
+	}
+
 	// Resolve chat model ID using shared helper
 	chatModelID, chatModelTenantID, err := s.resolveChatModelID(ctx, req, knowledgeBaseIDs, knowledgeIDs)
 	if err != nil {
@@ -666,6 +673,74 @@ func intersectStrings(left []string, right []string) []string {
 		}
 	}
 	return out
+}
+
+// tryOfficialAnswer answers from the approved standard-answer set when one exists.
+//
+// Returns true when the turn was fully handled (an answer streamed), so the
+// caller stops before retrieval. A miss, an error, or an expired answer falls
+// through to the normal RAG path: the official-answer store must never become a
+// single point of failure for answering.
+func (s *sessionService) tryOfficialAnswer(
+	ctx context.Context, req *types.QARequest, eventBus *event.EventBus, kbIDs []string,
+) bool {
+	if s.officialAnswers == nil || req == nil || strings.TrimSpace(req.Query) == "" {
+		return false
+	}
+	tenantID, ok := types.TenantIDFromContext(ctx)
+	if !ok || tenantID == 0 {
+		return false
+	}
+	kbID := ""
+	if len(kbIDs) == 1 {
+		kbID = kbIDs[0]
+	}
+	match, err := s.officialAnswers.Lookup(ctx, tenantID, req.Query, kbID)
+	if err != nil {
+		logger.Warnf(ctx, "official answer lookup failed, falling back to RAG: %v", err)
+		return false
+	}
+	if match == nil || match.Answer == nil {
+		return false
+	}
+	// 过期/未到生效日的官方答案不能当作当前口径直接回答；交回 RAG 路径，
+	// 由拒答矩阵按"只有过期证据"等场景处理。
+	if match.EffectiveStatus != types.OfficialAnswerPublished {
+		logger.Infof(ctx,
+			"official answer %s is %s, deferring to the RAG path",
+			match.Answer.ID, match.EffectiveStatus)
+		return false
+	}
+	answer := match.Answer
+	var builder strings.Builder
+	builder.WriteString(answer.Answer)
+	if answer.Conditions != "" {
+		builder.WriteString("\n\n适用条件：" + answer.Conditions)
+	}
+	if answer.Exceptions != "" {
+		builder.WriteString("\n例外：" + answer.Exceptions)
+	}
+	if answer.Scope != "" {
+		builder.WriteString("\n适用范围：" + answer.Scope)
+	}
+	if eventBus != nil {
+		eventID := generateEventID("official_answer")
+		if emitErr := eventBus.Emit(ctx, event.Event{
+			ID:        eventID,
+			Type:      event.EventAgentFinalAnswer,
+			SessionID: req.Session.ID,
+			Data: event.AgentFinalAnswerData{
+				Content: builder.String(),
+				Done:    true,
+			},
+		}); emitErr != nil {
+			logger.Warnf(ctx, "official answer emit failed, falling back to RAG: %v", emitErr)
+			return false
+		}
+	}
+	logger.Infof(ctx, "answered %q from official answer %s (v%d)",
+		req.Query, answer.ID, answer.Version)
+	return true
 }
 
 // KnowledgeQAByEvent processes knowledge QA through a series of events in the pipeline

@@ -43,7 +43,10 @@ const retentionJobEnabledEnvVar = "WEKNORA_RETENTION_JOBS_ENABLED"
 type RetentionJobScheduler struct {
 	purgeRecycleBin func(ctx context.Context, now time.Time) (int64, error)
 	computeHealth   func(ctx context.Context, tenantID uint64) error
-	listTenants     func(ctx context.Context) ([]uint64, error)
+	// expireOfficialAnswers demotes standard answers whose validity window
+	// ended (§13.7 证据或版本失效时自动降级). Optional.
+	expireOfficialAnswers func(ctx context.Context, tenantID uint64) (int, error)
+	listTenants           func(ctx context.Context) ([]uint64, error)
 
 	startOnce sync.Once
 	stopOnce  sync.Once
@@ -59,15 +62,17 @@ type RetentionJobScheduler struct {
 func NewRetentionJobScheduler(
 	purgeRecycleBin func(ctx context.Context, now time.Time) (int64, error),
 	computeHealth func(ctx context.Context, tenantID uint64) error,
+	expireOfficialAnswers func(ctx context.Context, tenantID uint64) (int, error),
 	listTenants func(ctx context.Context) ([]uint64, error),
 ) *RetentionJobScheduler {
 	return &RetentionJobScheduler{
-		purgeRecycleBin: purgeRecycleBin,
-		computeHealth:   computeHealth,
-		listTenants:     listTenants,
-		stopCh:          make(chan struct{}),
-		doneCh:          make(chan struct{}),
-		now:             time.Now,
+		purgeRecycleBin:       purgeRecycleBin,
+		computeHealth:         computeHealth,
+		expireOfficialAnswers: expireOfficialAnswers,
+		listTenants:           listTenants,
+		stopCh:                make(chan struct{}),
+		doneCh:                make(chan struct{}),
+		now:                   time.Now,
 	}
 }
 
@@ -158,6 +163,14 @@ func (s *RetentionJobScheduler) runOnce() {
 		if err := s.computeHealth(ctx, tenantID); err != nil {
 			// 单个租户失败不阻断其余：健康分是运营指标，不是业务前置条件。
 			logger.Warnf(ctx, "[retention-jobs] health snapshot failed for tenant %d: %v", tenantID, err)
+		}
+		if s.expireOfficialAnswers != nil {
+			// 官方答案到期必须自动降级：过期口径继续回答比没有答案更危险。
+			if expired, err := s.expireOfficialAnswers(ctx, tenantID); err != nil {
+				logger.Warnf(ctx, "[retention-jobs] official answer expiry failed for tenant %d: %v", tenantID, err)
+			} else if expired > 0 {
+				logger.Infof(ctx, "[retention-jobs] expired %d official answer(s) for tenant %d", expired, tenantID)
+			}
 		}
 	}
 }

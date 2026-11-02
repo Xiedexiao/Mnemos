@@ -182,6 +182,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewApprovalSLAEventRepository))
 	must(container.Provide(repository.NewApprovalChainRepository))
 	must(container.Provide(repository.NewKnowledgeTemplateRepository))
+	must(container.Provide(repository.NewOfficialAnswerRepository))
+	must(container.Provide(service.NewOfficialAnswerService))
 	must(container.Provide(service.NewKnowledgeTemplateService))
 	must(container.Provide(service.NewApprovalChainService))
 	must(container.Provide(service.NewApprovalFlowService))
@@ -774,6 +776,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewSearchQualityHandler))
 	must(container.Provide(handler.NewApprovalChainHandler))
 	must(container.Provide(handler.NewKnowledgeTemplateHandler))
+	must(container.Provide(handler.NewOfficialAnswerHandler))
 	must(container.Provide(handler.NewOntologyHandler))
 	must(container.Provide(handler.NewGraphFactHandler))
 	must(container.Provide(handler.NewReviewHandler))
@@ -2430,6 +2433,7 @@ func startRetentionJobScheduler(
 func newRetentionJobScheduler(
 	recycle interfaces.RecycleBinService,
 	health interfaces.KnowledgeHealthService,
+	officialAnswers interfaces.OfficialAnswerService,
 	tenants interfaces.TenantRepository,
 ) *service.RetentionJobScheduler {
 	var purge func(ctx context.Context, now time.Time) (int64, error)
@@ -2442,6 +2446,10 @@ func newRetentionJobScheduler(
 			_, err := health.CronComputeAll(ctx, tenantID)
 			return err
 		}
+	}
+	var expire func(ctx context.Context, tenantID uint64) (int, error)
+	if officialAnswers != nil {
+		expire = officialAnswers.DemoteDue
 	}
 	var list func(ctx context.Context) ([]uint64, error)
 	if tenants != nil {
@@ -2459,7 +2467,7 @@ func newRetentionJobScheduler(
 			return ids, nil
 		}
 	}
-	return service.NewRetentionJobScheduler(purge, compute, list)
+	return service.NewRetentionJobScheduler(purge, compute, expire, list)
 }
 
 func startApprovalSLAScheduler(
