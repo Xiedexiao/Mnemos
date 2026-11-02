@@ -67,6 +67,17 @@ type KnowledgeBase struct {
 	IsTemporary bool `yaml:"is_temporary"            json:"is_temporary"            gorm:"default:false"`
 	// Description of the knowledge base
 	Description string `yaml:"description"             json:"description" extensions:"x-agent"`
+	// SpaceKind distinguishes personal/team/public/project/external-collab
+	// spaces and drives their default policy (V3.0 §4.1). Empty means team.
+	SpaceKind string `yaml:"space_kind"                json:"space_kind"              gorm:"column:space_kind;type:varchar(24);not null;default:'team'"`
+	// DefaultClassification applies to new content without an explicit
+	// classification (V3.0 §2.4 定密：无确认时按空间默认密级处理).
+	DefaultClassification string `yaml:"default_classification" json:"default_classification" gorm:"column:default_classification;type:varchar(16);not null;default:'internal'"`
+	// RequireReview forces new content through the approval flow.
+	RequireReview bool `yaml:"require_review"            json:"require_review"          gorm:"column:require_review;not null;default:false"`
+	// ExpiresAt ends the space's life: project close or external NDA expiry
+	// turns it read-only (§4.1).
+	ExpiresAt *time.Time `yaml:"expires_at"                json:"expires_at"              gorm:"column:expires_at"`
 	// Workspace ID
 	TenantID uint64 `yaml:"tenant_id"               json:"tenant_id"`
 	// CreatorID records the user ID of whoever originally created the KB.

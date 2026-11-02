@@ -74,6 +74,9 @@ type knowledgeBaseService struct {
 	quality interfaces.SearchQualityService
 	// gaps clusters zero-result queries into the gap list (§14.4). Optional.
 	gaps interfaces.KnowledgeGapService
+	// folderACL applies directory-level denials before recall (§2.3).
+	// Optional: nil means directory grants do not narrow retrieval.
+	folderACL interfaces.FolderACLRepository
 }
 
 // NewKnowledgeBaseService creates a new knowledge base service
@@ -101,6 +104,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 	wikiRepo interfaces.WikiPageRepository,
 	quality interfaces.SearchQualityService,
 	gaps interfaces.KnowledgeGapService,
+	folderACL interfaces.FolderACLRepository,
 ) interfaces.KnowledgeBaseService {
 	return &knowledgeBaseService{
 		repo:            repo,
@@ -127,6 +131,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 		wikiRepo:        wikiRepo,
 		quality:         quality,
 		gaps:            gaps,
+		folderACL:       folderACL,
 	}
 }
 

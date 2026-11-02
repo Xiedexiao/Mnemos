@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
     wiki_config TEXT,
     indexing_strategy TEXT,
     creator_id VARCHAR(36),
+    space_kind VARCHAR(24) NOT NULL DEFAULT 'team',
+    default_classification VARCHAR(16) NOT NULL DEFAULT 'internal',
+    require_review BOOLEAN NOT NULL DEFAULT 0,
+    expires_at DATETIME NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     deleted_at DATETIME

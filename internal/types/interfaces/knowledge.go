@@ -285,6 +285,10 @@ type KnowledgeRepository interface {
 	// search service before recall so unauthorized/stale content never reaches
 	// the candidate set (KnowAxis V3.0 §7.1 + §2.7 权限先行).
 	GetLifecycleExcludedKnowledgeIDs(ctx context.Context, knowledgeBaseIDs []string, now time.Time) ([]string, error)
+	// ListKnowledgeIDsUnderFolderPaths returns the IDs of entries stored in the
+	// given folder paths or their descendants, so a directory-level deny can be
+	// applied before recall (V3.0 §2.3 目录级授权).
+	ListKnowledgeIDsUnderFolderPaths(ctx context.Context, kbID string, folderPaths []string) ([]string, error)
 	// CheckKnowledgeExists checks if knowledge already exists.
 	// For file types, check by fileHash or (fileName+fileSize).
 	// For URL types, check by URL.

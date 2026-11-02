@@ -1292,3 +1292,42 @@ func (r *knowledgeRepository) GetLatestKnowledgeVersion(ctx context.Context, kno
 	}
 	return &version, nil
 }
+
+// ListKnowledgeIDsUnderFolderPaths returns the IDs of entries stored in the
+// given folder paths or their descendants (V3.0 §2.3 目录级授权).
+//
+// The root path ("") matches every entry in the space, which is what a
+// space-wide deny means. Descendant matching uses the same "path/" prefix rule
+// as the folder filter so a folder named "sop" never matches "sopx".
+func (r *knowledgeRepository) ListKnowledgeIDsUnderFolderPaths(
+	ctx context.Context, kbID string, folderPaths []string,
+) ([]string, error) {
+	if kbID == "" || len(folderPaths) == 0 {
+		return nil, nil
+	}
+	query := r.db.WithContext(ctx).
+		Model(&types.Knowledge{}).
+		Where("knowledge_base_id = ? AND deleted_at IS NULL", kbID)
+
+	var conditions []string
+	var args []interface{}
+	for _, path := range folderPaths {
+		path = types.NormalizeKnowledgeFolderPath(path)
+		if path == "" {
+			// 根目录：整个空间。
+			conditions = append(conditions, "1 = 1")
+			continue
+		}
+		conditions = append(conditions,
+			"(folder_path = ? OR folder_path LIKE ? ESCAPE ?)")
+		args = append(args, path, escapeLikeKeyword(path)+"/%", likeEscapeChar)
+	}
+	if len(conditions) == 0 {
+		return nil, nil
+	}
+	query = query.Where("("+strings.Join(conditions, " OR ")+")", args...)
+
+	var ids []string
+	err := query.Pluck("id", &ids).Error
+	return ids, err
+}

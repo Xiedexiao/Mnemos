@@ -224,6 +224,49 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 	return results, nil
 }
 
+// folderDeniedKnowledgeIDs returns the entries whose folder path carries a deny
+// for the caller (V3.0 §2.3 目录级授权).
+//
+// Directory grants are folded per distinct folder path rather than per document:
+// a space typically has a handful of paths and thousands of rows, so the fold
+// costs one query per path instead of one per document.
+func (s *knowledgeBaseService) folderDeniedKnowledgeIDs(
+	ctx context.Context, kbIDs []string, userID string,
+) ([]string, error) {
+	var denied []string
+	for _, kbID := range kbIDs {
+		tenantID, _ := types.TenantIDFromContext(ctx)
+		grants, err := s.folderACL.ListByKnowledgeBase(ctx, tenantID, kbID)
+		if err != nil {
+			return nil, err
+		}
+		if len(grants) == 0 {
+			continue
+		}
+		// 只关心该调用者的 deny 行；allow 行不改变检索可见性（文档级 ACL 与
+		// 密级已经决定"能不能看"，目录主要是收窄手段）。
+		var denyPaths []string
+		for _, grant := range grants {
+			if grant == nil || grant.SubjectID != userID {
+				continue
+			}
+			if grant.Effect != string(types.KnowledgeACLEffectDeny) {
+				continue
+			}
+			denyPaths = append(denyPaths, grant.FolderPath)
+		}
+		if len(denyPaths) == 0 {
+			continue
+		}
+		ids, err := s.kgRepo.ListKnowledgeIDsUnderFolderPaths(ctx, kbID, denyPaths)
+		if err != nil {
+			return nil, err
+		}
+		denied = append(denied, ids...)
+	}
+	return denied, nil
+}
+
 // recordSearchTelemetry writes the §12.5 query log and feeds the knowledge-gap
 // aggregator on zero-result queries.
 //
@@ -336,6 +379,23 @@ func (s *knowledgeBaseService) hybridSearchCandidates(ctx context.Context,
 		}
 		if len(aclDenied) > 0 {
 			params.ExcludeKnowledgeIDs = append(params.ExcludeKnowledgeIDs, aclDenied...)
+		}
+	}
+
+	// 目录级授权（§2.3）：目录上的 deny 必须与文档 ACL 一样在召回前生效，
+	// 否则"这个目录整体不对供应商开放"会被目录里的每一篇文档默认放行。
+	// 与文档 ACL 同样 fail-closed。
+	if caller := types.CallerFromContext(ctx); caller.UserID != "" && s.folderACL != nil {
+		folderDenied, folderErr := s.folderDeniedKnowledgeIDs(ctx, searchKBIDs, caller.UserID)
+		if folderErr != nil {
+			logger.ErrorWithFields(ctx, folderErr, map[string]interface{}{
+				"fail_closed": true,
+				"kb_ids":      searchKBIDs,
+			})
+			return nil, folderErr
+		}
+		if len(folderDenied) > 0 {
+			params.ExcludeKnowledgeIDs = append(params.ExcludeKnowledgeIDs, folderDenied...)
 		}
 	}
 
