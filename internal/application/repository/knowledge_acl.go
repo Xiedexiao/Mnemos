@@ -44,6 +44,14 @@ func (r *knowledgeACLRepository) ListByKnowledge(ctx context.Context, knowledgeI
 	return grants, err
 }
 
+// DeleteByKnowledge removes every ACL row of one knowledge entry.
+func (r *knowledgeACLRepository) DeleteByKnowledge(ctx context.Context, knowledgeID string) (int64, error) {
+	result := r.db.WithContext(ctx).
+		Where("knowledge_id = ?", knowledgeID).
+		Delete(&types.KnowledgeACL{})
+	return result.RowsAffected, result.Error
+}
+
 // Revoke deletes one grant row within the tenant.
 func (r *knowledgeACLRepository) Revoke(ctx context.Context, tenantID uint64, grantID string) error {
 	return r.db.WithContext(ctx).

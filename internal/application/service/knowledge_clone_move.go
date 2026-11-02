@@ -1441,6 +1441,16 @@ func (s *knowledgeService) moveKnowledgeReuseVectors(
 	if err := s.repo.DeleteKnowledgeTagRelations(ctx, knowledge.ID); err != nil {
 		return fmt.Errorf("failed to clear knowledge tag relations: %w", err)
 	}
+	// 跨空间移动不得携带源空间授权（V3.0 §2.3）：文档级 ACL 会随行移入目标
+	// 空间，原本只对源空间某些人开放的授信到了目标空间依然生效，等于静默
+	// 提权。移动一律重置为"继承目标空间"，旧授权由管理员按需重建。
+	if removed, aclErr := s.aclRepo.DeleteByKnowledge(ctx, knowledge.ID); aclErr != nil {
+		return fmt.Errorf("failed to reset document ACL on move: %w", aclErr)
+	} else if removed > 0 {
+		logger.Warnf(ctx,
+			"knowledge %s moved %s -> %s: dropped %d per-document ACL grant(s) (reset to target inheritance)",
+			knowledge.ID, sourceKB.ID, targetKB.ID, removed)
+	}
 	before := *knowledge
 	knowledge.KnowledgeBaseID = targetKB.ID
 	knowledge.ParseStatus = types.ParseStatusCompleted
@@ -1477,6 +1487,14 @@ func (s *knowledgeService) moveKnowledgeReparse(
 	}
 	if err := s.repo.DeleteKnowledgeTagRelations(ctx, knowledge.ID); err != nil {
 		return err
+	}
+	// 同 moveOneKnowledge：跨空间移动重置文档级授权（V3.0 §2.3）。
+	if removed, aclErr := s.aclRepo.DeleteByKnowledge(ctx, knowledge.ID); aclErr != nil {
+		return fmt.Errorf("failed to reset document ACL on move: %w", aclErr)
+	} else if removed > 0 {
+		logger.Warnf(ctx,
+			"knowledge %s moved %s -> %s (reparse): dropped %d per-document ACL grant(s)",
+			knowledge.ID, sourceKB.ID, targetKB.ID, removed)
 	}
 	knowledge.KnowledgeBaseID = targetKB.ID
 	knowledge.EmbeddingModelID = targetKB.EmbeddingModelID

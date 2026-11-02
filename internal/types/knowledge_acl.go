@@ -77,3 +77,27 @@ func (t KnowledgeACLSubjectType) Valid() bool {
 		return false
 	}
 }
+
+// KnowledgeMoveAccessPreview is the "who gains / who loses access" diff the UI
+// must show before a cross-space move is confirmed (V3.0 §2.3: 任何移动都必须
+// 先回答"谁会因此获得或失去访问"). It is read-only; nothing is written.
+type KnowledgeMoveAccessPreview struct {
+	// KnowledgeID the preview describes.
+	KnowledgeID string `json:"knowledge_id"`
+	// SourceKBID / TargetKBID the spaces involved.
+	SourceKBID string `json:"source_kb_id"`
+	TargetKBID string `json:"target_kb_id"`
+	// RetainedSubjectIDs keep access after the move because of a document ACL
+	// row that the operator may choose to recreate in the target space.
+	RetainedSubjectIDs []string `json:"retained_subject_ids"`
+	// GainedSubjectIDs would gain access from the target space's policy. A
+	// non-empty list means the move widens exposure and needs confirmation.
+	GainedSubjectIDs []string `json:"gained_subject_ids"`
+	// LostSubjectIDs lose access they had through the source space.
+	LostSubjectIDs []string `json:"lost_subject_ids"`
+	// ResetGrantCount is how many document-level grants the move drops when
+	// the document falls back to target-space inheritance.
+	ResetGrantCount int `json:"reset_grant_count"`
+	// RequiresConfirmation is true when the move changes anyone's access.
+	RequiresConfirmation bool `json:"requires_confirmation"`
+}

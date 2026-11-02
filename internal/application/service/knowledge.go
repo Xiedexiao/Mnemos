@@ -88,6 +88,9 @@ type knowledgeService struct {
 	// (V3.0 §5.5, 30-day restore window). Optional: nil (Lite/test harness)
 	// skips the enqueue entirely.
 	recycleBin interfaces.RecycleBinService
+	// aclRepo resets per-document grants when a document changes space
+	// (V3.0 §2.3 移动一律重置为继承). Optional: nil skips the reset.
+	aclRepo interfaces.KnowledgeACLRepository
 }
 
 const (
@@ -126,6 +129,7 @@ func NewKnowledgeService(
 	spanTracker SpanTracker,
 	audit interfaces.AuditLogService,
 	recycleBin interfaces.RecycleBinService,
+	aclRepo interfaces.KnowledgeACLRepository,
 ) (interfaces.KnowledgeService, error) {
 	return &knowledgeService{
 		config:          config,
@@ -156,6 +160,7 @@ func NewKnowledgeService(
 		spanTracker:     spanTracker,
 		audit:           audit,
 		recycleBin:      recycleBin,
+		aclRepo:         aclRepo,
 	}, nil
 }
 

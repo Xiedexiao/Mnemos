@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/errors"
@@ -14,11 +15,16 @@ import (
 // authorize action ceiling of the default role matrix.
 type KnowledgeACLHandler struct {
 	aclService interfaces.KnowledgeACLService
+	// kgRepo resolves the document's current space for the move preview.
+	kgRepo interfaces.KnowledgeRepository
 }
 
 // NewKnowledgeACLHandler constructs the handler.
-func NewKnowledgeACLHandler(aclService interfaces.KnowledgeACLService) *KnowledgeACLHandler {
-	return &KnowledgeACLHandler{aclService: aclService}
+func NewKnowledgeACLHandler(
+	aclService interfaces.KnowledgeACLService,
+	kgRepo interfaces.KnowledgeRepository,
+) *KnowledgeACLHandler {
+	return &KnowledgeACLHandler{aclService: aclService, kgRepo: kgRepo}
 }
 
 // aclGrantRequest is the body of POST /knowledge/:id/acl.
@@ -116,4 +122,45 @@ func (h *KnowledgeACLHandler) RevokeKnowledgeACL(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"success": true})
+}
+
+// PreviewKnowledgeMove godoc
+// @Summary      预览跨空间移动的访问差异
+// @Description  移动前回答"谁将获得/失去访问"（KnowAxis V3.0 §2.3）。只读投影：不写任何数据。移动本身会把文档级授权重置为目标空间继承，因此同时给出将被重置的授权条数。
+// @Tags         知识ACL
+// @Produce      json
+// @Param        id              path   string  true  "知识ID"
+// @Param        target_kb_id    query  string  true  "目标知识库ID"
+// @Success      200  {object}  map[string]interface{}  "{success, data: KnowledgeMoveAccessPreview}"
+// @Failure      400  {object}  errors.AppError
+// @Security     Bearer
+// @Security     ApiKeyAuth
+// @Router       /knowledge/{id}/acl/move-preview [get]
+func (h *KnowledgeACLHandler) PreviewKnowledgeMove(c *gin.Context) {
+	ctx := c.Request.Context()
+	knowledgeID := c.Param("id")
+	targetKBID := strings.TrimSpace(c.Query("target_kb_id"))
+	sourceKBID := strings.TrimSpace(c.Query("source_kb_id"))
+	if targetKBID == "" {
+		c.Error(errors.NewBadRequestError("target_kb_id is required"))
+		return
+	}
+	// The document decides its current space; callers may not assert a source
+	// space that differs from where the document actually lives.
+	if sourceKBID == "" && h.kgRepo != nil {
+		knowledge, err := h.kgRepo.GetKnowledgeByIDOnly(ctx, knowledgeID)
+		if err != nil {
+			c.Error(errors.NewNotFoundError("knowledge not found"))
+			return
+		}
+		if knowledge != nil {
+			sourceKBID = knowledge.KnowledgeBaseID
+		}
+	}
+	preview, err := h.aclService.MovePreview(ctx, knowledgeID, sourceKBID, targetKBID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "data": preview})
 }
