@@ -188,6 +188,10 @@ type ChunkExtractService struct {
 	knowledgeRepo     interfaces.KnowledgeRepository
 	chunkRepo         interfaces.ChunkRepository
 	graphEngine       interfaces.RetrieveGraphRepository
+	// graphFacts projects the extraction into the versioned fact layer
+	// (§8.5/§9.4): entities, evidence-bound facts and a GraphCommit per chunk.
+	// Optional: nil keeps the legacy graph-only behaviour.
+	graphFacts interfaces.GraphFactService
 	// spanTracker records this graph-extract task's subspan under the
 	// parent attempt's postprocess stage so the trace viewer shows real
 	// per-chunk graph extraction time rather than the upstream's enqueue.
@@ -202,6 +206,7 @@ func NewChunkExtractService(
 	knowledgeRepo interfaces.KnowledgeRepository,
 	chunkRepo interfaces.ChunkRepository,
 	graphEngine interfaces.RetrieveGraphRepository,
+	graphFacts interfaces.GraphFactService,
 	spanTracker SpanTracker,
 ) interfaces.TaskHandler {
 	return &ChunkExtractService{
@@ -211,6 +216,7 @@ func NewChunkExtractService(
 		knowledgeRepo:     knowledgeRepo,
 		chunkRepo:         chunkRepo,
 		graphEngine:       graphEngine,
+		graphFacts:        graphFacts,
 		spanTracker:       spanTracker,
 	}
 }
@@ -385,6 +391,19 @@ func (s *ChunkExtractService) Handle(ctx context.Context, t *asynq.Task) error {
 		logger.Errorf(ctx, "failed to add graph: %v", err)
 		handleErr = err
 		return err
+	}
+	// 图谱事实层投影（§8.5/§9.4）：把同一份抽取结果写进带证据、可版本化的
+	// GraphEntity/GraphFact/GraphCommit。legacy 图存储继续写，二者并行直到
+	// 查询侧全部切到事实层。失败只告警：解析与索引已经完成，不该因此回滚。
+	if s.graphFacts != nil {
+		if commit, projErr := (&graphFactProjection{facts: s.graphFacts}).projectChunk(
+			ctx, p.TenantID, chunk, graph, "system",
+		); projErr != nil {
+			graphOut["fact_projection_error"] = projErr.Error()
+		} else if commit != nil {
+			graphOut["fact_commit_id"] = commit.ID
+			graphOut["facts_added"] = commit.FactsAdded
+		}
 	}
 	graphOut["nodes_added"] = len(graph.Node)
 	graphOut["relations_added"] = len(graph.Relation)

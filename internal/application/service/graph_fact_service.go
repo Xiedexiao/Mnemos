@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -546,6 +547,15 @@ func (s *graphFactService) normalizeFacts(tenantID uint64, facts []*types.GraphF
 			return ErrGraphInvalidConfidence
 		}
 		fact.TenantID = tenantID
+		// 证据绑定是硬约束（§9.4/§8.5）：没有原文位置或业务记录的实体/关系
+		// 不得进入正式图谱。此前 Evidence 可空，等于让"无中生有"的抽取直接
+		// 落到查询面；这里把无证据的事实降级为 AMBIGUOUS —— 它仍可被人工审核
+		// 看到，但不会自动参与检索（AMBIGUOUS 默认排除在查询之外）。
+		if !factHasEvidence(fact) {
+			if fact.Confidence == types.GraphConfidenceExtracted {
+				fact.Confidence = types.GraphConfidenceAmbiguous
+			}
+		}
 		if fact.ID == "" {
 			fact.ID = uuid.NewString()
 		}
@@ -554,6 +564,26 @@ func (s *graphFactService) normalizeFacts(tenantID uint64, facts []*types.GraphF
 		}
 	}
 	return nil
+}
+
+// factHasEvidence reports whether the fact carries at least one usable
+// evidence binding: an identifiable source chunk or document. A locator/quote
+// alone is not enough — without a document the claim cannot be traced back, so
+// it cannot be verified or withdrawn (§2.4 证据可追溯).
+func factHasEvidence(fact *types.GraphFact) bool {
+	if fact == nil || len(fact.Evidence) == 0 {
+		return false
+	}
+	var evidence []types.GraphFactEvidence
+	if err := json.Unmarshal(fact.Evidence, &evidence); err != nil {
+		return false
+	}
+	for _, item := range evidence {
+		if item.KnowledgeID != "" || item.ChunkID != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // validateFactEndpoints 校验事实两端实体存在：本批实体优先，其余查库。
