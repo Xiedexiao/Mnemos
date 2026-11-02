@@ -1444,7 +1444,7 @@ func (s *knowledgeService) moveKnowledgeReuseVectors(
 	// 跨空间移动不得携带源空间授权（V3.0 §2.3）：文档级 ACL 会随行移入目标
 	// 空间，原本只对源空间某些人开放的授信到了目标空间依然生效，等于静默
 	// 提权。移动一律重置为"继承目标空间"，旧授权由管理员按需重建。
-	if removed, aclErr := s.aclRepo.DeleteByKnowledge(ctx, knowledge.ID); aclErr != nil {
+	if removed, aclErr := s.deleteDocumentACLOnMove(ctx, knowledge.ID); aclErr != nil {
 		return fmt.Errorf("failed to reset document ACL on move: %w", aclErr)
 	} else if removed > 0 {
 		logger.Warnf(ctx,
@@ -1470,6 +1470,16 @@ func (s *knowledgeService) moveKnowledgeReuseVectors(
 	return nil
 }
 
+// deleteDocumentACLOnMove resets a document's per-document grants when it
+// changes space (V3.0 §2.3: 移动一律重置为继承)。Returns how many grants were
+// dropped; a nil repository (Lite / test harness) is a no-op.
+func (s *knowledgeService) deleteDocumentACLOnMove(ctx context.Context, knowledgeID string) (int64, error) {
+	if s.aclRepo == nil {
+		return 0, nil
+	}
+	return s.aclRepo.DeleteByKnowledge(ctx, knowledgeID)
+}
+
 // moveKnowledgeReparse moves knowledge to target KB and re-parses it with target KB's configuration.
 func (s *knowledgeService) moveKnowledgeReparse(
 	ctx context.Context,
@@ -1489,7 +1499,7 @@ func (s *knowledgeService) moveKnowledgeReparse(
 		return err
 	}
 	// 同 moveOneKnowledge：跨空间移动重置文档级授权（V3.0 §2.3）。
-	if removed, aclErr := s.aclRepo.DeleteByKnowledge(ctx, knowledge.ID); aclErr != nil {
+	if removed, aclErr := s.deleteDocumentACLOnMove(ctx, knowledge.ID); aclErr != nil {
 		return fmt.Errorf("failed to reset document ACL on move: %w", aclErr)
 	} else if removed > 0 {
 		logger.Warnf(ctx,

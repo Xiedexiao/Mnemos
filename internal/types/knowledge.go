@@ -123,6 +123,14 @@ type KnowledgeListFilter struct {
 	SortBy KnowledgeListSortField
 	// SortOrder 指定升序或降序；零值与 desc 等价。
 	SortOrder KnowledgeListSortOrder
+	// ExcludeKnowledgeIDs drops specific entries from the listing. Callers fill
+	// this with the ACL/classification denial set so a document the reader may
+	// not open never shows up as a title-only row (V3.0 §2.4/§2.10 计数与预览不泄露).
+	ExcludeKnowledgeIDs []string
+	// MaxClassification caps the visible classification when non-empty, so a
+	// reader without an explicit allow does not even learn that a secret entry
+	// exists. Empty means "no ceiling" (caller already decided).
+	MaxClassification KnowledgeClassification
 }
 
 // KnowledgeListSortField 是知识文件列表允许使用的排序字段。

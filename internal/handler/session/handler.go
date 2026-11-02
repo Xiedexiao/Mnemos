@@ -64,9 +64,12 @@ type Handler struct {
 	// dlpService masks PII in finalized assistant output (V3.0 §13 DLP v1).
 	// Optional: nil (Lite) skips the scan entirely.
 	dlpService interfaces.DLPService
-	desktopService  *service.SandboxDesktopService
-	desktopTickets  service.SandboxDesktopTicketStore
-	desktopLast     service.SandboxDesktopLastStore
+	// permissionVersions stamps the authorization epoch into the Evidence Pack
+	// permission snapshot (V3.0 §2.6/§13.4). Optional: nil leaves it empty.
+	permissionVersions interfaces.PermissionVersionService
+	desktopService     *service.SandboxDesktopService
+	desktopTickets     service.SandboxDesktopTicketStore
+	desktopLast        service.SandboxDesktopLastStore
 	// redis backs the distributed desktop slot. Nil in Lite mode, where the
 	// in-process limiter is the correct degradation.
 	redis *redis.Client
@@ -128,6 +131,7 @@ func NewHandler(
 	// dlpService masks PII in finalized assistant output (V3.0 §13 DLP v1).
 	// Optional: nil (Lite) skips the scan entirely.
 	dlpService interfaces.DLPService,
+	permissionVersions interfaces.PermissionVersionService,
 ) *Handler {
 	h := &Handler{
 		browserSkill:          browserSkill,
@@ -161,6 +165,7 @@ func NewHandler(
 		background:            backgroundWork,
 		evidenceService:       evidenceService,
 		dlpService:            dlpService,
+		permissionVersions:    permissionVersions,
 		attachmentProcessor: NewAttachmentProcessor(
 			fileService,
 			documentReader,

@@ -170,6 +170,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewKnowledgeBaseRepository))
 	must(container.Provide(repository.NewKnowledgeRepository))
 	must(container.Provide(repository.NewKnowledgeACLRepository))
+	must(container.Provide(repository.NewPermissionVersionRepository))
+	must(container.Provide(service.NewPermissionVersionService))
 	must(container.Provide(repository.NewFeedbackRepository))
 	must(container.Provide(repository.NewQualityTaskRepository))
 	must(container.Provide(repository.NewApprovalFlowRepository))

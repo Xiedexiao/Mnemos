@@ -21,6 +21,10 @@ type KnowledgeACLRepository interface {
 	DeleteByKnowledge(ctx context.Context, knowledgeID string) (int64, error)
 	// Revoke deletes one grant row by ID (within tenant).
 	Revoke(ctx context.Context, tenantID uint64, grantID string) error
+	// GetByID returns one grant within the tenant. Revocation reads it first so
+	// the propagation ledger can name the affected document and subject after
+	// the row is deleted.
+	GetByID(ctx context.Context, tenantID uint64, grantID string) (*types.KnowledgeACL, error)
 	// DeniedKnowledgeIDs returns the IDs of entries in the given knowledge
 	// bases that the subject must NOT access for the action:
 	//   - any deny row for (user, action) wins, and

@@ -234,6 +234,29 @@ func applyKnowledgeListFilter(query *gorm.DB, filter types.KnowledgeListFilter) 
 			)
 		}
 	}
+	// 权限与密级上限（V3.0 §2.4/§2.10）：列表同时是"存在性"出口，无权限的
+	// 条目连标题都不能出现，所以拒绝集直接下推成查询条件——既过滤行，也让
+	// total 计数不再泄露隐藏条目的数量。
+	if len(filter.ExcludeKnowledgeIDs) > 0 {
+		query = query.Where("knowledges.id NOT IN (?)", filter.ExcludeKnowledgeIDs)
+	}
+	if filter.MaxClassification != "" {
+		allowed := make([]string, 0, 4)
+		for _, candidate := range []types.KnowledgeClassification{
+			types.KnowledgeClassificationPublic,
+			types.KnowledgeClassificationInternal,
+			types.KnowledgeClassificationSecret,
+			types.KnowledgeClassificationConfidential,
+		} {
+			if candidate.Rank() <= filter.MaxClassification.Rank() {
+				allowed = append(allowed, string(candidate))
+			}
+		}
+		// 存量行的 classification 可能为空，按 internal 处理，与
+		// ParseKnowledgeClassification 的默认值保持一致。
+		allowed = append(allowed, "")
+		query = query.Where("classification IN (?)", allowed)
+	}
 	return query
 }
 

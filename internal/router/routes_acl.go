@@ -20,5 +20,7 @@ func RegisterKnowledgeACLRoutes(r *gin.RouterGroup, handler *handler.KnowledgeAC
 		// 移动前访问差异预览（V3.0 §2.3）：只读，但输出"谁将获得/失去访问"，
 		// 按写权限而不是读权限把关——能执行移动的人才该看到这份差异。
 		acl.GET("/move-preview", g.Contributor(), g.KBAccessWriteFromKnowledgeIDParam("id"), handler.PreviewKnowledgeMove)
+		// 撤权传播台账（§2.6）：治理面读取，Admin 及以上。
+		acl.GET("/revocations", g.Admin(), g.KBAccessReadFromKnowledgeIDParam("id"), handler.ListRevocationLedger)
 	}
 }

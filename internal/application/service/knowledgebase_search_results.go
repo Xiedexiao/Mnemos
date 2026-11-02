@@ -366,6 +366,11 @@ func (s *knowledgeBaseService) buildSearchResult(chunk *types.Chunk,
 		MatchedContent:          matchedContent,
 		KnowledgeBaseID:         knowledge.KnowledgeBaseID,
 		SourceLocators:          chunk.SourceLocators,
+		// Classification and lifecycle travel with the hit so downstream
+		// stages (Evidence Pack snapshot §13.4, citation redaction §2.7) do
+		// not need a second per-hit lookup.
+		KnowledgeClassification:  knowledge.Classification,
+		KnowledgeLifecycleStatus: knowledge.LifecycleStatus,
 	}
 }
 

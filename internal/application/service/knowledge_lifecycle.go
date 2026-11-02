@@ -39,7 +39,10 @@ type knowledgeLifecycleService struct {
 	audit        interfaces.AuditLogService
 	gamification interfaces.GamificationService
 	receipts     interfaces.ApprovalReceiptRepository
-	now          func() time.Time
+	// versions advances the authorization epoch on reclassification so
+	// snapshot caches miss (§2.4 升密即时生效). Optional: nil skips it.
+	versions interfaces.PermissionVersionService
+	now      func() time.Time
 }
 
 // NewKnowledgeLifecycleService constructs the lifecycle service.
@@ -49,6 +52,7 @@ func NewKnowledgeLifecycleService(
 	audit interfaces.AuditLogService,
 	gamification interfaces.GamificationService,
 	receipts interfaces.ApprovalReceiptRepository,
+	versions interfaces.PermissionVersionService,
 ) interfaces.KnowledgeLifecycleService {
 	return &knowledgeLifecycleService{
 		kgRepo:       kgRepo,
@@ -56,6 +60,7 @@ func NewKnowledgeLifecycleService(
 		audit:        audit,
 		gamification: gamification,
 		receipts:     receipts,
+		versions:     versions,
 		now:          time.Now,
 	}
 }
@@ -248,6 +253,21 @@ func (s *knowledgeLifecycleService) Transition(
 	}
 
 	s.logTransition(ctx, knowledge, updated, input)
+
+	// 密级变更与撤权同样推进权限版本（§2.4 升密"即时生效"、§2.6 撤权传播）：
+	// 升密之后，旧缓存里的答案摘要与派生内容都必须立刻不可用。
+	if input.Action == types.KnowledgeLifecycleActionUpdateSettings &&
+		input.Classification != nil && input.Classification.Valid() &&
+		string(*input.Classification) != knowledge.Classification && s.versions != nil {
+		if _, err := s.versions.BumpForKnowledge(ctx, updated.TenantID, updated.ID, updated.KnowledgeBaseID,
+			permissionEpochReason(string(types.RevocationTriggerClassification), string(*input.Classification))); err != nil {
+			logger.Warnf(ctx, "failed to bump permission version after reclassification of %s: %v", updated.ID, err)
+		}
+		if _, err := s.versions.RecordRevocation(ctx, updated.TenantID, updated.ID, "",
+			types.RevocationTriggerClassification); err != nil {
+			logger.Warnf(ctx, "failed to record reclassification propagation for %s: %v", updated.ID, err)
+		}
+	}
 	return updated, nil
 }
 

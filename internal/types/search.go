@@ -233,6 +233,15 @@ type SearchResult struct {
 	// KnowledgeBaseID is the ID of the knowledge base this result belongs to
 	KnowledgeBaseID string `json:"knowledge_base_id,omitempty"`
 
+	// KnowledgeClassification is the source document's classification at
+	// retrieval time. Carried on the hit so the Evidence Pack permission
+	// snapshot (§13.4) and the citation redaction path (§2.7) can decide
+	// without a second lookup.
+	KnowledgeClassification string `json:"knowledge_classification,omitempty"`
+	// KnowledgeLifecycleStatus is the source document's lifecycle state at
+	// retrieval time, for the same reason.
+	KnowledgeLifecycleStatus string `json:"knowledge_lifecycle_status,omitempty"`
+
 	// SourceLocators point back into the original file for citation
 	// navigation. Merged results carry the union of their chunks' locators.
 	SourceLocators SourceLocators `json:"source_locators,omitempty"`

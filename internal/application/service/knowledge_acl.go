@@ -25,6 +25,9 @@ type knowledgeACLService struct {
 	// kbShares supplies the space-level reachability used by MovePreview.
 	// Optional: nil means the preview reports document-level deltas only.
 	kbShares interfaces.KBShareRepository
+	// versions bumps the authorization epoch on every change so snapshot-holding
+	// caches miss immediately (V3.0 §2.6). Optional: nil skips the bump.
+	versions interfaces.PermissionVersionService
 	now      func() time.Time
 }
 
@@ -34,9 +37,11 @@ func NewKnowledgeACLService(
 	kgRepo interfaces.KnowledgeRepository,
 	audit interfaces.AuditLogService,
 	kbShares interfaces.KBShareRepository,
+	versions interfaces.PermissionVersionService,
 ) interfaces.KnowledgeACLService {
 	return &knowledgeACLService{
-		repo: repo, kgRepo: kgRepo, audit: audit, kbShares: kbShares, now: time.Now,
+		repo: repo, kgRepo: kgRepo, audit: audit, kbShares: kbShares,
+		versions: versions, now: time.Now,
 	}
 }
 
@@ -62,6 +67,9 @@ func (s *knowledgeACLService) Grant(ctx context.Context, grant *types.KnowledgeA
 	if err := s.repo.UpsertGrant(ctx, grant); err != nil {
 		return nil, err
 	}
+	// 任何授权变更都让权限版本前进（§2.6）：新增 deny 会立刻缩小可见范围，
+	// 缓存键随之失效，不需要逐通道发失效消息。
+	s.bumpEpoch(ctx, grant.TenantID, grant.KnowledgeID, permissionEpochReason(string(types.RevocationTriggerACLGrant), grant.Action))
 	if s.audit != nil {
 		_ = s.audit.Log(ctx, &types.AuditLog{
 			TenantID:    grant.TenantID,
@@ -90,6 +98,12 @@ func (s *knowledgeACLService) ListByKnowledge(ctx context.Context, knowledgeID s
 
 // Revoke deletes one grant within the tenant.
 func (s *knowledgeACLService) Revoke(ctx context.Context, tenantID uint64, grantID, actorID string) error {
+	// Resolve the document first: the row is gone after the delete, and the
+	// revocation sweep (§2.6) is recorded against the document it applied to.
+	grant, err := s.repo.GetByID(ctx, tenantID, grantID)
+	if err != nil {
+		return err
+	}
 	if err := s.repo.Revoke(ctx, tenantID, grantID); err != nil {
 		return err
 	}
@@ -99,12 +113,52 @@ func (s *knowledgeACLService) Revoke(ctx context.Context, tenantID uint64, grant
 			ActorUserID: actorID,
 			Action:      auditActionACLRevoked,
 			ScopeType:   "knowledge",
+			ScopeID:     grant.KnowledgeID,
 			TargetType:  "acl_grant",
 			TargetID:    grantID,
 			Outcome:     "success",
 		})
 	}
+	// 撤权是 §2.6 的核心事件：先推进权限版本让缓存键失效，再把十个出口的
+	// 处置结果记进台账，回答"撤权之后每个出口都验证过看不到"。
+	s.bumpEpoch(ctx, tenantID, grant.KnowledgeID, string(types.RevocationTriggerACLRevoke))
+	s.recordRevocation(ctx, tenantID, grant.KnowledgeID, grant.SubjectID, types.RevocationTriggerACLRevoke)
 	return nil
+}
+
+// bumpEpoch advances the permission epoch of one document. Failure is logged
+// but never fails the authorization change itself: the change already took
+// effect in the database (the source of truth), and the epoch is what makes
+// snapshot caches miss. Callers that must be strict use the returned error.
+func (s *knowledgeACLService) bumpEpoch(
+	ctx context.Context, tenantID uint64, knowledgeID, reason string,
+) {
+	if s.versions == nil || tenantID == 0 || knowledgeID == "" {
+		return
+	}
+	var kbID string
+	if s.kgRepo != nil {
+		if knowledge, err := s.kgRepo.GetKnowledgeByIDOnly(ctx, knowledgeID); err == nil && knowledge != nil {
+			kbID = knowledge.KnowledgeBaseID
+		}
+	}
+	if _, err := s.versions.BumpForKnowledge(ctx, tenantID, knowledgeID, kbID, reason); err != nil {
+		logger.Warnf(ctx, "failed to bump permission version for knowledge %s: %v", knowledgeID, err)
+	}
+}
+
+// recordRevocation writes the §2.6 outlet sweep. Best-effort: the revocation
+// itself already happened, and a ledger write failure must not resurrect it.
+func (s *knowledgeACLService) recordRevocation(
+	ctx context.Context, tenantID uint64, knowledgeID, subjectID string,
+	trigger types.RevocationTrigger,
+) {
+	if s.versions == nil || tenantID == 0 || knowledgeID == "" {
+		return
+	}
+	if _, err := s.versions.RecordRevocation(ctx, tenantID, knowledgeID, subjectID, trigger); err != nil {
+		logger.Warnf(ctx, "failed to record revocation propagation for %s: %v", knowledgeID, err)
+	}
 }
 
 // DeniedKnowledgeIDs answers the deny-wins authorization query used before

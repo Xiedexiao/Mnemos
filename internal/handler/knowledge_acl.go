@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,14 +18,17 @@ type KnowledgeACLHandler struct {
 	aclService interfaces.KnowledgeACLService
 	// kgRepo resolves the document's current space for the move preview.
 	kgRepo interfaces.KnowledgeRepository
+	// versions exposes the revocation propagation ledger (§2.6).
+	versions interfaces.PermissionVersionService
 }
 
 // NewKnowledgeACLHandler constructs the handler.
 func NewKnowledgeACLHandler(
 	aclService interfaces.KnowledgeACLService,
 	kgRepo interfaces.KnowledgeRepository,
+	versions interfaces.PermissionVersionService,
 ) *KnowledgeACLHandler {
-	return &KnowledgeACLHandler{aclService: aclService, kgRepo: kgRepo}
+	return &KnowledgeACLHandler{aclService: aclService, kgRepo: kgRepo, versions: versions}
 }
 
 // aclGrantRequest is the body of POST /knowledge/:id/acl.
@@ -122,6 +126,38 @@ func (h *KnowledgeACLHandler) RevokeKnowledgeACL(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"success": true})
+}
+
+// ListRevocationLedger godoc
+// @Summary      撤权传播台账
+// @Description  返回某篇知识最近的撤权传播记录（KnowAxis V3.0 §2.6）：每个出口一行，含处置结果与当时的权限版本。"撤权完成"的标准是每个出口都验证过看不到，而不是事件已发出。
+// @Tags         知识ACL
+// @Produce      json
+// @Param        id     path   string  true   "知识ID"
+// @Param        limit  query  int     false  "返回条数（默认 100，上限 500）"
+// @Success      200  {object}  map[string]interface{}  "{success, data: [RevocationPropagation]}"
+// @Security     Bearer
+// @Security     ApiKeyAuth
+// @Router       /knowledge/{id}/acl/revocations [get]
+func (h *KnowledgeACLHandler) ListRevocationLedger(c *gin.Context) {
+	ctx := c.Request.Context()
+	caller := types.CallerFromContext(ctx)
+	limit := 0
+	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			limit = parsed
+		}
+	}
+	if h.versions == nil {
+		c.JSON(200, gin.H{"success": true, "data": []interface{}{}})
+		return
+	}
+	rows, err := h.versions.ListRevocations(ctx, caller.TenantID, c.Param("id"), limit)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "data": rows})
 }
 
 // PreviewKnowledgeMove godoc

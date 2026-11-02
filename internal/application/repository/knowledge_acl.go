@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
@@ -9,6 +10,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+// ErrKnowledgeACLGrantNotFound is returned when a grant lookup misses.
+var ErrKnowledgeACLGrantNotFound = errors.New("knowledge acl grant not found")
 
 // knowledgeACLRepository implements interfaces.KnowledgeACLRepository.
 type knowledgeACLRepository struct {
@@ -50,6 +54,23 @@ func (r *knowledgeACLRepository) DeleteByKnowledge(ctx context.Context, knowledg
 		Where("knowledge_id = ?", knowledgeID).
 		Delete(&types.KnowledgeACL{})
 	return result.RowsAffected, result.Error
+}
+
+// GetByID returns one grant within the tenant.
+func (r *knowledgeACLRepository) GetByID(
+	ctx context.Context, tenantID uint64, grantID string,
+) (*types.KnowledgeACL, error) {
+	var grant types.KnowledgeACL
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND id = ?", tenantID, grantID).
+		First(&grant).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrKnowledgeACLGrantNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &grant, nil
 }
 
 // Revoke deletes one grant row within the tenant.

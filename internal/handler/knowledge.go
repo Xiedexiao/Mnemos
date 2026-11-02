@@ -286,6 +286,48 @@ func (h *KnowledgeHandler) authorizeKnowledgeAction(
 	return nil
 }
 
+// applyListPermissionCeiling pushes the per-document denial set into a list
+// query (V3.0 §2.4/§2.10).
+//
+// The document list is an existence channel: showing a title, or merely counting
+// a row, already leaks that restricted knowledge exists. So the denial set is
+// applied as a query predicate rather than filtered after the fact, which also
+// keeps the page total from revealing how many entries are hidden.
+//
+// Failure is fail-closed: if the ACL query errors, the caller's own documents
+// are still listed but everything else is suppressed by using the strict
+// classification ceiling. Public/internal content stays visible because it does
+// not require an explicit grant.
+func (h *KnowledgeHandler) applyListPermissionCeiling(c *gin.Context, filter *types.KnowledgeListFilter) {
+	if filter == nil || h.aclService == nil {
+		return
+	}
+	ctx := c.Request.Context()
+	caller := types.CallerFromContext(ctx)
+	if caller.UserID == "" {
+		return
+	}
+	kbID := c.Param("id")
+	if kbID == "" {
+		return
+	}
+	denied, err := h.aclService.DeniedKnowledgeIDs(
+		ctx, []string{kbID}, caller.UserID, types.PermissionActionView,
+	)
+	if err != nil {
+		// Fail closed: without a verdict, hide everything above internal by
+		// applying the strictest ceiling rather than showing too much.
+		logger.ErrorWithFields(ctx, err, map[string]interface{}{
+			"fail_closed": true,
+			"kb_id":       kbID,
+			"handler":     "knowledge.list",
+		})
+		filter.MaxClassification = types.KnowledgeClassificationInternal
+		return
+	}
+	filter.ExcludeKnowledgeIDs = denied
+}
+
 // handleDuplicateKnowledgeError handles cases where duplicate knowledge is detected
 // Returns true if the error was a duplicate error and was handled, false otherwise
 func (h *KnowledgeHandler) handleDuplicateKnowledgeError(c *gin.Context,
@@ -1204,6 +1246,10 @@ func (h *KnowledgeHandler) ListKnowledge(c *gin.Context) {
 			filter.FolderScope = types.FolderScopeSubtree
 		}
 	}
+
+	// 列表级的权限/密级下推（V3.0 §2.4/§2.10）：文档列表是"存在性"出口，
+	// 无权限条目不能以标题形式出现，total 也不能把隐藏条目算进去。
+	h.applyListPermissionCeiling(c, &filter)
 
 	logger.Infof(
 		ctx,

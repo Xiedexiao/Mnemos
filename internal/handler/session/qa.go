@@ -2362,12 +2362,59 @@ func (h *Handler) saveEvidencePack(
 		CandidatesShown:  len(candidates),
 		CandidatesTotal:  len(candidates),
 	})
+	// 权限基线（§2.6/§13.4）：记录回答时刻的密级、lifecycle 与权限版本，
+	// 回放时可核对"这条证据当时是否可读"。权限版本来自 epoch 账本——撤权
+	// 或升密后版本前进，审计因此能看出答案是基于哪个授权状态给出的。
+	pack.SetPermissionSnapshot(h.evidencePermissionSnapshot(ctx, assistantMessage.KnowledgeReferences))
 	if assistantMessage.IsFallback {
 		pack.Refusal = string(types.EvidenceRefusalNoEvidence)
 	}
 	if _, err := h.evidenceService.Save(ctx, pack); err != nil {
 		logger.Warnf(ctx, "evidence pack save failed for request %s: %v", pack.RequestID, err)
 	}
+}
+
+// evidencePermissionSnapshot builds the permission baseline recorded in the
+// Evidence Pack (V3.0 §13.4). It is best-effort: a failed epoch read leaves the
+// field empty rather than blocking the pack, which is an audit artifact — the
+// answer has already been delivered.
+func (h *Handler) evidencePermissionSnapshot(
+	ctx context.Context, refs []*types.SearchResult,
+) types.EvidencePermissionSnapshot {
+	snapshot := types.EvidencePermissionSnapshot{}
+	if len(refs) == 0 {
+		return snapshot
+	}
+	tenantID, _ := types.TenantIDFromContext(ctx)
+	statuses := make(map[string]string, len(refs))
+	versionsByKB := make(map[string]string, len(refs))
+	highest := types.KnowledgeClassificationPublic
+	for _, ref := range refs {
+		if ref == nil || ref.KnowledgeID == "" {
+			continue
+		}
+		if ref.KnowledgeLifecycleStatus != "" {
+			statuses[ref.KnowledgeID] = ref.KnowledgeLifecycleStatus
+		}
+		classification := types.ParseKnowledgeClassification(ref.KnowledgeClassification)
+		if classification.Rank() > highest.Rank() {
+			highest = classification
+		}
+		if h.permissionVersions != nil && tenantID != 0 && ref.KnowledgeBaseID != "" {
+			if _, seen := versionsByKB[ref.KnowledgeBaseID]; !seen {
+				versionsByKB[ref.KnowledgeBaseID] = h.permissionVersions.CacheKey(
+					ctx, tenantID, ref.KnowledgeID, ref.KnowledgeBaseID)
+			}
+		}
+	}
+	snapshot.HighestClassification = string(highest)
+	if len(statuses) > 0 {
+		snapshot.LifecycleStatuses = statuses
+	}
+	if len(versionsByKB) > 0 {
+		snapshot.ACLVersions = versionsByKB
+	}
+	return snapshot
 }
 
 // recordTurnMemory runs the long-term memory write path for a finished turn.
