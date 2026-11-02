@@ -35,6 +35,7 @@ type KnowledgeHandler struct {
 	kbService         interfaces.KnowledgeBaseService
 	kbShareService    interfaces.KBShareService
 	agentShareService interfaces.AgentShareService
+	aclService        interfaces.KnowledgeACLService
 	chunkService      interfaces.ChunkService
 	systemSettingSvc  interfaces.SystemSettingService
 	userSvc           interfaces.UserService
@@ -97,6 +98,7 @@ func NewKnowledgeHandler(
 	asynqClient interfaces.TaskEnqueuer,
 	spanRepo repository.KnowledgeSpanRepository,
 	housekeeping *service.HousekeepingService,
+	aclService interfaces.KnowledgeACLService,
 ) *KnowledgeHandler {
 	var backlog backlogProbe
 	if housekeeping != nil {
@@ -109,6 +111,7 @@ func NewKnowledgeHandler(
 		kbService:         kbService,
 		kbShareService:    kbShareService,
 		agentShareService: agentShareService,
+		aclService:        aclService,
 		chunkService:      chunkService,
 		systemSettingSvc:  systemSettingSvc,
 		userSvc:           userSvc,
@@ -192,6 +195,23 @@ func (h *KnowledgeHandler) resolveKnowledgeAndValidateKBAccess(
 	knowledgeID string,
 	requiredPermission types.OrgMemberRole,
 ) (*types.Knowledge, context.Context, error) {
+	return h.resolveKnowledgeAndValidateKBAction(c, knowledgeID, requiredPermission, types.PermissionActionView)
+}
+
+// resolveKnowledgeAndValidateKBAction is resolveKnowledgeAndValidateKBAccess
+// plus a per-document ACL verdict for one permission action (V3.0 §2.2: 能看
+// ≠ 能下载 ≠ 能问). KB-level permission is necessary but not sufficient: a
+// deny row on the document, or a secret/confidential classification without an
+// explicit allow, must reject regardless of the caller's KB role.
+//
+// The verdict fails closed: if the ACL query errors, the request is rejected
+// rather than served on the strength of the KB role alone (§2.6).
+func (h *KnowledgeHandler) resolveKnowledgeAndValidateKBAction(
+	c *gin.Context,
+	knowledgeID string,
+	requiredPermission types.OrgMemberRole,
+	action types.PermissionAction,
+) (*types.Knowledge, context.Context, error) {
 	ctx := c.Request.Context()
 	request := middleware.KBAccessRequest(c)
 	if request.Caller.TenantID == 0 {
@@ -208,6 +228,9 @@ func (h *KnowledgeHandler) resolveKnowledgeAndValidateKBAccess(
 		if grant.EffectiveTenantID != knowledge.TenantID {
 			return nil, ctx, errors.NewForbiddenError("Permission denied to access this knowledge")
 		}
+		if err := h.authorizeKnowledgeAction(ctx, knowledge, action); err != nil {
+			return nil, ctx, err
+		}
 		return knowledge, grant.Context(ctx), nil
 	}
 	kb := &types.KnowledgeBase{ID: knowledge.KnowledgeBaseID, TenantID: knowledge.TenantID}
@@ -218,7 +241,49 @@ func (h *KnowledgeHandler) resolveKnowledgeAndValidateKBAccess(
 	if err != nil {
 		return nil, ctx, kbAccessHTTPError(err)
 	}
+	if err := h.authorizeKnowledgeAction(ctx, knowledge, action); err != nil {
+		return nil, ctx, err
+	}
 	return knowledge, grant.Context(ctx), nil
+}
+
+// authorizeKnowledgeAction applies the document-level ACL/classification
+// verdict for one action. Machine callers without a user subject are judged by
+// their KB scope, which the middleware already enforced.
+func (h *KnowledgeHandler) authorizeKnowledgeAction(
+	ctx context.Context, knowledge *types.Knowledge, action types.PermissionAction,
+) error {
+	caller := types.CallerFromContext(ctx)
+	if knowledge == nil || caller.UserID == "" {
+		return nil
+	}
+	if h.aclService == nil {
+		// Without an ACL service only the classification floor can be applied.
+		// Deny rows and explicit allows need the ACL table, so fail closed for
+		// the classifications that require one.
+		if types.ParseKnowledgeClassification(knowledge.Classification).Rank() >=
+			types.KnowledgeClassificationSecret.Rank() {
+			return errors.NewForbiddenError("Permission denied to access this knowledge")
+		}
+		return nil
+	}
+	denied, err := h.aclService.DeniedKnowledgeIDs(
+		ctx, []string{knowledge.KnowledgeBaseID}, caller.UserID, action,
+	)
+	if err != nil {
+		logger.ErrorWithFields(ctx, err, map[string]interface{}{
+			"fail_closed":  true,
+			"knowledge_id": knowledge.ID,
+			"action":       string(action),
+		})
+		return errors.NewForbiddenError("Permission denied to access this knowledge")
+	}
+	for _, id := range denied {
+		if id == knowledge.ID {
+			return errors.NewForbiddenError("Permission denied to access this knowledge")
+		}
+	}
+	return nil
 }
 
 // handleDuplicateKnowledgeError handles cases where duplicate knowledge is detected
@@ -2060,8 +2125,9 @@ func (h *KnowledgeHandler) DownloadKnowledgeFile(c *gin.Context) {
 
 	// Keep a handler-level Editor check in addition to the route guard. The
 	// original file is more sensitive than parsed-content reads and must not
-	// be downloadable through a read-only organization share.
-	_, effCtx, err := h.resolveKnowledgeAndValidateKBAccess(c, id, types.OrgRoleEditor)
+	// be downloadable through a read-only organization share. The per-document
+	// verdict is the download action, not view (V3.0 §2.2 动作分离).
+	_, effCtx, err := h.resolveKnowledgeAndValidateKBAction(c, id, types.OrgRoleEditor, types.PermissionActionDownload)
 	if err != nil {
 		c.Error(err)
 		return

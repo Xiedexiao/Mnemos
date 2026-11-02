@@ -37,6 +37,7 @@ type shareLinkService struct {
 	kgRepo interfaces.KnowledgeRepository
 	repo   interfaces.ShareLinkRepository
 	audit  interfaces.AuditLogService
+	acl    interfaces.KnowledgeACLService
 	now    func() time.Time
 }
 
@@ -51,8 +52,9 @@ func NewShareLinkService(
 	kgRepo interfaces.KnowledgeRepository,
 	repo interfaces.ShareLinkRepository,
 	audit interfaces.AuditLogService,
+	acl interfaces.KnowledgeACLService,
 ) interfaces.ShareLinkService {
-	return &shareLinkService{kgRepo: kgRepo, repo: repo, audit: audit, now: time.Now}
+	return &shareLinkService{kgRepo: kgRepo, repo: repo, audit: audit, acl: acl, now: time.Now}
 }
 
 // Create issues a share link after the classification ceiling check.
@@ -101,6 +103,13 @@ func (s *shareLinkService) Create(
 	}
 	if permission == types.ShareLinkPermissionDownload && classification == types.KnowledgeClassificationSecret {
 		return nil, apperrors.NewForbiddenError("secret knowledge cannot be shared with download permission")
+	}
+
+	// 动作分离（§2.2/§2.5）：能看 ≠ 能分享。KB 角色够、但文档上有 share 的
+	// deny 行（或 secret/confidential 无 share 的显式 allow）时不得签链。
+	// 权限一旦失效，已签发的链接也必须在 Resolve 时重新判定。
+	if err := s.authorizeShare(ctx, knowledge, createdBy); err != nil {
+		return nil, err
 	}
 
 	token, err := mintShareToken()
@@ -161,6 +170,15 @@ func (s *shareLinkService) Resolve(
 			return nil, apperrors.NewNotFoundError(shareLinkUnavailableMessage)
 		}
 		return nil, err
+	}
+
+	// 链接的权限上限是"源文档此刻的权限"（§2.5）：源文档被提密、下架或加
+	// deny 行之后，活链接不能继续外发。与未知 token 同响应，避免泄露状态。
+	if !shareLinkStillPermitted(knowledge, link) {
+		return nil, apperrors.NewNotFoundError(shareLinkUnavailableMessage)
+	}
+	if err := s.authorizeShareFor(ctx, knowledge, link.CreatedBy); err != nil {
+		return nil, apperrors.NewNotFoundError(shareLinkUnavailableMessage)
 	}
 
 	visitedAt := s.now()
@@ -227,6 +245,72 @@ func (s *shareLinkService) ListByKnowledge(
 		return nil, apperrors.NewBadRequestError("knowledge_id is required")
 	}
 	return s.repo.ListByKnowledge(ctx, tenantID, knowledgeID)
+}
+
+// shareLinkStillPermitted re-applies the source-document ceilings to a live
+// link (§2.5 链接权限 ≤ 源文档权限). Classification may have been raised or
+// the document taken out of service after the link was minted; an active link
+// must stop working in that case rather than keep serving stale authority.
+func shareLinkStillPermitted(knowledge *types.Knowledge, link *types.ShareLink) bool {
+	if knowledge == nil || link == nil {
+		return false
+	}
+	classification := types.ParseKnowledgeClassification(knowledge.Classification)
+	if classification == types.KnowledgeClassificationConfidential {
+		return false
+	}
+	if link.Permission == string(types.ShareLinkPermissionDownload) &&
+		classification == types.KnowledgeClassificationSecret {
+		return false
+	}
+	// 生命周期：只有仍然可对外提供内容的状态才允许通过外链访问。
+	status := types.ParseKnowledgeLifecycleStatus(knowledge.LifecycleStatus)
+	resolved := types.ResolveLifecycle(status, knowledge.EffectiveAt, knowledge.ExpiresAt, time.Now())
+	if !resolved.EffectiveStatus.Searchable() {
+		return false
+	}
+	return true
+}
+
+// authorizeShare applies the per-document share verdict for the link owner.
+// Deny-wins and the secret/confidential allow requirement come from the ACL
+// repository, so a revoked grant invalidates links that depend on it.
+func (s *shareLinkService) authorizeShare(
+	ctx context.Context, knowledge *types.Knowledge, createdBy string,
+) error {
+	if err := s.authorizeShareFor(ctx, knowledge, createdBy); err != nil {
+		return apperrors.NewForbiddenError("knowledge cannot be shared: share permission was revoked")
+	}
+	return nil
+}
+
+// authorizeShareFor is authorizeShare with the caller's error shaping left to
+// the caller (Resolve must not distinguish "denied" from "unknown token").
+func (s *shareLinkService) authorizeShareFor(
+	ctx context.Context, knowledge *types.Knowledge, createdBy string,
+) error {
+	if knowledge == nil || createdBy == "" {
+		return nil
+	}
+	if s.acl == nil {
+		if types.ParseKnowledgeClassification(knowledge.Classification).Rank() >=
+			types.KnowledgeClassificationSecret.Rank() {
+			return errors.New("share: ACL service unavailable for a classified document")
+		}
+		return nil
+	}
+	denied, err := s.acl.DeniedKnowledgeIDs(
+		ctx, []string{knowledge.KnowledgeBaseID}, createdBy, types.PermissionActionShare,
+	)
+	if err != nil {
+		return err
+	}
+	for _, id := range denied {
+		if id == knowledge.ID {
+			return errors.New("share: the document denies the share action")
+		}
+	}
+	return nil
 }
 
 // buildShareKnowledgeView projects the knowledge row to the public,
