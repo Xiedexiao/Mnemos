@@ -265,6 +265,17 @@ func (g *pgRepository) KeywordsRetrieve(ctx context.Context,
 		Vars: []interface{}{params.Query},
 	})
 
+	// ExcludeKnowledgeIDs carries the authorization (ACL/classification) and
+	// lifecycle denials computed before recall. Dropping it here would let
+	// unauthorized chunks back into the candidate set, so it applies as a hard
+	// NOT IN filter (KnowAxis V3.0 §2.1 权限先行).
+	if len(params.ExcludeKnowledgeIDs) > 0 {
+		conds = append(conds, clause.Not(clause.IN{
+			Column: "knowledge_id",
+			Values: common.ToInterfaceSlice(params.ExcludeKnowledgeIDs),
+		}))
+	}
+
 	// Filter by is_enabled = true or NULL (NULL means enabled for historical data)
 	conds = append(conds, clause.Expr{
 		SQL:  "(is_enabled IS NULL OR is_enabled = ?)",
@@ -401,6 +412,19 @@ func (g *pgRepository) VectorRetrieve(ctx context.Context,
 	// is_enabled filter
 	whereParts = append(whereParts, fmt.Sprintf("(is_enabled IS NULL OR is_enabled = $%d)", len(allVars)+1))
 	allVars = append(allVars, true)
+
+	// ExcludeKnowledgeIDs is the pre-recall authorization/lifecycle denial set
+	// (KnowAxis V3.0 §2.1 权限先行). See the keyword path above for rationale.
+	if len(params.ExcludeKnowledgeIDs) > 0 {
+		placeholders := make([]string, len(params.ExcludeKnowledgeIDs))
+		paramStart := len(allVars) + 1
+		for i, id := range params.ExcludeKnowledgeIDs {
+			placeholders[i] = fmt.Sprintf("$%d", paramStart+i)
+			allVars = append(allVars, id)
+		}
+		whereParts = append(whereParts, fmt.Sprintf("knowledge_id NOT IN (%s)",
+			strings.Join(placeholders, ", ")))
+	}
 	if len(params.ExcludeGeneratedQuestionKBIDs) > 0 {
 		placeholders := make([]string, len(params.ExcludeGeneratedQuestionKBIDs))
 		paramStart := len(allVars) + 1

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	apperrors "github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
-	apperrors "github.com/Tencent/WeKnora/internal/errors"
 )
 
 // lifecycleJSON marshals v, falling back to an empty object on failure so audit
@@ -38,6 +38,7 @@ type knowledgeLifecycleService struct {
 	versionRepo  interfaces.KnowledgeVersionRepository
 	audit        interfaces.AuditLogService
 	gamification interfaces.GamificationService
+	receipts     interfaces.ApprovalReceiptRepository
 	now          func() time.Time
 }
 
@@ -47,14 +48,56 @@ func NewKnowledgeLifecycleService(
 	versionRepo interfaces.KnowledgeVersionRepository,
 	audit interfaces.AuditLogService,
 	gamification interfaces.GamificationService,
+	receipts interfaces.ApprovalReceiptRepository,
 ) interfaces.KnowledgeLifecycleService {
 	return &knowledgeLifecycleService{
 		kgRepo:       kgRepo,
 		versionRepo:  versionRepo,
 		audit:        audit,
 		gamification: gamification,
+		receipts:     receipts,
 		now:          time.Now,
 	}
+}
+
+// requireReceiptForPublish 判定义务性审批凭证（§6.2「知识更新」+§6.7）。
+//
+// 规则：secret / confidential 只有绑定本知识的 approved 回执才能发布；
+// public / internal 保持自助发布。历史数据与上传即 valid 的路径不经过
+// publish 动作，因此本门槛不会拦住存量内容。
+func (s *knowledgeLifecycleService) requireReceiptForPublish(
+	ctx context.Context, knowledge *types.Knowledge, receiptID string,
+) error {
+	if knowledge == nil {
+		return nil
+	}
+	classification := types.ParseKnowledgeClassification(knowledge.Classification)
+	if classification.Rank() < types.KnowledgeClassificationSecret.Rank() {
+		return nil
+	}
+	if receiptID == "" {
+		return apperrors.NewForbiddenError(
+			"publishing " + string(classification) + " knowledge requires an approval receipt")
+	}
+	if s.receipts == nil {
+		// 依赖缺失时放行会静默降级安全语义，宁可失败。
+		return apperrors.NewInternalServerError("approval receipt repository is not configured")
+	}
+	receipt, err := s.receipts.Get(ctx, knowledge.TenantID, receiptID)
+	if err != nil {
+		return apperrors.NewForbiddenError(
+			"approval receipt " + receiptID + " was not found for this tenant")
+	}
+	if receipt.KnowledgeID != knowledge.ID {
+		// 回执必须绑定"这一条"知识，否则可以用别的回执偷渡发布。
+		return apperrors.NewForbiddenError(
+			"approval receipt does not belong to this knowledge")
+	}
+	if receipt.Decision != string(types.ApprovalDecisionApproved) {
+		return apperrors.NewForbiddenError(
+			"approval receipt decision is " + receipt.Decision + ", not approved")
+	}
+	return nil
 }
 
 // Transition validates and applies one lifecycle action.
@@ -85,6 +128,13 @@ func (s *knowledgeLifecycleService) Transition(
 		if next := types.KnowledgeLifecycleValid; !current.CanTransitionTo(next) &&
 			!current.CanTransitionTo(types.KnowledgeLifecyclePendingEffective) {
 			return nil, s.illegalTransition(ctx, knowledge, current, types.KnowledgeLifecycleValid, input.ActorID)
+		}
+		// 审批凭证门槛（§6.2/§6.7）：密级为 secret/confidential 的知识属于
+		// "高风险不得单审"的范围，发布必须绑定一份属于本知识的、结论为通过
+		// 的回执，否则任何人都能绕过审批直接发布。low/internal 维持自助发布
+		// （上传即 valid 的存量流程不受影响）。
+		if err := s.requireReceiptForPublish(ctx, knowledge, input.ReceiptID); err != nil {
+			return nil, err
 		}
 		// 生效日未来 → 待生效；否则立即有效。
 		next := types.KnowledgeLifecycleValid
@@ -217,10 +267,10 @@ func (s *knowledgeLifecycleService) writeVersionSnapshot(
 		version = latest.Version + 1
 	}
 	snapshot := map[string]interface{}{
-		"title":         knowledge.Title,
-		"file_hash":     knowledge.FileHash,
-		"file_size":     knowledge.StorageSize,
-		"parse_status":  knowledge.ParseStatus,
+		"title":          knowledge.Title,
+		"file_hash":      knowledge.FileHash,
+		"file_size":      knowledge.StorageSize,
+		"parse_status":   knowledge.ParseStatus,
 		"classification": knowledge.Classification,
 	}
 	snapshotJSON := lifecycleJSON(snapshot)

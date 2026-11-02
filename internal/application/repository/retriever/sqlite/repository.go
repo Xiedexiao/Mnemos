@@ -888,6 +888,13 @@ func buildFilterWhere(params types.RetrieveParams, tableAlias string) []whereCla
 			args:   toInterfaceSlice(params.TagIDs),
 		})
 	}
+	if len(params.ExcludeKnowledgeIDs) > 0 {
+		// Pre-recall authorization/lifecycle denials (KnowAxis V3.0 §2.1).
+		parts = append(parts, whereClause{
+			clause: tableAlias + ".knowledge_id NOT IN (" + placeholders(len(params.ExcludeKnowledgeIDs)) + ")",
+			args:   toInterfaceSlice(params.ExcludeKnowledgeIDs),
+		})
+	}
 	if len(params.ExcludeGeneratedQuestionKBIDs) > 0 {
 		parts = append(parts, whereClause{
 			clause: fmt.Sprintf(

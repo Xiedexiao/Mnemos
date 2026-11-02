@@ -235,7 +235,8 @@ func (h *ReviewHandler) GetReceiptChain(c *gin.Context) {
 func writeReviewError(c *gin.Context, ctx context.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrReviewTaskAlreadyPending),
-		errors.Is(err, service.ErrReviewTaskNotPending):
+		errors.Is(err, service.ErrReviewTaskNotPending),
+		errors.Is(err, service.ErrReviewBaselineChanged):
 		c.Error(apperrors.NewConflictError(err.Error()))
 	case errors.Is(err, service.ErrReviewSelfDecision):
 		c.Error(apperrors.NewForbiddenError(err.Error()))

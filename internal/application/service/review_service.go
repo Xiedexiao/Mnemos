@@ -45,6 +45,10 @@ var (
 	ErrReviewInvalidReasonCode = errors.New("review: unknown reason code")
 	// ErrReviewReceiptNotFound 回执不存在（或不在本租户）。
 	ErrReviewReceiptNotFound = errors.New("review: approval receipt not found")
+	// ErrReviewBaselineChanged 基线已变：审批期间内容被改动，审批人看到的
+	// 快照与当前内容不一致（KnowAxis V3.0 §7.5 差异再审）。调用方应选择
+	// 继续/重审/撤回，而不是让"批 A 发 B"。
+	ErrReviewBaselineChanged = errors.New("review: the review baseline changed since submission")
 )
 
 const (
@@ -321,6 +325,25 @@ func (s *reviewService) approveTask(
 	required := approvalQuorum(task)
 	approvers := distinctApprovalApprovers(history)
 
+	// 基线复核（§7.5 差异再审）：审批人批的是提交时冻结的那一版。若内容
+	// 在审批期间被改动，先阻断——否则回执绑定的是旧 hash、发布的是新内容，
+	// 四眼与凭证同时失效。中间票不做检查，避免把"内容还没改完"的正常在途
+	// 审批卡住；只在即将发布的那一票上强制。
+	if len(approvers) >= required {
+		drifted, err := s.baselineDrifted(ctx, task)
+		if err != nil {
+			return nil, err
+		}
+		if drifted {
+			s.reviewAuditEvent(ctx, task, types.AuditActionReviewRejected, types.AuditOutcomeFailed, map[string]any{
+				"approver_id":      approverID,
+				"baseline_changed": true,
+				"expected_hash":    task.ContentHash,
+			})
+			return nil, ErrReviewBaselineChanged
+		}
+	}
+
 	if len(approvers) < required {
 		// 中间票：任务保持 pending，等待下一位审批人。
 		if err := s.tasks.Update(ctx, task); err != nil {
@@ -453,6 +476,28 @@ func (s *reviewService) GetReceiptChain(ctx context.Context, tenantID uint64, li
 // ============================================================================
 // 内部助手
 // ============================================================================
+
+// baselineDrifted 重新计算当前内容指纹并与任务冻结的 ContentHash 比较
+// （KnowAxis V3.0 §7.5 基线规则：发布前比对当前内容 hash 与审核基线）。
+// 与提交时的计算口径（reviewContentHash）保持完全一致：同样的 chunk 类型
+// 集合、同样的行级字段，否则会产生假阳性。
+func (s *reviewService) baselineDrifted(ctx context.Context, task *types.ApprovalTask) (bool, error) {
+	if task.ContentHash == "" {
+		// 历史任务没有冻结 hash：无法比对，放行（不改变旧行为）。
+		return false, nil
+	}
+	knowledge, err := s.knowledges.GetKnowledgeByID(ctx, task.TenantID, task.KnowledgeID)
+	if err != nil {
+		return false, err
+	}
+	chunks, err := s.chunks.ListChunksByKnowledgeIDAndTypes(ctx, task.TenantID, task.KnowledgeID,
+		[]types.ChunkType{types.ChunkTypeText, types.ChunkTypeFAQ})
+	if err != nil {
+		return false, err
+	}
+	current := reviewContentHash(knowledge, len(chunks), chunkContentDigest(chunks))
+	return current != task.ContentHash, nil
+}
 
 // reviewRiskLevelFor 是 v1 的风险路由：密级 → 审批风险级。confidential 一票
 // 不放行（走 dual），secret 居中，其余 low。（委员会多角色会签为后续版本预留。）

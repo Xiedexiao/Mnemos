@@ -88,6 +88,16 @@ func TestVectorRetrieveFiltersBeforeTopK(t *testing.T) {
 			blocker:   sqliteTestIndex("blocker", "kb-target", "knowledge-target", "tag-target", false),
 			configure: func(_ *types.RetrieveParams) {},
 		},
+		{
+			// ExcludeKnowledgeIDs carries the ACL/classification denials
+			// resolved before recall; the retriever must drop those chunks
+			// even when they score highest.
+			name:    "excluded knowledge",
+			blocker: sqliteTestIndex("blocker", "kb-target", "knowledge-denied", "tag-target", true),
+			configure: func(params *types.RetrieveParams) {
+				params.ExcludeKnowledgeIDs = []string{"knowledge-denied"}
+			},
+		},
 	}
 
 	for _, testCase := range testCases {

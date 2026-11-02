@@ -72,6 +72,9 @@ type RouterParams struct {
 	DLPHandler                   *handler.DLPHandler
 	FreshnessHandler             *handler.FreshnessHandler
 	EvidencePackHandler          *handler.EvidencePackHandler
+	AIPreReviewHandler           *handler.AIPreReviewHandler
+	SchemaProposalHandler        *handler.SchemaProposalHandler
+	ParseQualityHandler          *handler.ParseQualityHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
 	ShareLinkHandler             *handler.ShareLinkHandler
@@ -340,6 +343,9 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterModelGatewayRoutes(v1, params.ModelGatewayHandler, rbacGuards)
 		RegisterExportDLPRoutes(v1, params.ExportControlHandler, params.DLPHandler, rbacGuards)
 		RegisterEvidenceRoutes(v1, rbacGuards, params.EvidencePackHandler)
+		RegisterAIPreReviewRoutes(v1, rbacGuards, params.AIPreReviewHandler)
+		RegisterSchemaProposalRoutes(v1, params.SchemaProposalHandler, rbacGuards)
+		RegisterParseQualityRoutes(v1, params.ParseQualityHandler, rbacGuards)
 		RegisterShareLinkRoutes(v1, rbacGuards, params.ShareLinkHandler)
 		RegisterGraphSearchRoutes(v1, params.GraphSearchHandler, rbacGuards)
 		RegisterFAQRoutes(v1, params.FAQHandler, rbacGuards)
