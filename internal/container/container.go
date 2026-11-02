@@ -175,6 +175,10 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewFeedbackRepository))
 	must(container.Provide(repository.NewQualityTaskRepository))
 	must(container.Provide(repository.NewApprovalFlowRepository))
+	must(container.Provide(repository.NewApprovalSLAEventRepository))
+	must(container.Provide(service.NewApprovalFlowService))
+	must(container.Provide(service.NewApprovalSLAService))
+	must(container.Provide(service.NewApprovalSLAScheduler))
 	must(container.Provide(repository.NewApprovalTaskRepository))
 	must(container.Provide(repository.NewApprovalReceiptRepository))
 	// knowledgeRepository implements both KnowledgeRepository and
@@ -758,6 +762,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewAIPreReviewHandler))
 	must(container.Provide(handler.NewSchemaProposalHandler))
 	must(container.Provide(handler.NewParseQualityHandler))
+	must(container.Provide(handler.NewApprovalFlowHandler))
 	must(container.Provide(handler.NewOntologyHandler))
 	must(container.Provide(handler.NewGraphFactHandler))
 	must(container.Provide(handler.NewReviewHandler))
@@ -2393,6 +2398,69 @@ func startAuditLogRetention(
 
 // startFreshnessReviewScheduler boots the daily review-cycle/freshness sweep
 // (V3.0 §7.7/§7.9) and registers its shutdown with the resource cleaner.
+// startApprovalSLAScheduler boots the §6.3 SLA sweep: reminders before the
+// deadline and escalation after it. Without it an approval task could sit
+// pending forever, which is what the sla_due column previously did.
+// startRetentionJobScheduler boots the two jobs that previously had no caller:
+// recycle-bin expiry (the 30-day window never actually elapsed) and the
+// knowledge-health snapshot (dashboards only showed hand-computed numbers).
+func startRetentionJobScheduler(
+	scheduler *service.RetentionJobScheduler, cleaner interfaces.ResourceCleaner,
+) {
+	scheduler.Start(context.Background())
+	cleaner.RegisterWithName("RetentionJobs", func() error {
+		scheduler.StopWithin(cleanupStepTimeout)
+		return nil
+	})
+}
+
+// newRetentionJobScheduler adapts the two services into the scheduler's function
+// values. Both are best-effort jobs: a nil service disables only that job.
+func newRetentionJobScheduler(
+	recycle interfaces.RecycleBinService,
+	health interfaces.KnowledgeHealthService,
+	tenants interfaces.TenantRepository,
+) *service.RetentionJobScheduler {
+	var purge func(ctx context.Context, now time.Time) (int64, error)
+	if recycle != nil {
+		purge = recycle.PurgeDue
+	}
+	var compute func(ctx context.Context, tenantID uint64) error
+	if health != nil {
+		compute = func(ctx context.Context, tenantID uint64) error {
+			_, err := health.CronComputeAll(ctx, tenantID)
+			return err
+		}
+	}
+	var list func(ctx context.Context) ([]uint64, error)
+	if tenants != nil {
+		list = func(ctx context.Context) ([]uint64, error) {
+			rows, err := tenants.ListTenants(ctx)
+			if err != nil {
+				return nil, err
+			}
+			ids := make([]uint64, 0, len(rows))
+			for _, row := range rows {
+				if row != nil {
+					ids = append(ids, row.ID)
+				}
+			}
+			return ids, nil
+		}
+	}
+	return service.NewRetentionJobScheduler(purge, compute, list)
+}
+
+func startApprovalSLAScheduler(
+	scheduler *service.ApprovalSLAScheduler, cleaner interfaces.ResourceCleaner,
+) {
+	scheduler.Start(context.Background())
+	cleaner.RegisterWithName("ApprovalSLAScheduler", func() error {
+		scheduler.StopWithin(cleanupStepTimeout)
+		return nil
+	})
+}
+
 func startFreshnessReviewScheduler(
 	scheduler *service.FreshnessReviewScheduler, cleaner interfaces.ResourceCleaner,
 ) {

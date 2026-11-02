@@ -136,20 +136,34 @@ func (s *reviewService) SubmitReview(ctx context.Context, knowledgeID, requester
 	}
 
 	// KB 审批流配置。无配置 / enabled=false / 模式非法 → single 兜底。
-	mode := types.ApprovalModeSingle
+	// 审批链由"内容风险 × 影响 × 受众"与空间配置共同决定（§6.3 条件路由）：
+	// 配置只能抬高审批强度，作者无法把自己写的内容标成低风险来降级。
 	var slaDue time.Time
 	flow, err := s.flows.GetByKB(ctx, tenantID, knowledge.KnowledgeBaseID)
 	switch {
 	case err == nil:
-		if flow.Enabled && flow.Mode == string(types.ApprovalModeDual) {
-			mode = types.ApprovalModeDual
+		if !flow.Enabled {
+			flow = nil
 		}
-		slaDue = s.now().Add(reviewSLAFromRules(flow.RiskRules))
 	case errors.Is(err, repository.ErrApprovalFlowNotFound):
-		slaDue = s.now().Add(reviewDefaultSLA)
+		flow = nil
 	default:
 		return nil, err
 	}
+	contentRisk := reviewRiskLevelFor(types.ParseKnowledgeClassification(knowledge.Classification))
+	resolution := ResolveApprovalChain(flow, contentRisk)
+	mode := resolution.Mode
+	if mode != types.ApprovalModeDual {
+		mode = types.ApprovalModeSingle
+	}
+	risk := resolution.RiskLevel
+	slaHours := reviewDefaultSLA
+	if flow != nil && flow.SLAHours > 0 {
+		slaHours = time.Duration(flow.SLAHours) * time.Hour
+	} else if flow != nil {
+		slaHours = reviewSLAFromRules(flow.RiskRules)
+	}
+	slaDue = s.now().Add(slaHours)
 
 	// 内容基线：text/faq chunk 内容摘要 + 行级字段一起算 content hash。
 	chunks, err := s.chunks.ListChunksByKnowledgeIDAndTypes(ctx, tenantID, knowledgeID,
@@ -171,7 +185,6 @@ func (s *reviewService) SubmitReview(ctx context.Context, knowledgeID, requester
 		return nil, fmt.Errorf("review: marshal baseline: %w", err)
 	}
 
-	risk := reviewRiskLevelFor(types.ParseKnowledgeClassification(knowledge.Classification))
 	now := s.now()
 	task := &types.ApprovalTask{
 		ID:             uuid.NewString(),

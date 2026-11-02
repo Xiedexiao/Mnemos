@@ -2,16 +2,22 @@ package interfaces
 
 import (
 	"context"
+	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
 )
 
-// ApprovalFlowRepository 读取 KB 级审批流配置（v1 只读；配置由运营侧/后续
-// 管理接口写入）。
+// ApprovalFlowRepository 读写 KB 级审批流配置（§6.3 流程设计器）。
 type ApprovalFlowRepository interface {
 	// GetByKB 返回 (tenant, kb) 的审批流配置；无配置返回
 	// repository.ErrApprovalFlowNotFound（服务层按 single 模式兜底）。
 	GetByKB(ctx context.Context, tenantID uint64, kbID string) (*types.ApprovalFlow, error)
+	// Upsert 创建或更新一个空间的审批流配置，并把 Version 前进一。
+	Upsert(ctx context.Context, flow *types.ApprovalFlow) (*types.ApprovalFlow, error)
+	// ListByTenant 列出租户内全部审批流配置（管理面）。
+	ListByTenant(ctx context.Context, tenantID uint64, limit int) ([]*types.ApprovalFlow, error)
+	// Delete 删除一条配置（回到 single 兜底）。
+	Delete(ctx context.Context, tenantID uint64, kbID string) error
 }
 
 // ApprovalTaskRepository 审批任务的存储原语。
@@ -23,8 +29,24 @@ type ApprovalTaskRepository interface {
 	HasActiveByKnowledgeID(ctx context.Context, tenantID uint64, knowledgeID string) (bool, error)
 	// ListPending 按提交时间升序列出本租户全部 pending 任务（v1：Admin+ 待办池）。
 	ListPending(ctx context.Context, tenantID uint64, limit int) ([]*types.ApprovalTask, error)
+	// ListPendingBySLA 列出 SLA 已进入提醒窗口或已逾期的 pending 任务，按
+	// sla_due 升序（§6.3 到期催办 / 超时升级）。
+	ListPendingBySLA(ctx context.Context, tenantID uint64, before time.Time, limit int) ([]*types.ApprovalTask, error)
+	// ListPendingTenantIDs 返回当前仍有 pending 任务的租户 ID（SLA 扫描分租户进行）。
+	ListPendingTenantIDs(ctx context.Context) ([]uint64, error)
 	// Update 全量保存任务行（调用方加载后修改再回写）。
 	Update(ctx context.Context, task *types.ApprovalTask) error
+}
+
+// ApprovalSLAEventRepository records reminders and escalations (§6.3).
+type ApprovalSLAEventRepository interface {
+	// Create appends one SLA event.
+	Create(ctx context.Context, event *types.ApprovalSLAEvent) error
+	// HasEvent reports whether a task already got this kind of event, so a
+	// re-run of the sweep cannot spam the same reminder every interval.
+	HasEvent(ctx context.Context, tenantID uint64, taskID, kind string) (bool, error)
+	// ListByTask returns a task's SLA ledger, newest first.
+	ListByTask(ctx context.Context, tenantID uint64, taskID string, limit int) ([]*types.ApprovalSLAEvent, error)
 }
 
 // ApprovalReceiptRepository 审批回执的存储原语。append-only：接口刻意不提供

@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // ============================================================================
@@ -122,8 +125,19 @@ type ApprovalFlow struct {
 	KBID     string `json:"kb_id" gorm:"type:varchar(36);not null;uniqueIndex:uq_approval_flows_tenant_kb,priority:2"`
 	// Mode 审批模式：single | dual。
 	Mode string `json:"mode" gorm:"type:varchar(16);not null;default:'single'"`
-	// RiskRules 预留的风险规则/SLA 参数（v1 只读 {"sla_hours": n}）。
-	RiskRules JSON `json:"risk_rules" gorm:"type:json;not null;default:'{}'"`
+	// Version 流程定义版本。任务提交时冻结，改配置不影响在途任务（§6.3
+	// "在途流程按旧版本走完"）。
+	Version int `json:"version" gorm:"not null;default:1"`
+	// Rules 条件路由规则（ApprovalRoutingRules）。
+	Rules JSON `json:"rules" gorm:"type:json;not null;default:'{}'"`
+	// SLAHours 审批时限（小时）；0 用服务层默认值。
+	SLAHours int `json:"sla_hours" gorm:"not null;default:72"`
+	// ReminderHours 首次催办提前量（小时，相对 SLA 到期）。
+	ReminderHours int `json:"reminder_hours" gorm:"not null;default:24"`
+	// EscalateRole 超时升级到的角色（缺省 admin）。
+	EscalateRole string `json:"escalate_role" gorm:"type:varchar(32);not null;default:'admin'"`
+	// RiskRules 兼容列：v1 只读 {"sla_hours": n}；新写入走 SLAHours/Rules。
+	RiskRules JSON `json:"risk_rules,omitempty" gorm:"type:json;not null;default:'{}'"`
 	Enabled   bool `json:"enabled" gorm:"not null;default:true"`
 
 	CreatedAt time.Time `json:"created_at"`
@@ -132,6 +146,66 @@ type ApprovalFlow struct {
 
 // TableName 固定 GORM 表名。
 func (ApprovalFlow) TableName() string { return "approval_flows" }
+
+// ApprovalRoutingRules 是条件路由配置（§6.3 条件路由 + §6.4 风险分级）。
+//
+// 规则按"取最严"求值：命中任意一条高风险约束就走高风险链。作者不能把内容
+// 标成低风险来降低审批级别，因为风险分由服务层按内容与影响算出后与这里的
+// 约束取并集。
+type ApprovalRoutingRules struct {
+	// MinRiskLevel 强制的最低风险级（low|medium|high）。
+	MinRiskLevel string `json:"min_risk_level,omitempty"`
+	// ForceDualAbove 达到该风险级时强制双人（即使 mode=single）。
+	ForceDualAbove string `json:"force_dual_above,omitempty"`
+	// ClassificationRouting 密级 → 审批模式覆盖（single|dual）。
+	ClassificationRouting map[string]string `json:"classification_routing,omitempty"`
+	// RequireDistinctReviewerRoles 双审必须来自不同角色（§6.3 四眼）。
+	RequireDistinctReviewerRoles bool `json:"require_distinct_reviewer_roles,omitempty"`
+	// EscalationHours 未响应多久后升级；0 用 SLAHours。
+	EscalationHours int `json:"escalation_hours,omitempty"`
+}
+
+// ParseApprovalRoutingRules decodes the rules column, treating bad JSON as an
+// empty rule set: a configuration typo must not block every submission.
+func ParseApprovalRoutingRules(raw JSON) ApprovalRoutingRules {
+	var rules ApprovalRoutingRules
+	if len(raw) > 0 {
+		_ = json.Unmarshal(raw, &rules)
+	}
+	return rules
+}
+
+// ApprovalSLAEventKind names a recorded SLA action (§6.3).
+type ApprovalSLAEventKind string
+
+const (
+	// ApprovalSLAEventReminded 已催办。
+	ApprovalSLAEventReminded ApprovalSLAEventKind = "reminded"
+	// ApprovalSLAEventEscalated 已升级。
+	ApprovalSLAEventEscalated ApprovalSLAEventKind = "escalated"
+)
+
+// ApprovalSLAEvent records one reminder or escalation so auditing can answer
+// "why was this task escalated".
+type ApprovalSLAEvent struct {
+	ID        string    `json:"id" gorm:"type:varchar(36);primaryKey"`
+	TenantID  uint64    `json:"tenant_id" gorm:"not null"`
+	TaskID    string    `json:"task_id" gorm:"type:varchar(36);not null"`
+	Kind      string    `json:"kind" gorm:"type:varchar(16);not null"`
+	Detail    JSON      `json:"detail" gorm:"type:json;not null;default:'{}'"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TableName 固定 GORM 表名。
+func (ApprovalSLAEvent) TableName() string { return "approval_sla_events" }
+
+// BeforeCreate assigns an ID before persistence.
+func (e *ApprovalSLAEvent) BeforeCreate(_ *gorm.DB) error {
+	if e.ID == "" {
+		e.ID = uuid.NewString()
+	}
+	return nil
+}
 
 // ApprovalBaseline 是提交审核时刻的内容指纹快照，冻结进任务与回执。字段
 // 顺序即 JSON 序列化顺序（回执哈希按固定顺序复算），新增字段只能追加。
