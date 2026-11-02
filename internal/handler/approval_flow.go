@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,19 @@ type approvalFlowRequest struct {
 	EscalateRole  string     `json:"escalate_role"`
 	Enabled       *bool      `json:"enabled"`
 	Rules         types.JSON `json:"rules"`
+	// Nodes is the approval chain (§6.3): 或签 / 会签 / 逐级 都由它表达。
+	// Omit to clear the definition and fall back to the implicit single node.
+	Nodes []approvalFlowNodeRequest `json:"nodes"`
+}
+
+// approvalFlowNodeRequest is one node of the chain definition.
+type approvalFlowNodeRequest struct {
+	Seq          int      `json:"seq"`
+	Name         string   `json:"name"`
+	Mode         string   `json:"mode"`          // or | and
+	AssigneeKind string   `json:"assignee_kind"` // role | users
+	AssigneeRole string   `json:"assignee_role"`
+	AssigneeIDs  []string `json:"assignee_ids"`
 }
 
 // GetApprovalFlow godoc
@@ -120,7 +134,23 @@ func (h *ApprovalFlowHandler) UpsertApprovalFlow(c *gin.Context) {
 		Rules:         req.Rules,
 		Enabled:       enabled,
 	}
-	saved, err := h.flows.Save(c.Request.Context(), flow)
+	nodes := make([]*types.ApprovalFlowNode, 0, len(req.Nodes))
+	for i, node := range req.Nodes {
+		seq := node.Seq
+		if seq <= 0 {
+			seq = i + 1
+		}
+		raw, _ := json.Marshal(node.AssigneeIDs)
+		nodes = append(nodes, &types.ApprovalFlowNode{
+			Seq:          seq,
+			Name:         node.Name,
+			Mode:         node.Mode,
+			AssigneeKind: node.AssigneeKind,
+			AssigneeRole: node.AssigneeRole,
+			AssigneeIDs:  types.JSON(raw),
+		})
+	}
+	saved, err := h.flows.Save(c.Request.Context(), flow, nodes)
 	if err != nil {
 		c.Error(err)
 		return

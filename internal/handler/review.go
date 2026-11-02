@@ -238,7 +238,8 @@ func writeReviewError(c *gin.Context, ctx context.Context, err error) {
 		errors.Is(err, service.ErrReviewTaskNotPending),
 		errors.Is(err, service.ErrReviewBaselineChanged):
 		c.Error(apperrors.NewConflictError(err.Error()))
-	case errors.Is(err, service.ErrReviewSelfDecision):
+	case errors.Is(err, service.ErrReviewSelfDecision),
+		errors.Is(err, service.ErrReviewNotAssignee):
 		c.Error(apperrors.NewForbiddenError(err.Error()))
 	case errors.Is(err, service.ErrReviewInvalidDecision),
 		errors.Is(err, service.ErrReviewReasonRequired),

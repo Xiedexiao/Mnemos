@@ -49,6 +49,8 @@ var (
 	// 快照与当前内容不一致（KnowAxis V3.0 §7.5 差异再审）。调用方应选择
 	// 继续/重审/撤回，而不是让"批 A 发 B"。
 	ErrReviewBaselineChanged = errors.New("review: the review baseline changed since submission")
+	// ErrReviewNotAssignee 投票人不是当前审批节点的审批人（也没有有效委托）。
+	ErrReviewNotAssignee = errors.New("review: the approver is not assigned to the active approval node")
 )
 
 const (
@@ -62,8 +64,11 @@ const (
 
 // reviewService implements interfaces.ReviewService（KnowAxis V3.0 §6 v1 子集）。
 type reviewService struct {
-	tasks      interfaces.ApprovalTaskRepository
-	receipts   interfaces.ApprovalReceiptRepository
+	tasks    interfaces.ApprovalTaskRepository
+	receipts interfaces.ApprovalReceiptRepository
+	// chain is the multi-stage approval engine (§6.3 或签/会签/逐级).
+	// Optional: nil keeps the legacy "count the votes" behaviour.
+	chain      interfaces.ApprovalChainService
 	flows      interfaces.ApprovalFlowRepository
 	knowledges interfaces.KnowledgeRepository
 	chunks     interfaces.ChunkRepository
@@ -207,6 +212,20 @@ func (s *reviewService) SubmitReview(ctx context.Context, knowledgeID, requester
 		return nil, err
 	}
 
+	// 实例化多级审批链（§6.3）：或签/会签/逐级都落到 approval_task_nodes。
+	// 空间未配置节点时引擎会建一个隐式节点（法定人数 = 旧的 quorum），
+	// 因此单审/双审行为完全不变。
+	if s.chain != nil {
+		if _, chainErr := s.chain.Instantiate(ctx, task, resolution); chainErr != nil {
+			// 链建不起来就不能放行：撤销任务并把知识退回草稿，避免出现
+			// "有待办但没人能签"的死锁。
+			task.Status = string(types.ApprovalTaskStatusCanceled)
+			task.UpdatedAt = s.now()
+			_ = s.tasks.Update(ctx, task)
+			return nil, fmt.Errorf("review: instantiate approval chain: %w", chainErr)
+		}
+	}
+
 	// 状态机推进失败 → 撤销刚建的任务，避免留下没有状态机支撑的孤儿待办。
 	if _, err := s.lifecycle.Transition(ctx, &types.KnowledgeLifecycleTransitionInput{
 		KnowledgeID: knowledgeID,
@@ -276,6 +295,17 @@ func (s *reviewService) Decide(
 		return nil, ErrReviewSelfDecision
 	}
 
+	// 多级审批链优先（§6.3）：链存在时由它判定这一票是否推进/终结流程，
+	// decided_history 仍照记，供旧读取方与审计沿用。
+	var chainState *types.ApprovalChainState
+	if s.chain != nil {
+		state, chainErr := s.chain.Vote(ctx, task, approverID, string(decision), comment)
+		if chainErr != nil {
+			return nil, mapChainError(chainErr)
+		}
+		chainState = state
+	}
+
 	history, err := decodeApprovalDecisions(task.DecidedHistory)
 	if err != nil {
 		return nil, err
@@ -298,7 +328,35 @@ func (s *reviewService) Decide(
 	if decision == types.ApprovalDecisionRejected {
 		return s.rejectTask(ctx, task, approverID, now)
 	}
+
+	// 链未走完：记票保 pending，不发布、不发回执。
+	if chainState != nil && !chainState.Finished {
+		if err := s.tasks.Update(ctx, task); err != nil {
+			return nil, err
+		}
+		s.reviewAuditEvent(ctx, task, types.AuditActionReviewApproved, types.AuditOutcomeAccepted, map[string]any{
+			"vote_recorded": true,
+			"chain_active":  chainState.ActiveNodeSeq,
+			"approver_id":   approverID,
+		})
+		return task, nil
+	}
 	return s.approveTask(ctx, task, history, approverID, now)
+}
+
+// mapChainError 把链引擎的业务哨兵错误映射成审核流错误，保持 handler 的
+// HTTP 语义不变（403 越权 / 409 状态冲突）。
+func mapChainError(err error) error {
+	switch {
+	case errors.Is(err, ErrChainNotAssignee):
+		return ErrReviewNotAssignee
+	case errors.Is(err, ErrChainAlreadyVoted), errors.Is(err, ErrChainNodeNotActive),
+		errors.Is(err, ErrChainNodeNotFound), errors.Is(err, ErrChainDuplicateApprover),
+		errors.Is(err, ErrChainInvalidDelegation):
+		return ErrReviewTaskNotPending
+	default:
+		return err
+	}
 }
 
 // rejectTask 落 rejected 终态并推进 lifecycle reject_review（pending_review → draft）。

@@ -14,9 +14,13 @@ type ApprovalFlowService interface {
 	Get(ctx context.Context, tenantID uint64, kbID string) (*types.ApprovalFlow, error)
 	// List returns every configured space in the tenant.
 	List(ctx context.Context, tenantID uint64, limit int) ([]*types.ApprovalFlow, error)
-	// Save creates or updates one space's configuration and advances its
-	// version, so in-flight tasks keep their frozen definition.
-	Save(ctx context.Context, flow *types.ApprovalFlow) (*types.ApprovalFlow, error)
+	// Save creates or updates one space's configuration and its node chain, and
+	// advances the version so in-flight tasks keep their frozen definition.
+	Save(
+		ctx context.Context, flow *types.ApprovalFlow, nodes []*types.ApprovalFlowNode,
+	) (*types.ApprovalFlow, error)
+	// ListNodes returns a space's node definitions in approval order.
+	ListNodes(ctx context.Context, tenantID uint64, kbID string) ([]*types.ApprovalFlowNode, error)
 	// Delete removes a space's configuration.
 	Delete(ctx context.Context, tenantID uint64, kbID string) error
 	// Resolve decides the approval chain for one submission.

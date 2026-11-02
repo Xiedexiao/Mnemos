@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_approval_delegations_pair;
+DROP TABLE IF EXISTS approval_delegations;
+DROP INDEX IF EXISTS idx_approval_votes_node;
+DROP INDEX IF EXISTS idx_approval_votes_task;
+DROP TABLE IF EXISTS approval_votes;
+DROP INDEX IF EXISTS idx_approval_task_nodes_task;
+DROP TABLE IF EXISTS approval_task_nodes;
+DROP INDEX IF EXISTS idx_approval_flow_nodes_flow;
+DROP TABLE IF EXISTS approval_flow_nodes;

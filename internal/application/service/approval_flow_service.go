@@ -22,14 +22,17 @@ type approvalFlowService struct {
 	flows interfaces.ApprovalFlowRepository
 	// kbs validates that the target space exists in the caller's tenant.
 	kbs interfaces.KnowledgeBaseRepository
+	// chain persists the node definitions of a flow (§6.3 逐级/会签/或签).
+	chain interfaces.ApprovalChainRepository
 }
 
 // NewApprovalFlowService constructs the approval-flow service.
 func NewApprovalFlowService(
 	flows interfaces.ApprovalFlowRepository,
 	kbs interfaces.KnowledgeBaseRepository,
+	chain interfaces.ApprovalChainRepository,
 ) interfaces.ApprovalFlowService {
-	return &approvalFlowService{flows: flows, kbs: kbs}
+	return &approvalFlowService{flows: flows, kbs: kbs, chain: chain}
 }
 
 // approvalFlowDefaultSLAHours mirrors reviewDefaultSLA for configured flows.
@@ -64,9 +67,15 @@ func (s *approvalFlowService) List(
 	return flows, nil
 }
 
-// Save creates or updates one space's configuration.
+// Save creates or updates one space's configuration, including its node chain.
+//
+// The node list is replaced wholesale rather than diffed: an approval flow is a
+// small, fully-authored definition, and a partial update would let a caller
+// produce a chain that cannot be instantiated (e.g. a 会签 node with no
+// approvers). In-flight tasks are unaffected because they snapshot their own
+// nodes at submission.
 func (s *approvalFlowService) Save(
-	ctx context.Context, flow *types.ApprovalFlow,
+	ctx context.Context, flow *types.ApprovalFlow, nodes []*types.ApprovalFlowNode,
 ) (*types.ApprovalFlow, error) {
 	if flow == nil || flow.TenantID == 0 || flow.KBID == "" {
 		return nil, apperrors.NewBadRequestError("kb_id is required")
@@ -92,8 +101,27 @@ func (s *approvalFlowService) Save(
 	if err != nil {
 		return nil, err
 	}
+	if s.chain != nil {
+		if err := s.chain.ReplaceFlowNodes(ctx, flow.TenantID, saved.ID, nodes); err != nil {
+			return nil, err
+		}
+	}
 	saved.RiskRules = nil
 	return saved, nil
+}
+
+// ListNodes returns a flow's node definitions.
+func (s *approvalFlowService) ListNodes(
+	ctx context.Context, tenantID uint64, kbID string,
+) ([]*types.ApprovalFlowNode, error) {
+	if s.chain == nil {
+		return nil, nil
+	}
+	flow, err := s.flows.GetByKB(ctx, tenantID, kbID)
+	if err != nil || flow == nil {
+		return nil, nil
+	}
+	return s.chain.ListFlowNodes(ctx, tenantID, flow.ID)
 }
 
 // Delete removes a space's configuration so it falls back to single approval.
