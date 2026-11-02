@@ -351,3 +351,39 @@ func (r *approvalSLAEventRepository) ListByTask(
 		Find(&events).Error
 	return events, err
 }
+
+// FindLatestBySubject returns the newest task for one governance subject.
+func (r *approvalTaskRepository) FindLatestBySubject(
+	ctx context.Context, tenantID uint64, subjectType, subjectID string,
+) (*types.ApprovalTask, error) {
+	var task types.ApprovalTask
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND subject_type = ? AND subject_id = ?",
+			tenantID, subjectType, subjectID).
+		Order("created_at DESC").
+		First(&task).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrApprovalTaskNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+// ListPendingBySubject lists pending tasks of one subject type.
+func (r *approvalTaskRepository) ListPendingBySubject(
+	ctx context.Context, tenantID uint64, subjectType string, limit int,
+) ([]*types.ApprovalTask, error) {
+	if limit <= 0 || limit > approvalListMaxLimit {
+		limit = approvalListMaxLimit
+	}
+	query := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND status = ?", tenantID, string(types.ApprovalTaskStatusPending))
+	if subjectType != "" {
+		query = query.Where("subject_type = ?", subjectType)
+	}
+	var tasks []*types.ApprovalTask
+	err := query.Order("created_at ASC").Limit(limit).Find(&tasks).Error
+	return tasks, err
+}

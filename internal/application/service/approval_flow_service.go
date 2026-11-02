@@ -158,7 +158,14 @@ func ResolveApprovalChain(
 		Mode:      types.ApprovalModeSingle,
 	}
 	if flow == nil {
-		resolution.Quorum = approvalQuorumFor(types.ApprovalModeSingle, contentRisk)
+		// 无配置不等于无约束：§6.3 的"高风险不得单审"是平台级底线，不依赖
+		// 租户是否配过审批流。这里必须把 high 折算成双人，否则没有配置的
+		// 租户里所有高风险动作都会走单人审批。
+		if contentRisk == types.ApprovalRiskHigh {
+			resolution.Mode = types.ApprovalModeDual
+			resolution.Reasons = append(resolution.Reasons, "high_risk_requires_dual")
+		}
+		resolution.Quorum = approvalQuorumFor(resolution.Mode, contentRisk)
 		return resolution
 	}
 	resolution.FlowVersion = flow.Version

@@ -27,6 +27,16 @@ type ApprovalTaskRepository interface {
 	GetByID(ctx context.Context, tenantID uint64, taskID string) (*types.ApprovalTask, error)
 	// HasActiveByKnowledgeID 报告该知识是否仍有 pending 任务（提交幂等防重）。
 	HasActiveByKnowledgeID(ctx context.Context, tenantID uint64, knowledgeID string) (bool, error)
+	// FindLatestBySubject returns the newest task for one governance subject, so
+	// a caller can ask "is this action approved" without scanning the queue.
+	FindLatestBySubject(
+		ctx context.Context, tenantID uint64, subjectType, subjectID string,
+	) (*types.ApprovalTask, error)
+	// ListPendingBySubject lists pending tasks of one subject type (workbench
+	// filtering by §6.2 object kind).
+	ListPendingBySubject(
+		ctx context.Context, tenantID uint64, subjectType string, limit int,
+	) ([]*types.ApprovalTask, error)
 	// ListPending 按提交时间升序列出本租户全部 pending 任务（v1：Admin+ 待办池）。
 	ListPending(ctx context.Context, tenantID uint64, limit int) ([]*types.ApprovalTask, error)
 	// ListPendingBySLA 列出 SLA 已进入提醒窗口或已逾期的 pending 任务，按

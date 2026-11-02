@@ -38,7 +38,11 @@ type shareLinkService struct {
 	repo   interfaces.ShareLinkRepository
 	audit  interfaces.AuditLogService
 	acl    interfaces.KnowledgeACLService
-	now    func() time.Time
+	// governance gates external sharing behind an approved receipt (§6.2
+	// 外部分享). Optional: nil keeps the classification ceiling as the only
+	// gate, which is the pre-existing behaviour.
+	governance interfaces.GovernanceApprovalService
+	now        func() time.Time
 }
 
 // NewShareLinkService constructs the share link service.
@@ -53,8 +57,12 @@ func NewShareLinkService(
 	repo interfaces.ShareLinkRepository,
 	audit interfaces.AuditLogService,
 	acl interfaces.KnowledgeACLService,
+	governance interfaces.GovernanceApprovalService,
 ) interfaces.ShareLinkService {
-	return &shareLinkService{kgRepo: kgRepo, repo: repo, audit: audit, acl: acl, now: time.Now}
+	return &shareLinkService{
+		kgRepo: kgRepo, repo: repo, audit: audit, acl: acl,
+		governance: governance, now: time.Now,
+	}
 }
 
 // Create issues a share link after the classification ceiling check.
@@ -110,6 +118,17 @@ func (s *shareLinkService) Create(
 	// 权限一旦失效，已签发的链接也必须在 Resolve 时重新判定。
 	if err := s.authorizeShare(ctx, knowledge, createdBy); err != nil {
 		return nil, err
+	}
+
+	// 外部分享是 §6.2 的高风险治理动作：必须有一份获批的审批任务才能签链。
+	// 分享链接是外泄的头号入口，仅靠密级上限不够——同密级内容给谁看仍需
+	// 有人批准。
+	if s.governance != nil && linkType == types.ShareLinkTypePeople {
+		if _, gateErr := s.governance.RequireApproval(ctx, tenantID,
+			types.ApprovalSubjectShare, knowledgeID); gateErr != nil {
+			return nil, apperrors.NewForbiddenError(
+				"external sharing requires an approved governance task for this document")
+		}
 	}
 
 	token, err := mintShareToken()

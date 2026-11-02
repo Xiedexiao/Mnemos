@@ -238,6 +238,14 @@ type ApprovalTask struct {
 	TenantID    uint64 `json:"tenant_id" gorm:"not null;index:idx_approval_tasks_tenant_status,priority:1"`
 	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;index:idx_approval_tasks_knowledge"`
 	KBID        string `json:"kb_id" gorm:"type:varchar(36);not null"`
+	// SubjectType/SubjectID identify what is under review (§6.2 十四类审核对象).
+	// Knowledge publishing uses type "knowledge" and mirrors KnowledgeID, so
+	// existing queries and historical rows keep working unchanged.
+	SubjectType string `json:"subject_type" gorm:"type:varchar(32);not null;default:'knowledge'"`
+	SubjectID   string `json:"subject_id" gorm:"type:varchar(64);not null;default:''"`
+	// Title is a human label for the review workbench (the knowledge title, the
+	// official answer's question, the export request's purpose, …).
+	Title string `json:"title" gorm:"type:varchar(255);not null;default:''"`
 	// Mode 冻结提交时刻的流配置（single|dual），避免 submit→decide 之间
 	// flow 配置漂移导致表决口径不一致。
 	Mode     string `json:"mode" gorm:"type:varchar(16);not null;default:'single'"`
