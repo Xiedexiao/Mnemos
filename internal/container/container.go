@@ -62,6 +62,7 @@ import (
 	"github.com/Tencent/WeKnora/internal/config"
 	"github.com/Tencent/WeKnora/internal/database"
 	"github.com/Tencent/WeKnora/internal/datasource"
+	businessConnector "github.com/Tencent/WeKnora/internal/datasource/connector/business"
 	confluenceConnector "github.com/Tencent/WeKnora/internal/datasource/connector/confluence"
 	dingtalkConnector "github.com/Tencent/WeKnora/internal/datasource/connector/dingtalk"
 	"github.com/Tencent/WeKnora/internal/datasource/connector/feishu/core"
@@ -2249,6 +2250,29 @@ func initConnectorRegistry() (*datasource.ConnectorRegistry, error) {
 	}
 	if err := registry.Register(nextcloudConnector.NewConnector()); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("register nextcloud connector: %w", err))
+	}
+
+	// 业务系统连接器（§3.3）目前是占位实现：注册它们而不是留空，是为了让
+	// "这个源还接不了"以一条明确错误出现在配置/同步时，而不是 "connector
+	// not found" 或静默返回空结果。占位实现的 Validate/Fetch 全部返回
+	// NotImplementedError，并在消息里指出通用的 business_api 接法。
+	// 通用业务接入（HTTP+JSON）是能真正跑起来的读法，也是占位连接器错误消息
+	// 里指出的替代方案，所以它必须真实可用。
+	if err := registry.Register(businessConnector.NewGenericConnector()); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("register business_api connector: %w", err))
+	}
+	for _, connectorType := range []string{
+		types.ConnectorTypeERP, types.ConnectorTypeMES, types.ConnectorTypePLM,
+		types.ConnectorTypeQMS, types.ConnectorTypeOA, types.ConnectorTypeHR,
+		types.ConnectorTypeCRM,
+	} {
+		connector := businessConnector.NewConnector(connectorType)
+		if connector == nil {
+			return nil, fmt.Errorf("business connector %q is declared but has no profile", connectorType)
+		}
+		if err := registry.Register(connector); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("register %s connector: %w", connectorType, err))
+		}
 	}
 
 	// Future connectors will be registered here:

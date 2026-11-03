@@ -46,6 +46,23 @@ const (
 	ConnectorTypeNextcloud   = "nextcloud"
 	ConnectorTypeWecom       = "wecom"
 
+	// Business-system connector types (V3.0 §3.3). These are declared so the
+	// platform can name the intended integrations and report them as planned;
+	// the connector implementations are placeholders until a deployment has the
+	// source system's API contract (see internal/datasource/connector/business).
+	ConnectorTypeERP = "erp"
+	ConnectorTypeMES = "mes"
+	ConnectorTypePLM = "plm"
+	ConnectorTypeQMS = "qms"
+	ConnectorTypeOA  = "oa"
+	ConnectorTypeHR  = "hr"
+	ConnectorTypeCRM = "crm"
+	// ConnectorTypeBusinessAPI is the generic placeholder these map onto: one
+	// HTTP+JSON reader configured with an endpoint and a field mapping, so a
+	// deployment can integrate a business system before a bespoke connector
+	// exists.
+	ConnectorTypeBusinessAPI = "business_api"
+
 	// Sync modes
 	SyncModeIncremental = "incremental"
 	SyncModeFull        = "full"

@@ -169,6 +169,10 @@ type ConnectorMetadata struct {
 	Priority     int      `json:"priority"`     // Priority order for UI display (lower = higher priority)
 	AuthType     string   `json:"auth_type"`    // "oauth2", "api_key", "token", etc.
 	Capabilities []string `json:"capabilities"` // "incremental", "webhook", "deletion_sync", etc.
+	// Planned marks a declared-but-unimplemented connector. The UI must show it
+	// as unavailable rather than letting an operator configure a source whose
+	// every operation returns "not implemented" (V3.0 §3.3 business systems).
+	Planned bool `json:"planned,omitempty"`
 }
 
 // GetConnectorMetadata returns metadata for all available connectors
@@ -334,6 +338,31 @@ var ConnectorMetadataRegistry = map[string]ConnectorMetadata{
 		AuthType:     "token",
 		Capabilities: []string{"incremental", "hierarchical", "deletion_sync"},
 	},
+	types.ConnectorTypeBusinessAPI: {
+		Type: types.ConnectorTypeBusinessAPI,
+		Name: "Business system (HTTP+JSON)",
+		Description: "Read a business system's list endpoint with an explicit field mapping. " +
+			"The stand-in for ERP/MES/PLM/QMS/OA/HR/CRM before a dedicated connector exists.",
+		Priority:     19,
+		AuthType:     "token",
+		Capabilities: []string{"incremental"},
+	},
+}
+
+// registerPlannedConnectors merges the declared-but-unimplemented business
+// system connectors into the metadata registry.
+//
+// 放在一个函数里而不是直接写进 map 字面量：这样"哪些是能用的、哪些只是
+// 声明"在同一处一目了然，也避免有人在补充字面量时把它们误标成可用。
+func registerPlannedConnectors() {
+	for _, meta := range plannedConnectorMetadata() {
+		ConnectorMetadataRegistry[meta.Type] = meta
+	}
+}
+
+// init merges the planned connectors so ListAvailableConnectors reports them.
+func init() {
+	registerPlannedConnectors()
 }
 
 // ListAvailableConnectors returns all available connector metadata
