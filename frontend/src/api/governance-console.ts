@@ -1709,3 +1709,109 @@ export function cancelRedemption(id: string) {
 export function listKnowledgeStars(limit = 20) {
   return get<KnowledgeStarListResponse>(`/api/v1/knowledge-stars?limit=${limit}`)
 }
+
+// ============================================================================
+// §15.5 embedded contextual push
+// ============================================================================
+
+export interface EmbedPushPreference {
+  user_id: string
+  enabled: boolean
+  updated_at?: string
+}
+
+export interface EmbedPushRule {
+  id: string
+  name: string
+  system: string
+  scene: string
+  entity_type: string
+  entity_value: string
+  attributes: Record<string, string>
+  tag_names: string[]
+  knowledge_ids: string[]
+  reason: string
+  priority: number
+  enabled: boolean
+  created_by: string
+}
+
+export interface EmbedPushRuleStats {
+  rule_id: string
+  rule_name: string
+  impressions: number
+  clicks: number
+  dismissals: number
+}
+
+export interface EmbedPushRulePayload {
+  name: string
+  system?: string
+  scene?: string
+  entity_type?: string
+  entity_value?: string
+  attributes?: Record<string, string>
+  tag_names?: string[]
+  knowledge_ids?: string[]
+  reason?: string
+  priority?: number
+  enabled?: boolean
+}
+
+interface EmbedPushPreferenceResponse {
+  success: boolean
+  data: EmbedPushPreference
+}
+
+interface EmbedPushRuleListResponse {
+  success: boolean
+  data: EmbedPushRule[]
+}
+
+interface EmbedPushRuleResponse {
+  success: boolean
+  data: EmbedPushRule
+}
+
+interface EmbedPushRuleStatsResponse {
+  success: boolean
+  data: EmbedPushRuleStats[]
+}
+
+// GET /api/v1/embed/push/preferences
+export function getEmbedPushPreference() {
+  return get<EmbedPushPreferenceResponse>('/api/v1/embed/push/preferences')
+}
+
+// PUT /api/v1/embed/push/preferences
+export function setEmbedPushPreference(enabled: boolean) {
+  return put<EmbedPushPreferenceResponse>('/api/v1/embed/push/preferences', { enabled })
+}
+
+// GET /api/v1/embed/push/rules
+export function listEmbedPushRules() {
+  return get<EmbedPushRuleListResponse>('/api/v1/embed/push/rules')
+}
+
+// POST /api/v1/embed/push/rules
+export function createEmbedPushRule(payload: EmbedPushRulePayload) {
+  return post<EmbedPushRuleResponse>('/api/v1/embed/push/rules', payload)
+}
+
+// PUT /api/v1/embed/push/rules/:id
+export function updateEmbedPushRule(id: string, payload: EmbedPushRulePayload) {
+  return put<EmbedPushRuleResponse>(
+    `/api/v1/embed/push/rules/${encodeURIComponent(id)}`,
+    payload,
+  )
+}
+
+// DELETE /api/v1/embed/push/rules/:id
+export function deleteEmbedPushRule(id: string) {
+  return del<{ success: boolean }>(`/api/v1/embed/push/rules/${encodeURIComponent(id)}`)
+}
+
+// GET /api/v1/embed/push/stats
+export function getEmbedPushRuleStats(days = 30) {
+  return get<EmbedPushRuleStatsResponse>(`/api/v1/embed/push/stats?days=${days}`)
+}

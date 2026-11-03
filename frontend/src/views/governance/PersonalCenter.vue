@@ -117,6 +117,18 @@
           </div>
         </div>
 
+        <div class="personal-center__switch-row">
+          <div>
+            <span class="personal-center__label">{{ t('personalCenter.pushTitle') }}</span>
+            <p class="personal-center__switch-desc">{{ t('personalCenter.pushDesc') }}</p>
+          </div>
+          <t-switch
+            :value="pushEnabled"
+            :loading="pushBusy"
+            @change="(value: any) => togglePush(Boolean(value))"
+          />
+        </div>
+
         <h4 class="personal-center__subtitle">{{ t('personalCenter.pointsLedger') }}</h4>
         <t-table
           row-key="id"
@@ -202,6 +214,7 @@ import { MessagePlugin } from 'tdesign-vue-next';
 import {
   cancelRedemption,
   completeLearningTask,
+  getEmbedPushPreference,
   getMyPoints,
   getPersonalCenter,
   listKnowledgeStars,
@@ -210,6 +223,7 @@ import {
   listMyRedemptions,
   listRewardCatalog,
   redeemReward,
+  setEmbedPushPreference,
   type KnowledgeStarAward,
   type LearningCertificate,
   type LearningTask,
@@ -243,6 +257,8 @@ const points = ref<PointsSummary | null>(null);
 const catalog = ref<RewardCatalogItem[]>([]);
 const redemptions = ref<RewardRedemption[]>([]);
 const stars = ref<KnowledgeStarAward[]>([]);
+const pushEnabled = ref(true);
+const pushBusy = ref(false);
 
 const statusTheme = (status: string): 'default' | 'success' | 'warning' | 'danger' => {
   switch (status) {
@@ -336,7 +352,7 @@ const load = async () => {
   loading.value = true;
   try {
     const [centerResponse, certificateResponse, taskResponse, pointsResponse,
-      catalogResponse, redemptionResponse, starResponse] = await Promise.all([
+      catalogResponse, redemptionResponse, starResponse, pushResponse] = await Promise.all([
       getPersonalCenter(),
       // 认证与学习任务是辅助信息：取不到时页面其余部分仍然可用。
       listLearningCertificates().catch(() => ({ data: [] as LearningCertificate[] })),
@@ -345,6 +361,7 @@ const load = async () => {
       listRewardCatalog().catch(() => ({ data: [] as RewardCatalogItem[] })),
       listMyRedemptions().catch(() => ({ data: [] as RewardRedemption[] })),
       listKnowledgeStars().catch(() => ({ data: [] as KnowledgeStarAward[] })),
+      getEmbedPushPreference().catch(() => null),
     ]);
     center.value = centerResponse?.data || null;
     certificates.value = (certificateResponse as any)?.data || [];
@@ -353,6 +370,7 @@ const load = async () => {
     catalog.value = (catalogResponse as any)?.data || [];
     redemptions.value = (redemptionResponse as any)?.data || [];
     stars.value = (starResponse as any)?.data || [];
+    pushEnabled.value = (pushResponse as any)?.data?.enabled ?? true;
   } catch (error: any) {
     MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
   } finally {
@@ -399,6 +417,18 @@ const cancelRow = async (row: RewardRedemption) => {
     MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
   } finally {
     busyId.value = null;
+  }
+};
+
+const togglePush = async (enabled: boolean) => {
+  pushBusy.value = true;
+  try {
+    const response = await setEmbedPushPreference(enabled);
+    pushEnabled.value = (response as any)?.data?.enabled ?? enabled;
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
+  } finally {
+    pushBusy.value = false;
   }
 };
 
@@ -480,6 +510,23 @@ onMounted(load);
 .personal-center__value {
   font-size: 22px;
   font-weight: 600;
+}
+
+.personal-center__switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--td-component-stroke);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.personal-center__switch-desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--td-text-color-secondary);
 }
 
 .personal-center__subtitle {

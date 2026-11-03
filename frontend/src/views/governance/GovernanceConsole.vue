@@ -490,6 +490,65 @@
           }) }}
         </div>
       </t-tab-panel>
+
+      <!-- ================= 嵌入式推送（§15.5 上下文推送） ================= -->
+      <t-tab-panel value="push" :label="t('governanceConsole.tabPush')">
+        <div class="governance-toolbar">
+          <t-button theme="primary" size="small" @click="openPushDialog()">
+            {{ t('governanceConsole.pushAdd') }}
+          </t-button>
+          <span class="governance-hint">{{ t('governanceConsole.pushHint') }}</span>
+        </div>
+        <t-table
+          row-key="id"
+          :data="pushRules"
+          :columns="pushRuleColumns"
+          size="medium"
+          hover
+          :loading="loading"
+          :empty="t('governanceConsole.emptyPushRules')"
+        >
+          <template #rule="{ row }">
+            <div class="governance-subject">
+              <span class="governance-subject__title">{{ row.name }}</span>
+              <span class="governance-subject__meta">
+                {{ pushRuleScope(row) }}
+              </span>
+              <span class="governance-subject__meta">
+                {{ row.tag_names?.length
+                  ? row.tag_names.join(' / ')
+                  : (row.knowledge_ids || []).join(', ') }}
+              </span>
+            </div>
+          </template>
+          <template #enabled="{ row }">
+            <t-switch size="small" :value="row.enabled"
+              @change="(value: any) => togglePushRule(row, Boolean(value))" />
+          </template>
+          <template #op="{ row }">
+            <div class="governance-actions">
+              <t-button variant="text" size="small" @click="openPushDialog(row)">
+                {{ t('governanceConsole.feedEdit') }}
+              </t-button>
+              <t-popconfirm :content="t('governanceConsole.pushDeleteConfirm')"
+                @confirm="removePushRule(row)">
+                <t-button theme="danger" variant="text" size="small">
+                  {{ t('governanceConsole.feedDelete') }}
+                </t-button>
+              </t-popconfirm>
+            </div>
+          </template>
+        </t-table>
+
+        <h4 class="governance-subtitle">{{ t('governanceConsole.pushStatsTitle') }}</h4>
+        <t-table
+          row-key="rule_id"
+          :data="pushStats"
+          :columns="pushStatColumns"
+          size="small"
+          :empty="t('governanceConsole.emptyPushStats')"
+        />
+      </t-tab-panel>
     </t-tabs>
 
     <t-dialog
@@ -531,6 +590,49 @@
         </t-form-item>
         <t-form-item>
           <span class="governance-hint">{{ t('governanceConsole.feedAuthHint') }}</span>
+        </t-form-item>
+      </t-form>
+    </t-dialog>
+
+    <t-dialog
+      v-model:visible="pushDialogVisible"
+      :header="editingPushId ? t('governanceConsole.pushEdit') : t('governanceConsole.pushAdd')"
+      width="640px"
+      :confirm-btn="t('governanceConsole.feedSave')"
+      @confirm="savePushRule"
+    >
+      <t-form label-width="150px" label-align="right">
+        <t-form-item :label="t('governanceConsole.feedName')">
+          <t-input v-model="pushForm.name" :placeholder="t('governanceConsole.pushNamePlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushSystem')">
+          <t-input v-model="pushForm.system" placeholder="mes" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushScene')">
+          <t-input v-model="pushForm.scene" placeholder="work_order" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushEntityType')">
+          <t-input v-model="pushForm.entity_type" placeholder="equipment" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushEntityValue')">
+          <t-input v-model="pushForm.entity_value" placeholder="E45" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushTags')">
+          <t-input v-model="pushForm.tag_names"
+            :placeholder="t('governanceConsole.pushTagsPlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushKnowledgeIds')">
+          <t-input v-model="pushForm.knowledge_ids"
+            :placeholder="t('governanceConsole.pushKnowledgePlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushReason')">
+          <t-input v-model="pushForm.reason" :placeholder="t('governanceConsole.pushReasonPlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.pushPriority')">
+          <t-input-number v-model="pushForm.priority" :min="0" :max="1000" />
+        </t-form-item>
+        <t-form-item>
+          <span class="governance-hint">{{ t('governanceConsole.pushMatchHint') }}</span>
         </t-form-item>
       </t-form>
     </t-dialog>
@@ -608,12 +710,19 @@ import {
   deleteExternalFeed,
   listExternalEntries,
   listExternalFeeds,
+  createEmbedPushRule,
+  deleteEmbedPushRule,
+  getEmbedPushRuleStats,
+  listEmbedPushRules,
+  updateEmbedPushRule,
   syncExternalFeed,
   updateExternalFeed,
   type ChangeSignal,
   type ExternalSubscriptionEntry,
   type ExternalSubscriptionFeed,
   type ExternalSubscriptionSyncResult,
+  type EmbedPushRule,
+  type EmbedPushRuleStats,
   type GovernanceApprovalTask,
   type KnowledgeGap,
   type KnowledgeTemplate,
@@ -647,7 +756,8 @@ type TabValue =
   | 'gaps'
   | 'changeRequests'
   | 'signals'
-  | 'feeds';
+  | 'feeds'
+  | 'push';
 
 const activeTab = ref<TabValue>('approvals');
 const loading = ref(false);
@@ -715,6 +825,23 @@ const lastSync = ref<ExternalSubscriptionSyncResult | null>(null);
 const entriesVisible = ref(false);
 const entriesFeedName = ref('');
 const entries = ref<ExternalSubscriptionEntry[]>([]);
+
+// ---- 嵌入式推送（§15.5） ----
+const pushRules = ref<EmbedPushRule[]>([]);
+const pushStats = ref<EmbedPushRuleStats[]>([]);
+const pushDialogVisible = ref(false);
+const editingPushId = ref('');
+const pushForm = ref({
+  name: '',
+  system: '',
+  scene: '',
+  entity_type: '',
+  entity_value: '',
+  tag_names: '',
+  knowledge_ids: '',
+  reason: '',
+  priority: 0,
+});
 
 // ---------------------------------------------------------------------------
 // 展示助手
@@ -909,6 +1036,20 @@ const feedColumns = computed(() => [
   { colKey: 'last_checked_at', title: t('governanceConsole.columnLastChecked'), width: 170 },
   { colKey: 'feedStatus', title: t('governanceConsole.columnStatus'), width: 100 },
   { colKey: 'op', title: t('governanceConsole.columnOp'), width: 300 },
+]);
+
+const pushRuleColumns = computed(() => [
+  { colKey: 'rule', title: t('governanceConsole.columnPushRule'), ellipsis: true, minWidth: 300 },
+  { colKey: 'priority', title: t('governanceConsole.pushPriority'), width: 100 },
+  { colKey: 'enabled', title: t('governanceConsole.columnEnabled'), width: 90 },
+  { colKey: 'op', title: t('governanceConsole.columnOp'), width: 160 },
+]);
+
+const pushStatColumns = computed(() => [
+  { colKey: 'rule_name', title: t('governanceConsole.columnPushRule'), ellipsis: true, minWidth: 240 },
+  { colKey: 'impressions', title: t('governanceConsole.pushImpressions'), width: 120 },
+  { colKey: 'clicks', title: t('governanceConsole.pushClicks'), width: 110 },
+  { colKey: 'dismissals', title: t('governanceConsole.pushDismissals'), width: 110 },
 ]);
 
 const entryColumns = computed(() => [
@@ -1138,6 +1279,104 @@ const openEntries = async (row: ExternalSubscriptionFeed) => {
   }
 };
 
+const loadPush = () =>
+  withLoading(async () => {
+    const [ruleRes, statRes] = await Promise.all([
+      listEmbedPushRules(),
+      getEmbedPushRuleStats(30),
+    ]);
+    pushRules.value = ruleRes?.data || [];
+    pushStats.value = statRes?.data || [];
+  });
+
+const openPushDialog = (row?: EmbedPushRule) => {
+  editingPushId.value = row?.id || '';
+  pushForm.value = {
+    name: row?.name || '',
+    system: row?.system || '',
+    scene: row?.scene || '',
+    entity_type: row?.entity_type || '',
+    entity_value: row?.entity_value || '',
+    tag_names: (row?.tag_names || []).join(', '),
+    knowledge_ids: (row?.knowledge_ids || []).join(', '),
+    reason: row?.reason || '',
+    priority: row?.priority || 0,
+  };
+  pushDialogVisible.value = true;
+};
+
+const savePushRule = async () => {
+  const payload = {
+    name: pushForm.value.name.trim(),
+    system: pushForm.value.system.trim(),
+    scene: pushForm.value.scene.trim(),
+    entity_type: pushForm.value.entity_type.trim(),
+    entity_value: pushForm.value.entity_value.trim(),
+    tag_names: splitList(pushForm.value.tag_names),
+    knowledge_ids: splitList(pushForm.value.knowledge_ids),
+    reason: pushForm.value.reason.trim(),
+    priority: pushForm.value.priority,
+  };
+  try {
+    if (editingPushId.value) {
+      await updateEmbedPushRule(editingPushId.value, payload);
+    } else {
+      await createEmbedPushRule(payload);
+    }
+    pushDialogVisible.value = false;
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadPush();
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+const togglePushRule = async (row: EmbedPushRule, enabled: boolean) => {
+  busyId.value = row.id;
+  try {
+    await updateEmbedPushRule(row.id, {
+      name: row.name,
+      system: row.system,
+      scene: row.scene,
+      entity_type: row.entity_type,
+      entity_value: row.entity_value,
+      tag_names: row.tag_names || [],
+      knowledge_ids: row.knowledge_ids || [],
+      reason: row.reason,
+      priority: row.priority,
+      enabled,
+    });
+    await loadPush();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const removePushRule = async (row: EmbedPushRule) => {
+  busyId.value = row.id;
+  try {
+    await deleteEmbedPushRule(row.id);
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadPush();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const pushRuleScope = (row: EmbedPushRule) => {
+  const parts = [row.system, row.scene, row.entity_type]
+    .map((value) => (value || '').trim())
+    .filter(Boolean);
+  const entity = (row.entity_value || '').trim();
+  return parts.length || entity
+    ? `${parts.join(' / ') || t('governanceConsole.pushAny')}${entity ? ` · ${entity}` : ''}`
+    : t('governanceConsole.pushAny');
+};
+
 const loadChangeRequests = () =>
   withLoading(async () => {
     const res = await listChangeRequests();
@@ -1171,6 +1410,8 @@ const reloadActiveTab = () => {
       return loadSignals();
     case 'feeds':
       return loadFeeds();
+    case 'push':
+      return loadPush();
     default:
       return Promise.resolve();
   }
@@ -1477,6 +1718,13 @@ onMounted(() => {
   border-radius: 6px;
   background: var(--td-bg-color-secondarycontainer);
   font-size: 13px;
+  color: var(--td-text-color-secondary);
+}
+
+.governance-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 20px 0 8px;
   color: var(--td-text-color-secondary);
 }
 
