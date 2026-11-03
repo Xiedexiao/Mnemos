@@ -773,6 +773,15 @@ const connectorDefs = computed<ConnectorDef[]>(() => [
     ],
   },
   {
+    type: 'wecom', available: true, docUrl: 'https://developer.work.weixin.qq.com/document/path/97392',
+    permissionDocUrl: '', permissionPageUrl: '', requiredPermissions: [],
+    fields: [
+      { key: 'corp_id', labelKey: 'datasource.wecom.corpId', placeholder: 'ww0123456789abcdef', hintKey: 'datasource.wecom.corpIdHint' },
+      { key: 'corp_secret', labelKey: 'datasource.wecom.corpSecret', placeholder: '', secret: true, hintKey: 'datasource.wecom.corpSecretHint' },
+      { key: 'base_url', labelKey: 'datasource.wecom.baseUrl', placeholder: 'https://qyapi.weixin.qq.com', optional: true, hintKey: 'datasource.wecom.baseUrlHint' },
+    ],
+  },
+  {
     type: 'nextcloud', available: true,
     docUrl: 'https://docs.nextcloud.com/server/stable/user_manual/en/files/access_webdav.html',
     permissionDocUrl: '', permissionPageUrl: '', requiredPermissions: [],

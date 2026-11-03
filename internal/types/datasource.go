@@ -44,6 +44,7 @@ const (
 	ConnectorTypeIMA         = "ima"
 	ConnectorTypeSeafile     = "seafile"
 	ConnectorTypeNextcloud   = "nextcloud"
+	ConnectorTypeWecom       = "wecom"
 
 	// Sync modes
 	SyncModeIncremental = "incremental"

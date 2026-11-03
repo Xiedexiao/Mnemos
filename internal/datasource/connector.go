@@ -326,6 +326,14 @@ var ConnectorMetadataRegistry = map[string]ConnectorMetadata{
 		AuthType:     "password",
 		Capabilities: []string{"incremental", "hierarchical", "deletion_sync"},
 	},
+	types.ConnectorTypeWecom: {
+		Type:         types.ConnectorTypeWecom,
+		Name:         "WeCom Docs",
+		Description:  "Sync document collections from WeCom (企业微信)",
+		Priority:     15,
+		AuthType:     "token",
+		Capabilities: []string{"incremental", "hierarchical", "deletion_sync"},
+	},
 }
 
 // ListAvailableConnectors returns all available connector metadata

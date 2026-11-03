@@ -1216,6 +1216,15 @@ export default {
       paths: 'Каталоги', pathsPlaceholder: 'По одному каталогу в строке; оставьте пустым для синхронизации всего проекта',
       addProject: 'Добавить проект', projectRequired: 'Добавьте хотя бы один проект GitLab',
     },
+    wecom: {
+      corpId: 'Corp ID',
+      corpIdHint: 'Corp ID находится в разделе «Моё предприятие → Сведения о предприятии» консоли WeCom.',
+      corpSecret: 'Secret приложения документов',
+      corpSecretHint: 'Получите Secret в разделе «Приложения → Собственное приложение → Документы». Приложению нужен доступ к API документов.',
+      baseUrl: 'Адрес API',
+      baseUrlHint: 'По умолчанию https://qyapi.weixin.qq.com; для приватного развёртывания укажите собственный шлюз.',
+      selectionRequired: 'Выберите хотя бы одну коллекцию документов',
+    },
     nextcloud: {
       baseUrl: 'URL Nextcloud',
       baseUrlHint: 'Укажите адрес установки, например https://nextcloud.example.com/cloud, без /remote.php/dav. Для частной сети используйте существующий SSRF_WHITELIST.',

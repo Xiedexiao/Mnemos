@@ -35,6 +35,9 @@ type DataSourceService struct {
 	tenantRepo        interfaces.TenantRepository
 	tagService        interfaces.KnowledgeTagService
 	audit             interfaces.AuditLogService
+	// lifecycle demotes (rather than hard-deletes) content the source removed
+	// (V3.0 §3.4 删除同步：源文档删除 → 知识库进入"待确认下架").
+	lifecycle interfaces.KnowledgeLifecycleService
 }
 
 // NewDataSourceService creates a new data source service
@@ -49,6 +52,7 @@ func NewDataSourceService(
 	tenantRepo interfaces.TenantRepository,
 	tagService interfaces.KnowledgeTagService,
 	audit interfaces.AuditLogService,
+	lifecycle interfaces.KnowledgeLifecycleService,
 ) interfaces.DataSourceService {
 	return &DataSourceService{
 		dsRepo:            dsRepo,
@@ -60,6 +64,7 @@ func NewDataSourceService(
 		scheduler:         scheduler,
 		tenantRepo:        tenantRepo,
 		tagService:        tagService,
+		lifecycle:         lifecycle,
 		audit:             audit,
 	}
 }
@@ -948,6 +953,30 @@ func (s *DataSourceService) applyFetchedItem(
 			result.Skipped++
 			return false, nil
 		}
+		// 源删除 ≠ 平台物理删除（§3.4）：先进入"待确认下架"，保留内容与审计，
+		// 由 Owner 决定归档还是真删。此前这里直接 DeleteKnowledge +
+		// HardDeleteKnowledge，一次源端误删就会把知识连同历史一起抹掉。
+		if s.lifecycle != nil &&
+			types.ParseKnowledgeLifecycleStatus(existing.LifecycleStatus) != types.KnowledgeLifecycleDelisted {
+			if _, markErr := s.lifecycle.Transition(ctx, &types.KnowledgeLifecycleTransitionInput{
+				KnowledgeID: existing.ID,
+				Action:      types.KnowledgeLifecycleActionDelist,
+				ActorID:     "datasource:" + ds.ID,
+				ChangeNote:  "上游源删除该条目，等待确认下架或归档",
+			}); markErr != nil {
+				// 状态机拒绝（例如已归档）不是同步失败：记日志后按原路径处理。
+				logger.Warnf(ctx,
+					"could not mark knowledge %s as pending-delist for external_id=%s: %v",
+					existing.ID, item.ExternalID, markErr)
+			} else {
+				result.Deleted++
+				logger.Infof(ctx,
+					"source deletion for external_id=%s: knowledge %s moved to delisted (pending operator confirmation)",
+					item.ExternalID, existing.ID)
+				return false, nil
+			}
+		}
+
 		if deleteErr := s.knowledgeService.DeleteKnowledge(ctx, existing.ID); deleteErr != nil {
 			// The cursor is already past this item, so a failed deletion normally
 			// retries only on a later full sync. Counted separately so the
@@ -1476,6 +1505,16 @@ func (s *DataSourceService) ingestItem(ctx context.Context, ds *types.DataSource
 			return false, fmt.Errorf("check existing datasource knowledge: %w", err)
 		}
 		if existing != nil {
+			// 乱序保护（§3.3 / §7.10）：旧事件不得覆盖新版本。此前只记录
+			// source_updated_at 从不比较，重投的旧事件会把内容回滚且无提示。
+			if sourceUpdateStale(item, sourceVersionOf(existing)) {
+				logger.Warnf(ctx,
+					"item %q (external_id=%s) is older than the stored version (incoming=%s stored=%s), skipping to avoid a rollback",
+					item.Title, item.ExternalID,
+					item.UpdatedAt.UTC().Format(time.RFC3339),
+					existing.GetMetadata()["source_updated_at"])
+				return false, nil
+			}
 			// Conflict strategy "skip" (跳过已存在): the item already exists in
 			// the KB, so leave it untouched and report the conflict as a skip
 			// via the shared DuplicateKnowledgeError path (Tencent/WeKnora#4640 —

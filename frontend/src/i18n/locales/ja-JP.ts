@@ -8301,6 +8301,15 @@ export default {
       paths: 'ディレクトリ', pathsPlaceholder: '1行に1つのディレクトリを入力します。空欄の場合はプロジェクト全体を同期します',
       addProject: 'プロジェクトを追加', projectRequired: 'GitLabプロジェクトを1つ以上追加してください',
     },
+    wecom: {
+      corpId: 'Corp ID',
+      corpIdHint: 'WeCom 管理コンソールの「マイ企業 → 企業情報」で Corp ID を確認してください。',
+      corpSecret: 'ドキュメントアプリの Secret',
+      corpSecretHint: '「アプリ管理 → 自社開発アプリ → ドキュメント」で Secret を取得してください。ドキュメント API の権限が必要です。',
+      baseUrl: 'API のアドレス',
+      baseUrlHint: '既定値は https://qyapi.weixin.qq.com です。プライベート環境では自前のゲートウェイを指定してください。',
+      selectionRequired: 'ドキュメントコレクションを 1 つ以上選択してください',
+    },
     nextcloud: {
       baseUrl: 'Nextcloud URL',
       baseUrlHint: 'https://nextcloud.example.com/cloud のようなインストール先を指定します。/remote.php/dav は含めません。プライベート環境では既存の SSRF_WHITELIST を設定してください。',

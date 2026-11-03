@@ -1216,6 +1216,15 @@ export default {
       paths: '디렉터리', pathsPlaceholder: '한 줄에 하나씩 입력하세요. 비워 두면 전체 프로젝트를 동기화합니다',
       addProject: '프로젝트 추가', projectRequired: 'GitLab 프로젝트를 하나 이상 추가하세요',
     },
+    wecom: {
+      corpId: 'Corp ID',
+      corpIdHint: 'WeCom 관리 콘솔의 내 기업 → 기업 정보에서 Corp ID를 확인하세요.',
+      corpSecret: '문서 앱 Secret',
+      corpSecretHint: '앱 관리 → 자체 개발 앱 → 문서에서 Secret을 발급받으세요. 문서 API 권한이 필요합니다.',
+      baseUrl: 'API 주소',
+      baseUrlHint: '기본값은 https://qyapi.weixin.qq.com이며, 사설 배포 시 자체 게이트웨이 주소를 입력하세요.',
+      selectionRequired: '문서 컬렉션을 하나 이상 선택하세요',
+    },
     nextcloud: {
       baseUrl: 'Nextcloud URL',
       baseUrlHint: 'https://nextcloud.example.com/cloud 같은 설치 주소를 입력하세요. /remote.php/dav는 포함하지 않습니다. 사설 배포는 기존 SSRF_WHITELIST를 설정하세요.',

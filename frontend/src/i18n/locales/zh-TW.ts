@@ -1218,6 +1218,15 @@ export default {
       paths: '同步目錄', pathsPlaceholder: '每行一個目錄；留空同步整個專案',
       addProject: '新增專案', projectRequired: '請至少新增一個 GitLab 專案',
     },
+    wecom: {
+      corpId: '企業 CorpID',
+      corpIdHint: '在企業微信管理後台「我的企業 → 企業資訊」中查看 CorpID。',
+      corpSecret: '文件應用 Secret',
+      corpSecretHint: '在「應用管理 → 自建應用 → 文件」中取得 Secret；該應用需要啟用文件介面權限。',
+      baseUrl: 'API 位址',
+      baseUrlHint: '預設為 https://qyapi.weixin.qq.com，私有化部署時填寫自有閘道位址。',
+      selectionRequired: '請至少選擇一個文件集合',
+    },
     nextcloud: {
       baseUrl: 'Nextcloud 位址',
       baseUrlHint: '填寫安裝位址，如 https://nextcloud.example.com/cloud，不含 /remote.php/dav。私有網路部署請使用現有的 SSRF_WHITELIST 設定。',

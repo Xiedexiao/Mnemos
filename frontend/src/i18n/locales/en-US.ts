@@ -8301,6 +8301,15 @@ export default {
       paths: 'Directories', pathsPlaceholder: 'One directory per line; leave empty to sync the whole project',
       addProject: 'Add project', projectRequired: 'Add at least one GitLab project',
     },
+    wecom: {
+      corpId: 'Corp ID',
+      corpIdHint: 'Find the Corp ID under My Enterprise → Enterprise Info in the WeCom admin console.',
+      corpSecret: 'Document app secret',
+      corpSecretHint: 'Get the secret from Apps → Self-built app → Docs. The app must have the document API enabled.',
+      baseUrl: 'API base URL',
+      baseUrlHint: 'Defaults to https://qyapi.weixin.qq.com; set your own gateway for a private deployment.',
+      selectionRequired: 'Select at least one document collection',
+    },
     nextcloud: {
       baseUrl: 'Nextcloud URL',
       baseUrlHint: 'Installation URL, for example https://nextcloud.example.com/cloud, without /remote.php/dav. Private deployments must use the existing SSRF_WHITELIST.',
