@@ -167,6 +167,21 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true }
         },
         {
+          // 个人中心（§15.3）：我提交的审批、收藏、知识与认证。只读当前登录者。
+          path: "me",
+          name: "personalCenter",
+          component: () => import("../views/governance/PersonalCenter.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          // 运营看板（§16.1）：知识资产、治理待办、审核效率、搜索健康度。
+          // 后端 Admin+，非管理员 403 → 页面空态。
+          path: "operations",
+          name: "operationsDashboard",
+          component: () => import("../views/governance/OperationsDashboard.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
           // 治理控制台：审批（§6.2 十四类）、官方答案（§13.7）、模板与字段
           // 迁移（§3.2/§4.7）、目录权限与上限违规（§2.3）、搜索质量与知识
           // 缺口（§12.5/§14.4）。后端全部 Admin+，非管理员 403 → 空态。

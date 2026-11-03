@@ -1071,3 +1071,244 @@ export function getRelationDeleteImpact(knowledgeId: string) {
     `/api/v1/knowledge/${encodeURIComponent(knowledgeId)}/relations/delete-impact`,
   );
 }
+
+// ============================================================================
+// §15.3 personal center
+// ============================================================================
+
+// PersonalCenter mirrors the backend aggregate.
+export interface PersonalCenter {
+  overview: {
+    user_id: string
+    favorite_count: number
+    pending_review_count: number
+    latest_announcement_count: number
+  }
+  knowledge: Array<{
+    id: string
+    title: string
+    knowledge_base_id: string
+    lifecycle_status: string
+    parse_status: string
+    updated_at: string
+  }>
+  reviews: Array<{
+    task_id: string
+    knowledge_id: string
+    title: string
+    status: string
+    risk_level: string
+    sla_due: string
+    created_at: string
+  }>
+  favorites: Array<{
+    resource_type: string
+    resource_id: string
+    label: string
+    visible: boolean
+    created_at: string
+  }>
+}
+
+interface PersonalCenterResponse {
+  success: boolean
+  data: PersonalCenter
+}
+
+// GET /api/v1/me/center — the signed-in user's personal center.
+export function getPersonalCenter() {
+  return get<PersonalCenterResponse>('/api/v1/me/center')
+}
+
+// ============================================================================
+// §16.1 operations dashboard
+// ============================================================================
+
+// OperationsDashboard mirrors the backend aggregate.
+export interface OperationsDashboard {
+  overview: {
+    knowledge_total: number
+    knowledge_by_status: Record<string, number>
+    knowledge_base_count: number
+    chunk_total: number
+  }
+  governance: {
+    pending_reviews: number
+    pending_review_cycles: number
+    expired: number
+    conflicts: number
+    open_quality_tasks: number
+    open_impact_tasks: number
+    open_knowledge_gaps: number
+    pending_field_migrations: number
+    acl_ceiling_violations: number
+  }
+  delivery: {
+    approved_last_30_days: number
+    rejected_last_30_days: number
+    overdue_pending: number
+    average_decision_hours: number
+    four_eyes_violations: number
+  }
+  search_quality: {
+    total_queries: number
+    zero_result_queries: number
+    zero_result_rate: number
+    permission_filtered_total: number
+    average_duration_ms: number
+  }
+  health?: Record<string, unknown>
+  window_days: number
+}
+
+interface OperationsDashboardResponse {
+  success: boolean
+  data: OperationsDashboard
+}
+
+// GET /api/v1/operations/dashboard — the §16.1 operations view.
+export function getOperationsDashboard(windowDays = 30) {
+  return get<OperationsDashboardResponse>(`/api/v1/operations/dashboard?window_days=${windowDays}`)
+}
+
+// ============================================================================
+// §15.6 Q&A community
+// ============================================================================
+
+// CommunityQuestion mirrors the backend question row.
+export interface CommunityQuestion {
+  id: string
+  title: string
+  body: string
+  knowledge_id?: string
+  expert_id?: string
+  bounty: number
+  status: 'open' | 'answered' | 'resolved' | 'closed' | string
+  accepted_answer_id?: string
+  asked_by: string
+  created_at?: string
+  answers?: CommunityAnswer[]
+}
+
+// CommunityAnswer is one reply.
+export interface CommunityAnswer {
+  id: string
+  question_id: string
+  body: string
+  answered_by: string
+  votes: number
+  accepted: boolean
+  created_at?: string
+}
+
+interface CommunityQuestionListResponse {
+  success: boolean
+  data: CommunityQuestion[]
+}
+
+interface CommunityQuestionResponse {
+  success: boolean
+  data: CommunityQuestion
+}
+
+interface CommunityAnswerResponse {
+  success: boolean
+  data: CommunityAnswer
+}
+
+// GET /api/v1/community/questions — the community feed.
+export function listCommunityQuestions(status?: string) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return get<CommunityQuestionListResponse>(`/api/v1/community/questions${query}`)
+}
+
+// GET /api/v1/community/questions/:id — one question with its answers.
+export function getCommunityQuestion(id: string) {
+  return get<CommunityQuestionResponse>(
+    `/api/v1/community/questions/${encodeURIComponent(id)}`,
+  )
+}
+
+// POST /api/v1/community/questions — ask.
+export function askCommunityQuestion(payload: {
+  title: string
+  body: string
+  knowledge_id?: string
+  expert_id?: string
+  bounty?: number
+}) {
+  return post<CommunityQuestionResponse>('/api/v1/community/questions', payload)
+}
+
+// POST /api/v1/community/questions/:id/answers — answer.
+export function answerCommunityQuestion(id: string, body: string) {
+  return post<CommunityAnswerResponse>(
+    `/api/v1/community/questions/${encodeURIComponent(id)}/answers`,
+    { body },
+  )
+}
+
+// POST /api/v1/community/questions/:id/accept — adopt an answer (asker only).
+export function acceptCommunityAnswer(questionId: string, answerId: string) {
+  return post<CommunityQuestionResponse>(
+    `/api/v1/community/questions/${encodeURIComponent(questionId)}/accept`,
+    { answer_id: answerId },
+  )
+}
+
+// POST /api/v1/community/answers/:answer_id/vote — mark helpful.
+export function voteCommunityAnswer(answerId: string) {
+  return post<CommunityAnswerResponse>(
+    `/api/v1/community/answers/${encodeURIComponent(answerId)}/vote`,
+    {},
+  )
+}
+
+// ============================================================================
+// §15.5 learning certification
+// ============================================================================
+
+// LearningCertificate mirrors the backend credential.
+export interface LearningCertificate {
+  id: string
+  user_id: string
+  path_id: string
+  stage: string
+  serial: string
+  status: 'active' | 'revoked' | 'expired' | string
+  issued_at: string
+  expires_at?: string | null
+  revoked_reason?: string
+}
+
+// LearningCertification is the result of a completion attempt.
+export interface LearningCertification {
+  certificate?: LearningCertificate
+  eligible: boolean
+  completed_steps: number
+  total_steps: number
+  reason?: string
+}
+
+interface CertificateListResponse {
+  success: boolean
+  data: LearningCertificate[]
+}
+
+interface CertificationResponse {
+  success: boolean
+  data: LearningCertification
+}
+
+// GET /api/v1/learning-certificates — the caller's certificates.
+export function listLearningCertificates() {
+  return get<CertificateListResponse>('/api/v1/learning-certificates')
+}
+
+// POST /api/v1/learning-paths/:path_id/certify — request certification.
+export function certifyLearningPath(pathId: string, validMonths = 12) {
+  return post<CertificationResponse>(
+    `/api/v1/learning-paths/${encodeURIComponent(pathId)}/certify?valid_months=${validMonths}`,
+    {},
+  )
+}

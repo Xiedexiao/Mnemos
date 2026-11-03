@@ -8,6 +8,9 @@ import "time"
 const (
 	ResourceTypeKB    = "kb"
 	ResourceTypeAgent = "agent"
+	// ResourceTypeKnowledge 单篇知识。§15.3 的"我的收藏"要能收藏文档，
+	// 而此前只支持知识库与 Agent——读者收藏了一篇 SOP 无处可存。
+	ResourceTypeKnowledge = "knowledge"
 )
 
 // UserResourceFavorite is a per-(user, tenant) star on a single resource.
@@ -33,7 +36,7 @@ func (UserResourceFavorite) TableName() string {
 // the table and break the frontend's segmented view).
 func IsValidFavoriteResourceType(t string) bool {
 	switch t {
-	case ResourceTypeKB, ResourceTypeAgent:
+	case ResourceTypeKB, ResourceTypeAgent, ResourceTypeKnowledge:
 		return true
 	default:
 		return false

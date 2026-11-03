@@ -197,6 +197,9 @@ type LearningPath struct {
 	Name string `json:"name" gorm:"type:varchar(128);not null"`
 	// Audience tags the target 岗位/部门 (informational in v1).
 	Audience string `json:"audience" gorm:"type:varchar(64);default:''"`
+	// Stage is the proficiency level this path targets (§15.5 基础→进阶→熟练).
+	// Certification is issued per stage.
+	Stage string `json:"stage" gorm:"type:varchar(16);not null;default:'basic'"`
 	// Steps is the ordered step list as JSONB: [{order, title, knowledge_id,
 	// description}]. Marshalled with the local service helper, never inline
 	// structs.

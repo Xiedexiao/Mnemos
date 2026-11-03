@@ -393,6 +393,8 @@ const navItems = computed(() => {
     { key: 'members', icon: 'usergroup', label: t('tenantMember.title') },
     { key: 'review-workbench', icon: 'assignment-checked', label: t('reviewWorkbench.navEntry') },
     { key: 'governance-console', icon: 'secured', label: t('governanceConsole.navEntry') },
+    { key: 'personal-center', icon: 'user-circle', label: t('personalCenter.title') },
+    { key: 'operations-dashboard', icon: 'chart-pie', label: t('opsDashboard.title') },
     ...integrationItems,
   ]
   // currentTenantRole 为空表示「membership 还没加载」—— 比起渲染整套
@@ -549,6 +551,21 @@ const redirectToReviewWorkbench = (section: string) => {
 }
 
 // 治理控制台同样是独立整页（/platform/governance），弹窗里只放入口。
+// 个人中心与运营看板同样是独立整页（§15.3 / §16.1）。
+const redirectToStandalonePage = (section: string) => {
+  if (section === 'personal-center') {
+    uiStore.closeSettings()
+    void router.push('/platform/me')
+    return true
+  }
+  if (section === 'operations-dashboard') {
+    uiStore.closeSettings()
+    void router.push('/platform/operations')
+    return true
+  }
+  return false
+}
+
 const redirectToGovernanceConsole = (section: string) => {
   if (section !== 'governance-console') return false
   uiStore.closeSettings()
@@ -563,6 +580,7 @@ watch(() => uiStore.settingsInitialSection, (section) => {
     if (redirectToToolbox(normalizedSection, uiStore.settingsInitialSubSection)) return
     if (redirectToReviewWorkbench(normalizedSection)) return
     if (redirectToGovernanceConsole(normalizedSection)) return
+    if (redirectToStandalonePage(normalizedSection)) return
     if (deploymentCapabilities.loaded && !isSectionSupported(normalizedSection)) {
       MessagePlugin.warning(t('settings.capabilityUnavailable'))
       currentSection.value = navItems.value[0]?.key || 'general'

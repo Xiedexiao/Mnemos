@@ -82,7 +82,11 @@ type changeRequestService struct {
 	// versions supplies the published-version lookup needed by replacement-type
 	// publishes and by the close gate's "old version is gone" check.
 	versions interfaces.KnowledgeVersionRepository
-	now      func() time.Time
+	// relations is the dependency graph the impact analysis walks (§7.6).
+	// Optional: nil disables downstream expansion (only the change items
+	// themselves become tasks).
+	relations interfaces.KnowledgeRelationService
+	now       func() time.Time
 }
 
 // NewChangeRequestService constructs the production change request service.
@@ -93,6 +97,7 @@ func NewChangeRequestService(
 	audit interfaces.AuditLogService,
 	governance interfaces.GovernanceApprovalService,
 	versions interfaces.KnowledgeVersionRepository,
+	relations interfaces.KnowledgeRelationService,
 ) interfaces.ChangeRequestService {
 	return &changeRequestService{
 		crs:        crs,
@@ -101,6 +106,7 @@ func NewChangeRequestService(
 		audit:      audit,
 		governance: governance,
 		versions:   versions,
+		relations:  relations,
 		now:        time.Now,
 	}
 }
@@ -358,26 +364,26 @@ func (s *changeRequestService) Analyze(ctx context.Context, crID string) (*types
 			}
 		}
 
-		// TODO(v3.1): 完整影响分析应沿 chunk 引文、wiki 反链与订阅关系展开
-		// （V3.0 §7.6）；v1 用"同 KB 共享标签近邻"近似"谁引用了它"。
-		neighbors, err := s.crs.ListTagNeighborKnowledgeIDs(
-			ctx, tenantID, knowledge.KnowledgeBaseID, knowledge.ID, changeRequestNeighborLimit,
-		)
+		// 影响扩散（§7.6）：沿知识关联图遍历真实依赖边，而不是"同标签近邻"
+		// 近似。关联表记录了"依据/替代/前置/责任"这类方向明确的依赖，正是
+		// 影响分析要沿的边；标签共现既会高估（同标签的兄弟条目）也会低估
+		// （引用了正文却没打标签的条目）。
+		impacts, err := s.collectRelationImpacts(ctx, tenantID, knowledge)
 		if err != nil {
 			return nil, err
 		}
-		for _, neighborID := range neighbors {
-			if _, seen := tasked[neighborID]; seen {
+		for _, impact := range impacts {
+			if _, seen := tasked[impact.knowledgeID]; seen {
 				continue
 			}
-			ok, err := s.ensureImpactTask(ctx, cr, neighborID, priority,
-				fmt.Sprintf("同 KB 近邻（共享标签）：与变更条目 %s 关联，请评估是否需同步修订", knowledge.ID))
+			ok, err := s.ensureImpactTask(ctx, cr, impact.knowledgeID, impact.priority,
+				impact.note)
 			if err != nil {
 				return nil, err
 			}
 			if ok {
 				created++
-				tasked[neighborID] = struct{}{}
+				tasked[impact.knowledgeID] = struct{}{}
 			}
 		}
 	}
@@ -408,6 +414,111 @@ func (s *changeRequestService) Analyze(ctx context.Context, crID string) (*types
 		"risk_level":    cr.RiskLevel,
 	})
 	return s.Get(ctx, cr.ID)
+}
+
+// relationImpact is one downstream document affected by changing a source.
+type relationImpact struct {
+	knowledgeID string
+	priority    string
+	note        string
+}
+
+// changeRequestImpactMaxHops bounds the traversal. Two hops is what the spec's
+// examples need (SOP → its policy → the FAQs derived from that policy); a
+// deeper walk on a densely linked KB turns one change into the whole corpus.
+const changeRequestImpactMaxHops = 2
+
+// relationImpactPriorityFor grades how urgent a downstream edit is, by the
+// relation that produced it (§7.6 必须改 / 建议改 / 知会).
+//
+// 依据与前置是硬依赖：源变了，依赖它的内容就不再成立，属于必须改。替代与
+// 补充是软关联：建议改。其余（相关/责任）只知会。
+func relationImpactPriorityFor(relationType types.KnowledgeRelationType) types.ImpactTaskPriority {
+	switch relationType {
+	case types.RelationBasedOn, types.RelationPrerequisite:
+		return types.ImpactPriorityMustChange
+	case types.RelationReplaces, types.RelationSupplements, types.RelationConflicts:
+		return types.ImpactPrioritySuggested
+	default:
+		return types.ImpactPriorityFYI
+	}
+}
+
+// collectRelationImpacts walks the knowledge relation graph outward from one
+// changed document and returns the downstream documents that depend on it.
+//
+// 只沿"依赖方向"扩散：当前文档是 reverse 行的 from 时，说明别人依据/前置
+// 于它——那才是需要修的对象。当前文档 outbound 依赖别人，不会因为自己变了
+// 而让别人失效。
+func (s *changeRequestService) collectRelationImpacts(
+	ctx context.Context, tenantID uint64, source *types.Knowledge,
+) ([]relationImpact, error) {
+	if s.relations == nil || source == nil {
+		return nil, nil
+	}
+	type queued struct {
+		knowledgeID string
+		hops        int
+		via         types.KnowledgeRelationType
+	}
+	seen := map[string]bool{source.ID: true}
+	queue := []queued{{knowledgeID: source.ID, hops: 0}}
+	var impacts []relationImpact
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		if current.hops >= changeRequestImpactMaxHops {
+			continue
+		}
+		views, err := s.relations.List(ctx, tenantID, current.knowledgeID)
+		if err != nil {
+			return nil, err
+		}
+		for _, view := range views {
+			// 只处理"别人依赖我"的方向。
+			if view.Outbound {
+				continue
+			}
+			if seen[view.PeerID] {
+				continue
+			}
+			seen[view.PeerID] = true
+			relationType := types.KnowledgeRelationType(view.RelationType)
+			impacts = append(impacts, relationImpact{
+				knowledgeID: view.PeerID,
+				priority:    string(relationImpactPriorityFor(relationType)),
+				note: fmt.Sprintf("沿关联图谱：%s %s %s，请评估是否需同步修订",
+					view.PeerID, relationLabelZH(relationType), current.knowledgeID),
+			})
+			queue = append(queue, queued{
+				knowledgeID: view.PeerID,
+				hops:        current.hops + 1,
+				via:         relationType,
+			})
+		}
+	}
+	return impacts, nil
+}
+
+// relationLabelZH renders a relation type for operator-facing task notes.
+func relationLabelZH(relationType types.KnowledgeRelationType) string {
+	switch relationType {
+	case types.RelationBasedOn:
+		return "依据"
+	case types.RelationReplaces:
+		return "替代"
+	case types.RelationSupplements:
+		return "补充"
+	case types.RelationConflicts:
+		return "与"
+	case types.RelationPrerequisite:
+		return "前置"
+	case types.RelationResponsible:
+		return "责任关联"
+	default:
+		return "关联"
+	}
 }
 
 // SubmitForApproval 提交审批（analyzing→in_approval）。
