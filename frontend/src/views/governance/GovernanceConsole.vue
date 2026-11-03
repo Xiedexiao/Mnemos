@@ -266,6 +266,72 @@
         />
       </t-tab-panel>
 
+      <!-- ================= 变更单（§7.2 闭环） ================= -->
+      <t-tab-panel value="changeRequests" :label="t('governanceConsole.tabChangeRequests')">
+        <p class="governance-console__hint">{{ t('governanceConsole.crGateHint') }}</p>
+        <t-table
+          row-key="id"
+          :data="changeRequests"
+          :columns="changeRequestColumns"
+          size="medium"
+          hover
+          :loading="loading"
+          :empty="t('governanceConsole.emptyChangeRequests')"
+        >
+          <template #cr="{ row }">
+            <div class="governance-subject">
+              <span class="governance-subject__title">{{ row.title }}</span>
+              <span class="governance-subject__meta">{{ row.cr_number }}</span>
+            </div>
+          </template>
+          <template #change_type="{ row }">{{ row.change_type }}</template>
+          <template #counts="{ row }">
+            <span>{{ (row.items || []).length }} / {{ (row.impact_tasks || []).length }}</span>
+          </template>
+          <template #status="{ row }">
+            <t-tag size="small" variant="light" :theme="crStatusMeta(row.status).theme">
+              {{ crStatusMeta(row.status).label }}
+            </t-tag>
+          </template>
+          <template #op="{ row }">
+            <div class="governance-actions">
+              <t-button v-if="row.status === 'draft'" variant="text" size="small"
+                :loading="busyId === row.id" @click="runCR(row, 'analyze')">
+                {{ t('governanceConsole.crAnalyze') }}
+              </t-button>
+              <t-button v-if="row.status === 'analyzing'" theme="primary" variant="text" size="small"
+                :loading="busyId === row.id" @click="runCR(row, 'submit')">
+                {{ t('governanceConsole.crSubmit') }}
+              </t-button>
+              <t-button v-if="row.status === 'in_approval'" theme="primary" variant="text" size="small"
+                :loading="busyId === row.id" @click="runCR(row, 'schedule')">
+                {{ t('governanceConsole.crSchedule') }}
+              </t-button>
+              <t-button v-if="row.status === 'scheduled'" theme="primary" variant="text" size="small"
+                :loading="busyId === row.id" @click="runCR(row, 'publish')">
+                {{ t('governanceConsole.crPublish') }}
+              </t-button>
+              <t-button v-if="row.status === 'verifying'" variant="text" size="small"
+                :loading="busyId === row.id" @click="promptVerify(row)">
+                {{ t('governanceConsole.crVerify') }}
+              </t-button>
+              <t-button v-if="row.status === 'verifying'" variant="text" size="small"
+                :loading="busyId === row.id" @click="runCR(row, 'notify')">
+                {{ t('governanceConsole.crNotify') }}
+              </t-button>
+              <t-button v-if="row.status === 'verifying'" theme="success" variant="text" size="small"
+                :loading="busyId === row.id" @click="runCR(row, 'close')">
+                {{ t('governanceConsole.crClose') }}
+              </t-button>
+              <t-button v-if="canRollback(row)" theme="danger" variant="text" size="small"
+                :loading="busyId === row.id" @click="runCR(row, 'rollback')">
+                {{ t('governanceConsole.crRollback') }}
+              </t-button>
+            </div>
+          </template>
+        </t-table>
+      </t-tab-panel>
+
       <!-- ================= 知识缺口（§14.4） ================= -->
       <t-tab-panel value="gaps" :label="t('governanceConsole.tabGaps')">
         <t-table
@@ -330,6 +396,16 @@ import {
   resolveFieldMigration,
   submitOfficialAnswer,
   updateKnowledgeGap,
+  analyzeChangeRequest,
+  closeChangeRequest,
+  listChangeRequests,
+  notifyChangeRequest,
+  publishChangeRequest,
+  rollbackChangeRequest,
+  scheduleChangeRequest,
+  submitChangeRequest,
+  verifyChangeRequest,
+  type ChangeRequest,
   type GovernanceApprovalTask,
   type KnowledgeGap,
   type KnowledgeTemplate,
@@ -354,7 +430,14 @@ import {
 
 const { t } = useI18n();
 
-type TabValue = 'approvals' | 'answers' | 'templates' | 'permissions' | 'searchQuality' | 'gaps';
+type TabValue =
+  | 'approvals'
+  | 'answers'
+  | 'templates'
+  | 'permissions'
+  | 'searchQuality'
+  | 'gaps'
+  | 'changeRequests';
 
 const activeTab = ref<TabValue>('approvals');
 const loading = ref(false);
@@ -398,6 +481,9 @@ const zeroResultQueries = ref<Array<{ query: string; occurrences: number }>>([])
 
 // ---- 缺口 ----
 const gaps = ref<KnowledgeGap[]>([]);
+
+// ---- 变更单 ----
+const changeRequests = ref<ChangeRequest[]>([]);
 
 // ---------------------------------------------------------------------------
 // 展示助手
@@ -485,6 +571,32 @@ const gapStatusMeta = (status: string): { label: string; theme: TagTheme } => {
   }
 };
 
+const crStatusMeta = (status: string): { label: string; theme: TagTheme } => {
+  switch (status) {
+    case 'draft':
+      return { label: t('governanceConsole.statusDraft'), theme: 'default' };
+    case 'analyzing':
+      return { label: t('governanceConsole.statusAnalyzing'), theme: 'default' };
+    case 'in_approval':
+      return { label: t('governanceConsole.statusInApproval'), theme: 'warning' };
+    case 'scheduled':
+      return { label: t('governanceConsole.statusScheduled'), theme: 'warning' };
+    case 'publishing':
+      return { label: t('governanceConsole.statusPublishing'), theme: 'warning' };
+    case 'verifying':
+      return { label: t('governanceConsole.statusVerifying'), theme: 'success' };
+    case 'closed':
+      return { label: t('governanceConsole.statusClosed'), theme: 'success' };
+    case 'rolled_back':
+      return { label: t('governanceConsole.statusRolledBack'), theme: 'danger' };
+    default:
+      return { label: status || '--', theme: 'default' };
+  }
+};
+
+// 回滚只在验证阶段可用：更早的阶段没有可回滚的已应用条目，关闭后则无从回滚。
+const canRollback = (row: ChangeRequest) => row.status === 'verifying';
+
 const subjectLabel = (value: string) => t(`governanceConsole.subject_${value}`);
 
 const isOverdue = (row: GovernanceApprovalTask) =>
@@ -545,6 +657,14 @@ const violationColumns = computed(() => [
 const frequentColumns = computed(() => [
   { colKey: 'query', title: t('governanceConsole.columnQuery'), ellipsis: true, minWidth: 240 },
   { colKey: 'occurrences', title: t('governanceConsole.columnOccurrences'), width: 110 },
+]);
+
+const changeRequestColumns = computed(() => [
+  { colKey: 'cr', title: t('governanceConsole.columnCrTitle'), ellipsis: true, minWidth: 240 },
+  { colKey: 'change_type', title: t('governanceConsole.columnChangeType'), width: 140 },
+  { colKey: 'counts', title: t('governanceConsole.columnItems'), width: 130 },
+  { colKey: 'status', title: t('governanceConsole.columnStatus'), width: 110 },
+  { colKey: 'op', title: t('governanceConsole.columnOp'), width: 260 },
 ]);
 
 const gapColumns = computed(() => [
@@ -623,6 +743,12 @@ const loadSearchQuality = () =>
     zeroResultQueries.value = zeroRes?.data || [];
   });
 
+const loadChangeRequests = () =>
+  withLoading(async () => {
+    const res = await listChangeRequests();
+    changeRequests.value = res?.data || [];
+  });
+
 const loadGaps = () =>
   withLoading(async () => {
     const res = await listKnowledgeGaps();
@@ -644,6 +770,8 @@ const reloadActiveTab = () => {
       return loadSearchQuality();
     case 'gaps':
       return loadGaps();
+    case 'changeRequests':
+      return loadChangeRequests();
     default:
       return Promise.resolve();
   }
@@ -744,6 +872,64 @@ const removeGrant = async (row: FolderGrant) => {
   }
 };
 
+// runCR drives one change-request state transition. The four close gates live
+// server-side, so a blocked close surfaces the backend's explanation instead of
+// being silently swallowed.
+const runCR = async (
+  row: ChangeRequest,
+  action: 'analyze' | 'submit' | 'schedule' | 'publish' | 'notify' | 'close' | 'rollback',
+) => {
+  busyId.value = row.id;
+  try {
+    switch (action) {
+      case 'analyze':
+        await analyzeChangeRequest(row.id);
+        break;
+      case 'submit':
+        await submitChangeRequest(row.id);
+        break;
+      case 'schedule':
+        await scheduleChangeRequest(row.id);
+        break;
+      case 'publish':
+        await publishChangeRequest(row.id);
+        break;
+      case 'notify':
+        await notifyChangeRequest(row.id);
+        break;
+      case 'close':
+        await closeChangeRequest(row.id);
+        break;
+      case 'rollback':
+        await rollbackChangeRequest(row.id);
+        break;
+    }
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadChangeRequests();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
+// promptVerify asks for the close-gate verification result (§7.2 condition ②).
+const promptVerify = async (row: ChangeRequest) => {
+  const result = window.prompt(t('governanceConsole.crVerifyPrompt'), row.verification_result || '');
+  if (!result || !result.trim()) {
+    return;
+  }
+  busyId.value = row.id;
+  try {
+    await verifyChangeRequest(row.id, result.trim());
+    await loadChangeRequests();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
 const assignGap = async (row: KnowledgeGap) => {
   busyId.value = row.id;
   try {
@@ -813,6 +999,12 @@ onMounted(() => {
 
 .governance-console__filter {
   max-width: 260px;
+}
+
+.governance-console__hint {
+  margin: 0 0 12px;
+  color: var(--td-text-color-secondary);
+  font-size: 13px;
 }
 
 .governance-console__section {

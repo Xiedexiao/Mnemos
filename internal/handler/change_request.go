@@ -388,6 +388,61 @@ func (h *ChangeRequestHandler) Close(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": cr})
 }
 
+// MarkVerified godoc
+// @Summary      记录变更验证结论
+// @Description  填写发布后的验证结论（KnowAxis V3.0 §7.2 关闭门禁条件②）。未填写验证结论的变更单不能关闭。
+// @Tags         变更单
+// @Accept       json
+// @Produce      json
+// @Param        id       path  string                      true  "变更单ID"
+// @Param        request  body  changeVerifyRequest         true  "验证结论"
+// @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
+// @Security     Bearer
+// @x-agent      {"id":"cr.verify","risk":"write","role":"admin"}
+// @Router       /change-requests/{id}/verify [post]
+func (h *ChangeRequestHandler) MarkVerified(c *gin.Context) {
+	ctx := c.Request.Context()
+	if forbidden := changeRequestCallerGuard(c); forbidden {
+		return
+	}
+	var req changeVerifyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(apperrors.NewBadRequestError(err.Error()))
+		return
+	}
+	caller := types.CallerFromContext(ctx)
+	cr, err := h.changeRequestService.MarkVerified(ctx, c.Param("id"), req.Result, caller.UserID)
+	if err != nil {
+		writeChangeRequestError(c, ctx, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": cr})
+}
+
+// MarkNotified godoc
+// @Summary      记录影响通知已送达
+// @Description  标记受影响 Owner 已通知（§7.2 关闭门禁条件④）。未通知的变更单不能关闭。
+// @Tags         变更单
+// @Produce      json
+// @Param        id  path  string  true  "变更单ID"
+// @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
+// @Security     Bearer
+// @x-agent      {"id":"cr.notify","risk":"write","role":"admin"}
+// @Router       /change-requests/{id}/notify [post]
+func (h *ChangeRequestHandler) MarkNotified(c *gin.Context) {
+	ctx := c.Request.Context()
+	if forbidden := changeRequestCallerGuard(c); forbidden {
+		return
+	}
+	caller := types.CallerFromContext(ctx)
+	cr, err := h.changeRequestService.MarkNotified(ctx, c.Param("id"), caller.UserID)
+	if err != nil {
+		writeChangeRequestError(c, ctx, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": cr})
+}
+
 // Rollback godoc
 // @Summary      回滚变更单
 // @Description  verifying→rolled_back（终态，留痕审计）。已应用条目保持其状态，恢复需走 lifecycle 审批。
@@ -467,6 +522,12 @@ func changeRequestCallerGuard(c *gin.Context) bool {
 // writeChangeRequestError 把变更单的业务哨兵错误映射为 HTTP 语义。映射表：
 // 幂等/状态冲突 → 409，关闭门禁与参数/状态机门槛 → 400，资源缺失 → 404，
 // 缺租户上下文 → 401，其余记日志后 500（不外泄内部细节）。
+// changeVerifyRequest is the body of POST /change-requests/:id/verify.
+type changeVerifyRequest struct {
+	// Result is the verification conclusion (§7.2 关闭条件②).
+	Result string `json:"result"`
+}
+
 func writeChangeRequestError(c *gin.Context, ctx context.Context, err error) {
 	var blocked *types.ChangeCloseBlockedError
 	switch {
@@ -474,6 +535,9 @@ func writeChangeRequestError(c *gin.Context, ctx context.Context, err error) {
 		c.Error(apperrors.NewBadRequestError(blocked.Error()))
 	case errors.Is(err, service.ErrCRItemAlreadyAdded),
 		errors.Is(err, service.ErrCRNotEditable),
+		errors.Is(err, service.ErrCRNotAnalyzed),
+		errors.Is(err, service.ErrCRNotApproved),
+		errors.Is(err, service.ErrCRVerificationRequired),
 		errors.Is(err, service.ErrCRInvalidState):
 		c.Error(apperrors.NewConflictError(err.Error()))
 	case errors.Is(err, service.ErrCRTitleRequired),

@@ -48,6 +48,9 @@ func RegisterChangeRequestRoutes(r *gin.RouterGroup, g *rbacGuards, h *handler.C
 		crOps.POST("/:id/submit", g.Admin(), h.SubmitForApproval)
 		crOps.POST("/:id/schedule", g.Admin(), h.Schedule)
 		crOps.POST("/:id/publish", g.Admin(), h.Publish)
+		// 关闭门禁的两条补充动作（§7.2 条件②验证通过 / 条件④通知送达）。
+		crOps.POST("/:id/verify", g.Admin(), h.MarkVerified)
+		crOps.POST("/:id/notify", g.Admin(), h.MarkNotified)
 		crOps.POST("/:id/close", g.Admin(), h.Close)
 		crOps.POST("/:id/rollback", g.Admin(), h.Rollback)
 		// 影响任务闭环：done/waived + note。

@@ -829,3 +829,139 @@ export function resolveApprovalFlow(kbId: string, riskLevel: ApprovalRiskLevel =
     `/api/v1/approval-flows/${encodeURIComponent(kbId)}/resolve${query}`,
   )
 }
+
+// ============================================================================
+// §7.2 change requests (变更单)
+// ============================================================================
+
+// CHANGE_REQUEST_STATUSES mirrors the backend state machine.
+export const CHANGE_REQUEST_STATUSES = [
+  'draft',
+  'analyzing',
+  'in_approval',
+  'scheduled',
+  'publishing',
+  'verifying',
+  'closed',
+  'rolled_back',
+] as const
+
+export type ChangeRequestStatus = (typeof CHANGE_REQUEST_STATUSES)[number]
+
+// ChangeItem is one knowledge entry in the change set.
+export interface ChangeItem {
+  id?: string
+  cr_id?: string
+  knowledge_id: string
+  item_status: 'pending' | 'applied' | 'failed' | 'skipped' | string
+  replaced_by_id?: string
+}
+
+// ImpactTask is one affected-object task (§7.6).
+export interface ImpactTask {
+  id: string
+  cr_id: string
+  target_type: string
+  target_id: string
+  status: 'open' | 'done' | 'waived' | string
+  priority?: string
+  note?: string
+}
+
+// ChangeRequest mirrors the backend aggregate.
+export interface ChangeRequest {
+  id: string
+  cr_number: string
+  title: string
+  reason: string
+  change_type: string
+  status: ChangeRequestStatus | string
+  risk_level: string
+  effective_at?: string | null
+  rollback_plan?: string
+  approval_task_id?: string
+  approval_receipt_id?: string
+  verification_result?: string
+  notified_at?: string | null
+  created_by: string
+  created_at?: string
+  closed_at?: string | null
+  items?: ChangeItem[]
+  impact_tasks?: ImpactTask[]
+}
+
+interface ChangeRequestListResponse {
+  success: boolean
+  data: ChangeRequest[]
+  total?: number
+}
+
+interface ChangeRequestResponse {
+  success: boolean
+  data: ChangeRequest
+}
+
+// GET /api/v1/change-requests — list change requests.
+export function listChangeRequests(status?: string) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return get<ChangeRequestListResponse>(`/api/v1/change-requests${query}`)
+}
+
+// GET /api/v1/change-requests/:id — one change request with its items and tasks.
+export function getChangeRequest(id: string) {
+  return get<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}`)
+}
+
+// POST /api/v1/change-requests/:id/analyze — freeze the impact analysis.
+export function analyzeChangeRequest(id: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/analyze`, {})
+}
+
+// POST /api/v1/change-requests/:id/submit — create the §6.2 approval task.
+export function submitChangeRequest(id: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/submit`, {})
+}
+
+// POST /api/v1/change-requests/:id/schedule — requires an approved receipt.
+export function scheduleChangeRequest(id: string, effectiveAt?: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/schedule`, {
+    effective_at: effectiveAt || null,
+  })
+}
+
+// POST /api/v1/change-requests/:id/publish — apply items by change type.
+export function publishChangeRequest(id: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/publish`, {})
+}
+
+// POST /api/v1/change-requests/:id/verify — close gate condition ②.
+export function verifyChangeRequest(id: string, result: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/verify`, { result })
+}
+
+// POST /api/v1/change-requests/:id/notify — close gate condition ④.
+export function notifyChangeRequest(id: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/notify`, {})
+}
+
+// POST /api/v1/change-requests/:id/close — all four gates must pass.
+export function closeChangeRequest(id: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/close`, {})
+}
+
+// POST /api/v1/change-requests/:id/rollback
+export function rollbackChangeRequest(id: string) {
+  return post<ChangeRequestResponse>(`/api/v1/change-requests/${encodeURIComponent(id)}/rollback`, {})
+}
+
+// POST /api/v1/change-requests/:id/impact-tasks/:task_id — close or waive a task.
+export function updateImpactTask(
+  id: string,
+  taskId: string,
+  payload: { status: 'open' | 'done' | 'waived'; note?: string },
+) {
+  return post(
+    `/api/v1/change-requests/${encodeURIComponent(id)}/impact-tasks/${encodeURIComponent(taskId)}`,
+    payload,
+  )
+}

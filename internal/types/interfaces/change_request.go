@@ -64,18 +64,23 @@ type ChangeRequestService interface {
 	// 影响任务（priority 按 cr.risk_level），并对同 KB 共享标签的近邻知识
 	// 生成波及任务；冻结条目清单进 baseline。
 	Analyze(ctx context.Context, crID string) (*types.ChangeRequest, error)
-	// SubmitForApproval 提交审批（analyzing→in_approval；v1 占位，真实审批
-	// 对接 A2 审核流为后续版本）。
+	// SubmitForApproval 提交审批（analyzing→in_approval），创建一个 §6.2 治理
+	// 审批任务；未做影响分析的草稿会被拒绝（审批人需要看到条目与影响清单）。
 	SubmitForApproval(ctx context.Context, crID string) (*types.ChangeRequest, error)
-	// Schedule 排期（in_approval→scheduled）：设定 effective_at（空则取当前时刻）。
+	// Schedule 排期（in_approval→scheduled）：设定 effective_at（空则取当前
+	// 时刻）。必须先拿到审批回执，否则返回 ErrCRNotApproved（§7.2）。
 	Schedule(ctx context.Context, crID string, effectiveAt *time.Time) (*types.ChangeRequest, error)
 	// Publish 发布（scheduled→publishing→verifying）：对每个 pending/failed
 	// 条目调 lifecycle Transition（v1 一律 mark_stale），成功写 applied、失败写
 	// failed；存在失败时 CR 留在 publishing 可重试，全部成功才进 verifying。
 	Publish(ctx context.Context, crID string) (*types.ChangeRequest, error)
-	// Close 关闭（verifying→closed）。门禁：所有影响任务 done/waived 且所有
-	// 条目非 pending；不满足返回 *types.ChangeCloseBlockedError（400）。
+	// Close 关闭（verifying→closed）。四条门禁（§7.2）：影响任务闭环、验证
+	// 通过、旧版已失效、通知已送达；不满足返回 *types.ChangeCloseBlockedError。
 	Close(ctx context.Context, crID string) (*types.ChangeRequest, error)
+	// MarkVerified 记录发布后的验证结论（关闭门禁条件②）。
+	MarkVerified(ctx context.Context, crID, result, actorID string) (*types.ChangeRequest, error)
+	// MarkNotified 记录影响通知已送达（关闭门禁条件④）。
+	MarkNotified(ctx context.Context, crID, actorID string) (*types.ChangeRequest, error)
 	// Rollback 回滚（verifying→rolled_back；终态，留痕审计）。
 	Rollback(ctx context.Context, crID string) (*types.ChangeRequest, error)
 	// List 分页列出变更单（聚合 items + impact_tasks）。

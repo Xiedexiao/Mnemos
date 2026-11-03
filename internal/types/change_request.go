@@ -279,6 +279,10 @@ const (
 	AuditActionCRRolledBack AuditAction = "cr.rolled_back"
 	// AuditActionCRImpactTaskUpdated 影响任务状态/备注更新。
 	AuditActionCRImpactTaskUpdated AuditAction = "cr.impact_task_updated"
+	// AuditActionCRVerified 验证结论已填写（关闭门禁条件②）。
+	AuditActionCRVerified AuditAction = "cr.verified"
+	// AuditActionCRNotified 影响通知已送达（关闭门禁条件④）。
+	AuditActionCRNotified AuditAction = "cr.notified"
 )
 
 // ============================================================================
@@ -336,7 +340,16 @@ type ChangeRequest struct {
 	RollbackPlan string `json:"rollback_plan" gorm:"type:text;not null;default:''"`
 	// CloseConditions 结构化关闭前置条件（v1 只读展示）。
 	CloseConditions JSON `json:"close_conditions" gorm:"type:json;not null;default:'[]'"`
-	// CreatedBy 创建人（审批四眼校验等后续版本依赖它）。
+	// ApprovalTaskID 提交审批时创建的治理审批任务（§6.2 change_request）。
+	ApprovalTaskID string `json:"approval_task_id" gorm:"type:varchar(36);not null;default:''"`
+	// ApprovalReceiptID 排期时绑定的审批回执：发布与审计都以它为凭据
+	// （§7.2：审批通过才能进入排期）。
+	ApprovalReceiptID string `json:"approval_receipt_id" gorm:"type:varchar(64);not null;default:''"`
+	// VerificationResult 验证结论（发布后由验证人填写，关闭门禁条件②）。
+	VerificationResult string `json:"verification_result" gorm:"type:text;not null;default:''"`
+	// NotifiedAt 影响通知送达时刻（关闭门禁条件④）。
+	NotifiedAt *time.Time `json:"notified_at"`
+	// CreatedBy 创建人（审批四眼校验等其它治理动作依赖它）。
 	CreatedBy string `json:"created_by" gorm:"type:varchar(36);not null"`
 	// ClosedAt 关闭时刻。
 	ClosedAt *time.Time `json:"closed_at"`
@@ -362,6 +375,9 @@ type ChangeItem struct {
 	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;uniqueIndex:uq_change_items_cr_knowledge,priority:2"`
 	// ItemStatus 应用状态（pending/applied/failed/skipped）。
 	ItemStatus string `json:"item_status" gorm:"type:varchar(16);not null;default:'pending'"`
+	// ReplacedByID 替代类变更里接替本条目的新知识（§7.2 replacement）。
+	// 为空时发布降级为 mark_stale，而不是让整批条目 failed。
+	ReplacedByID string `json:"replaced_by_id" gorm:"type:varchar(36);not null;default:''"`
 
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -429,6 +445,12 @@ type ChangeCloseBlockedError struct {
 	OpenTasks []string
 	// PendingItems 仍是 pending 的变更条目知识 ID。
 	PendingItems []string
+	// Verified 验证结论是否已填写（§7.2 关闭条件②）。
+	Verified bool
+	// Notified 影响通知是否已送达（§7.2 关闭条件④）。
+	Notified bool
+	// OldVersionGone 旧版本是否已失效（§7.2 关闭条件③）。
+	OldVersionGone bool
 }
 
 // Error 实现 error 接口；消息里带清单，便于审计与前端提示。
@@ -437,6 +459,15 @@ func (e *ChangeCloseBlockedError) Error() string {
 	b.WriteString("change request close gate not met")
 	if len(e.PendingItems) > 0 {
 		fmt.Fprintf(&b, "; pending item(s): %s", strings.Join(e.PendingItems, ","))
+	}
+	if !e.Verified {
+		b.WriteString("; verification result is missing")
+	}
+	if !e.OldVersionGone {
+		b.WriteString("; the previous version has not been retired")
+	}
+	if !e.Notified {
+		b.WriteString("; affected owners have not been notified")
 	}
 	if len(e.OpenTasks) > 0 {
 		fmt.Fprintf(&b, "; open impact task(s): %s", strings.Join(e.OpenTasks, ","))

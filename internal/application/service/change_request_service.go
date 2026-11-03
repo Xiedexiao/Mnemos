@@ -37,6 +37,13 @@ var (
 	ErrCRKnowledgeNotFound = errors.New("change request: knowledge not found")
 	// ErrCRNoItems 变更单没有任何条目（分析/发布的前置）。
 	ErrCRNoItems = errors.New("change request: no change items")
+	// ErrCRNotAnalyzed 未做影响分析就提交审批：审批人看不到条目与影响清单，
+	// 等于盲签。
+	ErrCRNotAnalyzed = errors.New("change request: run the impact analysis before submitting for approval")
+	// ErrCRNotApproved 变更单尚未获批，不能排期或发布（§7.2）。
+	ErrCRNotApproved = errors.New("change request: the change request has not been approved")
+	// ErrCRVerificationRequired 验证结论为空：关闭门禁条件②要求显式填写。
+	ErrCRVerificationRequired = errors.New("change request: a verification result is required")
 	// ErrCRTitleRequired 标题必填。
 	ErrCRTitleRequired = errors.New("change request: title is required")
 	// ErrCRInvalidReason reason 不在白名单。
@@ -68,7 +75,14 @@ type changeRequestService struct {
 	knowledges interfaces.KnowledgeRepository
 	lifecycle  interfaces.KnowledgeLifecycleService
 	audit      interfaces.AuditLogService
-	now        func() time.Time
+	// governance routes the change request through the §6.2 approval flow so
+	// Schedule can require a receipt (V3.0 §7.2 审批). Optional: nil keeps the
+	// pre-existing "Admin drives it by hand" behaviour.
+	governance interfaces.GovernanceApprovalService
+	// versions supplies the published-version lookup needed by replacement-type
+	// publishes and by the close gate's "old version is gone" check.
+	versions interfaces.KnowledgeVersionRepository
+	now      func() time.Time
 }
 
 // NewChangeRequestService constructs the production change request service.
@@ -77,12 +91,16 @@ func NewChangeRequestService(
 	knowledges interfaces.KnowledgeRepository,
 	lifecycle interfaces.KnowledgeLifecycleService,
 	audit interfaces.AuditLogService,
+	governance interfaces.GovernanceApprovalService,
+	versions interfaces.KnowledgeVersionRepository,
 ) interfaces.ChangeRequestService {
 	return &changeRequestService{
 		crs:        crs,
 		knowledges: knowledges,
 		lifecycle:  lifecycle,
 		audit:      audit,
+		governance: governance,
+		versions:   versions,
 		now:        time.Now,
 	}
 }
@@ -397,11 +415,19 @@ func (s *changeRequestService) Analyze(ctx context.Context, crID string) (*types
 // TODO(v3.1): 真实审批对接 —— 复用 A2 ReviewService 的审批任务/回执/哈希链：
 // 为变更单建立审批任务（四眼校验基于 CreatedBy vs 审批人，高风险单走 dual），
 // 法定人数通过后出回执，再放行 Schedule。v1 占位：直接进入 in_approval，
-// 由治理面 Admin 手工驱动排期与发布；每一步都写审计可回溯。
+// SubmitForApproval 提交审批（analyzing→in_approval）。
+//
+// 这里接的是真实的 §6.2 治理审批：变更单作为一个 subject 进入审批链，
+// 四眼与多级链完全复用。此前只改状态位——任何 Admin 都能从 analyzing 一路
+// 推到发布，审批形同虚设。
 func (s *changeRequestService) SubmitForApproval(ctx context.Context, crID string) (*types.ChangeRequest, error) {
 	tenantID, err := changeRequestTenantFromContext(ctx)
 	if err != nil {
 		return nil, err
+	}
+	actor := types.CallerFromContext(ctx).UserID
+	if actor == "" {
+		return nil, ErrCRActorMissing
 	}
 	cr, err := s.loadCR(ctx, tenantID, crID)
 	if err != nil {
@@ -410,6 +436,39 @@ func (s *changeRequestService) SubmitForApproval(ctx context.Context, crID strin
 	if !types.ChangeRequestStatus(cr.Status).CanTransitionTo(types.ChangeRequestStatusInApproval) {
 		return nil, ErrCRInvalidState
 	}
+	// 没有影响分析就提交审批等于让审批人盲签：Analyze 之后才有条目清单与
+	// 影响任务可供判断。
+	if types.ChangeRequestStatus(cr.Status) == types.ChangeRequestStatusDraft {
+		return nil, ErrCRNotAnalyzed
+	}
+
+	if s.governance != nil {
+		snapshot, marshalErr := json.Marshal(map[string]interface{}{
+			"cr_number":     cr.CRNumber,
+			"change_type":   cr.ChangeType,
+			"change_reason": cr.Reason,
+			"risk_level":    cr.RiskLevel,
+			"effective_at":  cr.EffectiveAt,
+		})
+		if marshalErr != nil {
+			return nil, fmt.Errorf("change request: marshal approval snapshot: %w", marshalErr)
+		}
+		task, submitErr := s.governance.Submit(ctx, tenantID, actor, &types.GovernanceApprovalRequest{
+			SubjectType: types.ApprovalSubjectChangeRequest,
+			SubjectID:   cr.ID,
+			Title:       fmt.Sprintf("%s · %s", cr.CRNumber, cr.Title),
+			Reason:      cr.Reason,
+			RiskLevel:   types.ApprovalRiskLevel(cr.RiskLevel),
+			Snapshot:    types.JSON(snapshot),
+		})
+		if submitErr != nil && !errors.Is(submitErr, ErrGovernancePending) {
+			return nil, submitErr
+		}
+		if task != nil {
+			cr.ApprovalTaskID = task.ID
+		}
+	}
+
 	cr.Status = string(types.ChangeRequestStatusInApproval)
 	cr.UpdatedAt = s.now()
 	if err := s.crs.Update(ctx, cr); err != nil {
@@ -417,8 +476,9 @@ func (s *changeRequestService) SubmitForApproval(ctx context.Context, crID strin
 	}
 	// accepted：审批未决，与 review.submitted 同语义。
 	s.crAuditEvent(ctx, cr, types.AuditActionCRSubmitted, types.AuditOutcomeAccepted, map[string]any{
-		"cr_number":  cr.CRNumber,
-		"created_by": cr.CreatedBy,
+		"cr_number":   cr.CRNumber,
+		"created_by":  cr.CreatedBy,
+		"approval_id": cr.ApprovalTaskID,
 	})
 	return s.Get(ctx, cr.ID)
 }
@@ -436,6 +496,21 @@ func (s *changeRequestService) Schedule(ctx context.Context, crID string, effect
 	}
 	if !types.ChangeRequestStatus(cr.Status).CanTransitionTo(types.ChangeRequestStatusScheduled) {
 		return nil, ErrCRInvalidState
+	}
+	// 排期门禁（§7.2）：变更单必须先获批。同时把回执号刻进单据，后续发布
+	// 与审计都以它为凭据。
+	if s.governance != nil {
+		decision, gateErr := s.governance.RequireApproval(ctx, tenantID,
+			types.ApprovalSubjectChangeRequest, cr.ID)
+		if gateErr != nil {
+			return nil, ErrCRNotApproved
+		}
+		if decision != nil && decision.ReceiptID != "" {
+			cr.ApprovalReceiptID = decision.ReceiptID
+			if decision.TaskID != "" {
+				cr.ApprovalTaskID = decision.TaskID
+			}
+		}
 	}
 	if effectiveAt == nil {
 		now := s.now()
@@ -509,13 +584,25 @@ func (s *changeRequestService) Publish(ctx context.Context, crID string) (*types
 			continue // 已应用/已跳过的项不重复处理
 		case types.ChangeItemStatusPending, types.ChangeItemStatusFailed:
 		}
-		// 状态机推进失败只标 failed，不中断本轮：一条坏数据不能挡住其余条目。
-		if _, err := s.lifecycle.Transition(ctx, &types.KnowledgeLifecycleTransitionInput{
+		// 按变更类型分发 lifecycle 动作（§7.2）。此前所有类型统一 mark_stale，
+		// 使"替代"和"下架"在状态上无法区分，也让"旧版已失效"这条关闭门禁
+		// 无法判定。
+		input := types.KnowledgeLifecycleTransitionInput{
 			KnowledgeID: item.KnowledgeID,
-			Action:      types.KnowledgeLifecycleActionMarkStale,
+			Action:      changeRequestLifecycleAction(types.ChangeType(cr.ChangeType)),
 			ActorID:     actor,
 			ChangeNote:  changeNote,
-		}); err != nil {
+		}
+		// replacement 需要指向接替的新版本；条目上没记录时退回 stale，避免
+		// 一次缺少参数就让整批条目 failed。
+		if input.Action == types.KnowledgeLifecycleActionReplace {
+			if replacementID := changeRequestReplacementTarget(item); replacementID != "" {
+				input.ReplacedByID = replacementID
+			} else {
+				input.Action = types.KnowledgeLifecycleActionMarkStale
+			}
+		}
+		if _, err := s.lifecycle.Transition(ctx, &input); err != nil {
 			item.ItemStatus = string(types.ChangeItemStatusFailed)
 			failures = append(failures, item.KnowledgeID)
 		} else {
@@ -548,6 +635,31 @@ func (s *changeRequestService) Publish(ctx context.Context, crID string) (*types
 		"items":     len(items),
 	})
 	return s.Get(ctx, cr.ID)
+}
+
+// changeRequestLifecycleAction maps a change type onto the lifecycle action its
+// items take on publish.
+//
+// 文字勘误/内容改版/参数变更 都是"先让旧内容失效，再由编辑重新提交审核"，
+// 所以走 stale；替代与下架在语义上是终态，分别走 replace 与 delist；结构
+// 重组同样先 stale（拆分/合并后由新条目接替）。
+func changeRequestLifecycleAction(changeType types.ChangeType) types.KnowledgeLifecycleAction {
+	switch changeType {
+	case types.ChangeTypeDelist:
+		return types.KnowledgeLifecycleActionDelist
+	case types.ChangeTypeReplacement:
+		return types.KnowledgeLifecycleActionReplace
+	default:
+		return types.KnowledgeLifecycleActionMarkStale
+	}
+}
+
+// changeRequestReplacementTarget returns the knowledge that supersedes an item.
+func changeRequestReplacementTarget(item *types.ChangeItem) string {
+	if item == nil {
+		return ""
+	}
+	return strings.TrimSpace(item.ReplacedByID)
 }
 
 // Close 关闭（verifying→closed）。门禁（V3.0 §7.2）：所有影响任务为
@@ -586,8 +698,20 @@ func (s *changeRequestService) Close(ctx context.Context, crID string) (*types.C
 			pendingItems = append(pendingItems, item.KnowledgeID)
 		}
 	}
-	if len(openTasks) > 0 || len(pendingItems) > 0 {
-		return nil, &types.ChangeCloseBlockedError{OpenTasks: openTasks, PendingItems: pendingItems}
+	// 四条关闭门禁（§7.2）：影响任务闭环、验证通过、旧版已失效、通知已送达。
+	// v1 只实现了前两条，所以"变更没验证、也没通知受影响的人"照样能关单。
+	verified := strings.TrimSpace(cr.VerificationResult) != ""
+	notified := cr.NotifiedAt != nil
+	oldVersionGone := s.oldVersionsRetired(ctx, cr, items)
+
+	if len(openTasks) > 0 || len(pendingItems) > 0 || !verified || !notified || !oldVersionGone {
+		return nil, &types.ChangeCloseBlockedError{
+			OpenTasks:      openTasks,
+			PendingItems:   pendingItems,
+			Verified:       verified,
+			Notified:       notified,
+			OldVersionGone: oldVersionGone,
+		}
 	}
 
 	now := s.now()
@@ -601,6 +725,90 @@ func (s *changeRequestService) Close(ctx context.Context, crID string) (*types.C
 		"cr_number": cr.CRNumber,
 		"tasks":     len(tasks),
 		"items":     len(items),
+	})
+	return s.Get(ctx, cr.ID)
+}
+
+// oldVersionsRetired reports whether every item this change touched has left the
+// "current" states (§7.2 关闭条件③：旧版本已失效).
+//
+// A change that left its items as valid/stale has not actually taken effect:
+// closing it would claim "the old version is gone" while readers still get it.
+// Items already delisted/replaced/expired/archived count as retired.
+func (s *changeRequestService) oldVersionsRetired(
+	ctx context.Context, cr *types.ChangeRequest, items []*types.ChangeItem,
+) bool {
+	tenantID, _ := types.TenantIDFromContext(ctx)
+	for _, item := range items {
+		if item == nil || item.KnowledgeID == "" {
+			continue
+		}
+		knowledge, err := s.knowledges.GetKnowledgeByID(ctx, tenantID, item.KnowledgeID)
+		if err != nil || knowledge == nil {
+			// 读不到就当未失效：门禁宁严不宽。
+			return false
+		}
+		status := types.ParseKnowledgeLifecycleStatus(knowledge.LifecycleStatus)
+		switch status {
+		case types.KnowledgeLifecycleDelisted, types.KnowledgeLifecycleReplaced,
+			types.KnowledgeLifecycleExpired, types.KnowledgeLifecycleArchived:
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// MarkVerified records the post-publish verification outcome (关闭条件②).
+func (s *changeRequestService) MarkVerified(
+	ctx context.Context, crID, result, actorID string,
+) (*types.ChangeRequest, error) {
+	tenantID, err := changeRequestTenantFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cr, err := s.loadCR(ctx, tenantID, crID)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(result) == "" {
+		return nil, ErrCRVerificationRequired
+	}
+	cr.VerificationResult = strings.TrimSpace(result)
+	cr.UpdatedAt = s.now()
+	if err := s.crs.Update(ctx, cr); err != nil {
+		return nil, err
+	}
+	s.crAuditEvent(ctx, cr, types.AuditActionCRVerified, types.AuditOutcomeSuccess, map[string]any{
+		"cr_number": cr.CRNumber,
+		"actor":     actorID,
+		"result":    truncateChangeText(cr.VerificationResult, 200),
+	})
+	return s.Get(ctx, cr.ID)
+}
+
+// MarkNotified records that the affected owners were told (关闭条件④).
+func (s *changeRequestService) MarkNotified(
+	ctx context.Context, crID, actorID string,
+) (*types.ChangeRequest, error) {
+	tenantID, err := changeRequestTenantFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cr, err := s.loadCR(ctx, tenantID, crID)
+	if err != nil {
+		return nil, err
+	}
+	now := s.now()
+	cr.NotifiedAt = &now
+	cr.UpdatedAt = now
+	if err := s.crs.Update(ctx, cr); err != nil {
+		return nil, err
+	}
+	s.crAuditEvent(ctx, cr, types.AuditActionCRNotified, types.AuditOutcomeSuccess, map[string]any{
+		"cr_number": cr.CRNumber,
+		"actor":     actorID,
 	})
 	return s.Get(ctx, cr.ID)
 }
