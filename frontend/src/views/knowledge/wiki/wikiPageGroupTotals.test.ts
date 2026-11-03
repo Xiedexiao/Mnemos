@@ -6,8 +6,10 @@ import ts from 'typescript'
 
 const componentSource = readFileSync(new URL('./WikiBrowser.vue', import.meta.url), 'utf8')
 const start = componentSource.indexOf('const groupedPages = computed(() => {')
-const end = componentSource.indexOf('\n\n// hasContentPages is', start)
-const groupedPagesSource = componentSource.slice(start, end)
+const lfEnd = componentSource.indexOf('\n\n// hasContentPages is', start)
+const crlfEnd = componentSource.indexOf('\r\n\r\n// hasContentPages is', start)
+const end = lfEnd !== -1 ? lfEnd : crlfEnd
+const groupedPagesSource = componentSource.slice(start, end === -1 ? undefined : end)
 
 function projectGroups(pagesByType: Record<string, any>, pagesByTypeStats: Record<string, number>) {
   const script = ts.transpileModule(`${groupedPagesSource}\ngroupedPages.value`, {

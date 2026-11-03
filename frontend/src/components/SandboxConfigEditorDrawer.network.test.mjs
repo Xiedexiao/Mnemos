@@ -136,7 +136,7 @@ test('injected header values are password inputs and survive an untouched edit',
 
 test('stored network secret recoverability requires the loaded identity', () => {
   const helper = source.match(
-    /function isStoredNetworkSecretRecoverable\([\s\S]*?\): boolean \{\n([\s\S]*?)\n\}/,
+    /function isStoredNetworkSecretRecoverable\([\s\S]*?\): boolean \{\r?\n([\s\S]*?)\r?\n\}/,
   )
   assert.ok(helper, 'the shared recoverability helper must exist')
   const isRecoverable = new Function(
@@ -193,7 +193,7 @@ test('domain allow without deny-all is warned about in place', () => {
   )
 
   const helper = source.match(
-    /function denyOutRowCoversAllIPv4\(row: string\): boolean \{\n([\s\S]*?)\n\}/,
+    /function denyOutRowCoversAllIPv4\(row: string\): boolean \{\r?\n([\s\S]*?)\r?\n\}/,
   )
   assert.ok(helper, 'the deny-all classifier must exist')
   const coversAll = new Function('row', helper[1])
@@ -300,7 +300,7 @@ test('cube L7 rules collapse to a name bar', () => {
   )
 
   const mover = source.match(
-    /function moveCubeRule\(index: number, delta: number\) \{\n([\s\S]*?)\n\}/,
+    /function moveCubeRule\(index: number, delta: number\) \{\r?\n([\s\S]*?)\r?\n\}/,
   )
   assert.ok(mover, 'moveCubeRule must exist')
   const move = new Function('cubeRules', 'index', 'delta', `${mover[1]}`)

@@ -4,7 +4,7 @@ import test from 'node:test'
 
 const viewer = readFileSync(new URL('./PdfSourceViewer.vue', import.meta.url), 'utf8')
 const viteConfig = readFileSync(new URL('../../../vite.config.ts', import.meta.url), 'utf8')
-const renderCode = viewer.match(/async function paintPage\([\s\S]*?\n}\n\nfunction touchRendered/)?.[0] ?? ''
+const renderCode = viewer.match(/async function paintPage\([\s\S]*?\r?\n}\r?\n\r?\nfunction touchRendered/)?.[0] ?? ''
 
 test('PDF preview resolves the decoder from the configured frontend base path', () => {
   assert.match(viewer, /wasmUrl\s*:\s*`\$\{import\.meta\.env\.BASE_URL\}pdfjs\/wasm\//)

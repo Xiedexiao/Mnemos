@@ -42,31 +42,31 @@ const RULES = [
     name: 'radius-literal',
     why: '圆角请用 var(--app-radius-xs|sm|md|lg|xl|pill)（4/6/8/10/12/999px）',
     pattern: /border(?:-[a-z]+)*-radius\s*:\s*\d+(?:\.\d+)?px/g,
-    baseline: 160,
+    baseline: 158,
   },
   {
     name: 'font-size-literal',
     why: '字号请用 var(--app-text-2xs … 4xl)（10~24px），简写写成 font: var(--app-text-sm)/1.5 …；图标尺寸用 t-icon 的 size 属性',
     pattern: /\bfont(?:-size)?\s*:\s*\d+(?:\.\d+)?px/g,
-    baseline: 33,
+    baseline: 32,
   },
   {
     name: 'motion-literal',
     why: '过渡时长请用 var(--app-motion-instant|fast|base|slow)（120/150/200/300ms）',
     pattern: /transition[^;{]*?(?<![\d.])(?:0?\.\d+s|\d+ms)/g,
-    baseline: 64,
+    baseline: 63,
   },
   {
     name: 'transition-all',
     why: 'transition: all 会让无关属性也参与动画（含 layout 属性），请列出具体属性',
     pattern: /transition\s*:\s*all\b/g,
-    baseline: 59,
+    baseline: 58,
   },
   {
     name: 'important',
     why: '!important 通常意味着在和 TDesign 或自己的样式打架；全局意图的覆盖放 tdesign-overrides.less',
     pattern: /!important/g,
-    baseline: 414,
+    baseline: 400,
   },
   {
     name: 'z-index-important',
@@ -78,7 +78,7 @@ const RULES = [
     name: 'raster-icon',
     why: 'more.png / circle.png 位图图标请换成 t-icon',
     pattern: /(more|circle)\.png/g,
-    baseline: 8,
+    baseline: 1,
   },
 ]
 

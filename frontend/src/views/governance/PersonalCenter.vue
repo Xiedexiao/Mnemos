@@ -475,7 +475,7 @@ onMounted(load);
 }
 
 .personal-center__title {
-  font-size: 20px;
+  font-size: var(--app-text-3xl);
   font-weight: 600;
   margin: 0 0 4px;
 }
@@ -483,7 +483,7 @@ onMounted(load);
 .personal-center__desc {
   margin: 0;
   color: var(--td-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
 }
 
 .personal-center__metrics {
@@ -499,16 +499,16 @@ onMounted(load);
   gap: 4px;
   padding: 16px;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
 }
 
 .personal-center__label {
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   color: var(--td-text-color-secondary);
 }
 
 .personal-center__value {
-  font-size: 22px;
+  font-size: var(--app-text-4xl);
   font-weight: 600;
 }
 
@@ -519,18 +519,18 @@ onMounted(load);
   gap: 16px;
   padding: 12px 16px;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   margin-bottom: 8px;
 }
 
 .personal-center__switch-desc {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   color: var(--td-text-color-secondary);
 }
 
 .personal-center__subtitle {
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 500;
   margin: 20px 0 8px;
   color: var(--td-text-color-secondary);

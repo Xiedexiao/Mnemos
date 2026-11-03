@@ -119,5 +119,5 @@ test('install step shows parsed skill and sandbox backend details', () => {
 })
 
 test('install status names the version still running while an upgrade is pending or failed', () => {
-  assert.match(source, /const served = servedPreviousText\(t, inst\)\n  if \(served\) return served/)
+  assert.match(source, /const served = servedPreviousText\(t, inst\)\r?\n  if \(served\) return served/)
 })

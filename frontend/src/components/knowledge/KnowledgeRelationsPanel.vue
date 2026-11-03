@@ -195,13 +195,13 @@ watch(() => props.knowledgeId, load, { immediate: true });
 
 .kb-relations__title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-base);
   font-weight: 600;
 }
 
 .kb-relations__state {
   color: var(--td-text-color-placeholder);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   padding: 8px 0;
 }
 
@@ -240,12 +240,12 @@ watch(() => props.knowledgeId, load, { immediate: true });
 }
 
 .kb-relations__direction {
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   color: var(--td-text-color-placeholder);
 }
 
 .kb-relations__note {
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   color: var(--td-text-color-secondary);
   overflow: hidden;
   text-overflow: ellipsis;

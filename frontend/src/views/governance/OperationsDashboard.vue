@@ -369,7 +369,7 @@ onMounted(load);
 }
 
 .ops-dashboard__title {
-  font-size: 20px;
+  font-size: var(--app-text-3xl);
   font-weight: 600;
   margin: 0 0 4px;
 }
@@ -377,7 +377,7 @@ onMounted(load);
 .ops-dashboard__desc {
   margin: 0;
   color: var(--td-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
 }
 
 .ops-dashboard__actions {
@@ -395,13 +395,13 @@ onMounted(load);
 }
 
 .ops-dashboard__section-title {
-  font-size: 14px;
+  font-size: var(--app-text-base);
   font-weight: 600;
   margin: 0 0 12px;
 }
 
 .ops-dashboard__subtitle {
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 500;
   margin: 18px 0 8px;
   color: var(--td-text-color-secondary);
@@ -419,7 +419,7 @@ onMounted(load);
   gap: 4px;
   padding: 16px;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--td-bg-color-container);
 }
 
@@ -428,12 +428,12 @@ onMounted(load);
 }
 
 .ops-dashboard__label {
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   color: var(--td-text-color-secondary);
 }
 
 .ops-dashboard__value {
-  font-size: 22px;
+  font-size: var(--app-text-4xl);
   font-weight: 600;
 }
 
