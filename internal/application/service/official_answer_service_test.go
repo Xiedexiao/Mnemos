@@ -72,9 +72,12 @@ func (s *stubOfficialAnswerRepo) FindAnswerable(
 }
 
 func (s *stubOfficialAnswerRepo) FindActiveByQuestion(
-	_ context.Context, _ uint64, normalizedQuestion string,
+	_ context.Context, _ uint64, normalizedQuestion, excludeAnswerID string,
 ) (*types.OfficialAnswer, error) {
 	for _, answer := range s.rows {
+		if answer.ID == excludeAnswerID {
+			continue
+		}
 		if answer.QuestionNormalized == normalizedQuestion &&
 			types.OfficialAnswerStatus(answer.Status).Answerable() {
 			return answer, nil

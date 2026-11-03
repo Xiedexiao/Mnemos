@@ -24,9 +24,11 @@ type OfficialAnswerRepository interface {
 	FindAnswerable(
 		ctx context.Context, tenantID uint64, normalizedQuestion, kbID string,
 	) (*types.OfficialAnswer, error)
-	// FindActiveByQuestion returns the live answer ignoring the space scope.
+	// FindActiveByQuestion returns the live answer for a question, ignoring
+	// the space scope and excluding excludeAnswerID (the answer being
+	// published) so the duplicate check cannot match the candidate itself.
 	FindActiveByQuestion(
-		ctx context.Context, tenantID uint64, normalizedQuestion string,
+		ctx context.Context, tenantID uint64, normalizedQuestion, excludeAnswerID string,
 	) (*types.OfficialAnswer, error)
 	// ListExpiredDue returns published answers past their expiry.
 	ListExpiredDue(

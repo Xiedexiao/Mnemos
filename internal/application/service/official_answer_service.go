@@ -196,7 +196,8 @@ func (s *officialAnswerService) Publish(
 		return nil, ErrOfficialAnswerInvalidState
 	}
 	// 同一问题只能有一份生效答案，否则同一句话会得到两个"标准"回答。
-	if active, aerr := s.repo.FindActiveByQuestion(ctx, tenantID, answer.QuestionNormalized); aerr == nil &&
+	if active, aerr := s.repo.FindActiveByQuestion(
+		ctx, tenantID, answer.QuestionNormalized, answer.ID); aerr == nil &&
 		active != nil && active.ID != answer.ID {
 		return nil, ErrOfficialAnswerDuplicate
 	}

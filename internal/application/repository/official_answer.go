@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -101,15 +102,19 @@ func (r *officialAnswerRepository) FindAnswerable(
 // FindActiveByQuestion returns the live answer for a question, ignoring the
 // knowledge-base scope (used to enforce "one active answer per question").
 func (r *officialAnswerRepository) FindActiveByQuestion(
-	ctx context.Context, tenantID uint64, normalizedQuestion string,
+	ctx context.Context, tenantID uint64, normalizedQuestion, excludeAnswerID string,
 ) (*types.OfficialAnswer, error) {
 	var answer types.OfficialAnswer
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Where("tenant_id = ? AND question_normalized = ? AND status IN ?",
 			tenantID, normalizedQuestion,
-			[]string{string(types.OfficialAnswerApproved), string(types.OfficialAnswerPublished)}).
-		Order("version DESC").
-		First(&answer).Error
+			[]string{string(types.OfficialAnswerApproved), string(types.OfficialAnswerPublished)})
+	// 发布校验必须排除正在发布的这一条：它自己的版本号最高，不排除就会
+	// 永远匹配到自己，重复答案校验形同虚设。
+	if strings.TrimSpace(excludeAnswerID) != "" {
+		query = query.Where("id <> ?", excludeAnswerID)
+	}
+	err := query.Order("version DESC").First(&answer).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrOfficialAnswerNotFound
 	}
