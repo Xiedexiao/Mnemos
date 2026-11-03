@@ -92,8 +92,9 @@ type ModelRoutingRule struct {
 	// the rule behind and the caller falls back when the ID stops resolving.
 	ModelID string `json:"model_id" gorm:"type:varchar(64);not null"`
 	// Enabled rules participate in ResolveModel; disabled rules are kept so
-	// an admin can pause a route without losing the configuration.
-	Enabled bool `json:"enabled" gorm:"not null;default:true"`
+	// an admin can pause a route without losing the configuration. No gorm
+	// default tag: creating a paused rule with enabled=false must persist.
+	Enabled bool `json:"enabled" gorm:"not null"`
 	// CreatedBy records who created the rule (audit identity).
 	CreatedBy string `json:"created_by" gorm:"type:varchar(36);not null;default:''"`
 	// CreatedAt of the rule.

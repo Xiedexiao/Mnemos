@@ -74,8 +74,9 @@ type EmbedPushRule struct {
 	Reason string `json:"reason" gorm:"type:varchar(255);not null;default:''"`
 	// Priority orders competing rules; higher wins.
 	Priority int `json:"priority" gorm:"not null;default:0"`
-	// Enabled switches the rule off without deleting it.
-	Enabled   bool      `json:"enabled" gorm:"not null;default:true"`
+	// Enabled switches the rule off without deleting it. No gorm default tag:
+	// a rule created disabled must stay disabled.
+	Enabled   bool      `json:"enabled" gorm:"not null"`
 	CreatedBy string    `json:"created_by" gorm:"type:varchar(36);not null;default:''"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

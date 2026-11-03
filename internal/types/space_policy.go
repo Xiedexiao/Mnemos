@@ -138,7 +138,12 @@ type FolderACL struct {
 	Action      string `json:"action" gorm:"type:varchar(24);not null;default:'view'"`
 	Effect      string `json:"effect" gorm:"type:varchar(8);not null;default:'allow'"`
 	// InheritChildren makes the grant apply to descendant folders.
-	InheritChildren bool       `json:"inherit_children" gorm:"not null;default:true"`
+	// No gorm default tag: GORM omits zero-valued fields that carry one, so an
+	// explicit inherit_children=false would be stored as true — a permission
+	// grant would silently widen to every descendant. The handler resolves an
+	// omitted field to true before construction, so the zero value here always
+	// means an explicit false.
+	InheritChildren bool       `json:"inherit_children" gorm:"not null"`
 	GrantedBy       string     `json:"granted_by" gorm:"type:varchar(36);not null;default:''"`
 	ExpiresAt       *time.Time `json:"expires_at"`
 	CreatedAt       time.Time  `json:"created_at"`

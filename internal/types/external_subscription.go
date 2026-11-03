@@ -85,7 +85,9 @@ type ExternalSubscriptionFeed struct {
 	// every knowledge base in the tenant.
 	KnowledgeBaseIDs JSON `json:"knowledge_base_ids" gorm:"type:json;not null;default:'[]'"`
 	// Enabled controls whether the scheduler checks this feed.
-	Enabled bool `json:"enabled" gorm:"not null;default:true"`
+	// No gorm default tag: an explicit enabled=false on create must persist.
+	// The service sets the value (input or true) before insert.
+	Enabled bool `json:"enabled" gorm:"not null"`
 	// CheckIntervalHours is how often the scheduler polls the feed.
 	CheckIntervalHours int `json:"check_interval_hours" gorm:"not null;default:24"`
 	// LastCheckedAt is the last attempt (successful or not).
