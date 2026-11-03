@@ -43,7 +43,7 @@ type addDLPPatternRequest struct {
 // @Produce      json
 // @Param        limit  query  int  false  "条数上限（默认 50，最大 200）"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  errors.AppError
+// @Failure      400  {object}  apperrors.AppError
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /dlp/findings [get]
@@ -78,7 +78,7 @@ func (h *DLPHandler) ListFindings(c *gin.Context) {
 // @Produce      json
 // @Param        request body addDLPPatternRequest true "自定义规则"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  errors.AppError  "非法正则或类别"
+// @Failure      400  {object}  apperrors.AppError  "非法正则或类别"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /dlp/patterns [post]

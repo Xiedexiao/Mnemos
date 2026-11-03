@@ -19,6 +19,35 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/acl-ceiling-violations": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回\"子级授权超出父级\"的治理清单（§2.3：唯一权限过多/破坏继承进入治理清单）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "目录权限"
+                ],
+                "summary": "权限上限违规清单",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ACLCeilingViolation]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/agent-chat/{session_id}": {
             "post": {
                 "security": [
@@ -1104,6 +1133,323 @@ const docTemplate = `{
                         "description": "智能体不存在",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/approval-delegations": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某位代理人当前持有的有效委托（缺省为调用者自己）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "列出委托",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "代理人ID（缺省为当前用户）",
+                        "name": "delegate_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ApprovalDelegation]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "允许某人在一段时间内代自己投票（§6.3 委托/休假代理）。票记在代理人名下，但保留授权来源，审计可追溯。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "设置审批委托",
+                "parameters": [
+                    {
+                        "description": "委托",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.delegationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalDelegation}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/approval-delegations/{delegation_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "立即结束一条委托；撤销后代理人未投的票不再被接受。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "撤销委托",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "委托ID",
+                        "name": "delegation_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/approval-flows": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出租户内已配置审批流的知识空间（管理面）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "列出空间审批流配置",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ApprovalFlow]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/approval-flows/{kb_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某个知识空间的审批流配置（模式/SLA/催办/升级角色/条件路由）。未配置时返回 single 模式默认值，不返回 404。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "读取空间审批流配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "kb_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalFlow}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "创建或更新某个知识空间的审批流配置。每次保存都会让流程版本前进，在途审核任务仍按其提交时冻结的版本走完（§6.3）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "保存空间审批流配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "kb_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "审批流配置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.approvalFlowRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalFlow}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除配置后该空间回到 single 单人审批兜底。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "删除空间审批流配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "kb_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/approval-flows/{kb_id}/resolve": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按当前配置与内容风险试算一次提交会走什么审批链（模式/法定人数/触发规则）。用于 §6.3 \"规则可模拟\"：配置改了会影响谁，先看再保存。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "预览审批链",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "kb_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "内容风险级（low|mid|high），缺省 low",
+                        "name": "risk_level",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalResolution}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -2774,6 +3120,883 @@ const docTemplate = `{
                 "x-agent-hint": "Lists an automation's runs, newest first, with status, error and the start of the answer."
             }
         },
+        "/change-requests": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "分页返回本租户变更单（created_at 倒序，聚合 items 与影响任务）。可按 status 过滤。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "变更单列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单状态过滤",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "条数，1-200",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "偏移量",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [变更单], total}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "创建一张变更单（draft 状态），生成租户内唯一单号 CR-YYYYMMDD-序号。reason/change_type/risk_level 按白名单校验。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "创建变更单",
+                "parameters": [
+                    {
+                        "description": "{title, reason, change_type, risk_level?, note?, rollback_plan?, effective_at?, close_conditions?}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createChangeRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按单据 ID 返回变更单（聚合 items 与影响任务）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "获取变更单详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "变更单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/analyze": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "draft→analyzing：为每个条目建 knowledge 类影响任务（priority 按 risk_level），并对同 KB 共享标签的近邻知识生成波及任务（v1 简化）；条目清单冻结进 baseline。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "影响分析",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "状态机不允许/无条目/条目知识缺失",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "变更单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/close": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "verifying→closed。门禁：所有影响任务 done/waived 且所有条目非 pending；不满足返回 400 并列出未闭环项。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "关闭变更单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "关闭门禁未满足（含未闭环清单）",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "变更单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/impact-tasks/{task_id}": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "更新变更单下某条影响任务的状态（open/done/waived）与备注；任务必须属于该变更单。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "更新影响任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "影响任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{status: open|done|waived, note?}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.updateImpactTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 影响任务}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "status 非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "变更单/任务不存在（或任务不属于该单）",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/items": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "把一条知识加入变更单（仅 draft/analyzing 可改；同一知识幂等防重）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "追加变更条目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{knowledge_id}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.addItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "变更单/知识不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态不允许或知识已在单内",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/items/{knowledge_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "把一条知识移出变更单（仅 draft/analyzing 可改）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "移除变更条目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "knowledge_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "变更单/条目不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态不允许修改条目",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/notify": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "标记受影响 Owner 已通知（§7.2 关闭门禁条件④）。未通知的变更单不能关闭。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "记录影响通知已送达",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "scheduled→publishing→verifying：对每个条目调 lifecycle Transition（v1 一律 mark_stale），成功写 applied、失败写 failed；存在失败时单据留在 publishing 可重试，全部成功进 verifying。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "发布",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合，failed 项可见）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "状态机不允许/无条目",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "变更单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/rollback": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "verifying→rolled_back（终态，留痕审计）。已应用条目保持其状态，恢复需走 lifecycle 审批。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "回滚变更单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "变更单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/schedule": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "in_approval→scheduled：设定生效时间（缺省取当前时刻）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "排期",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{effective_at?}",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.scheduleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "变更单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "analyzing→in_approval（v1 占位：真实审批对接 A2 审核流为后续版本）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "提交审批",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "变更单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/change-requests/{id}/verify": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "填写发布后的验证结论（KnowAxis V3.0 §7.2 关闭门禁条件②）。未填写验证结论的变更单不能关闭。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "记录变更验证结论",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "验证结论",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.changeVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 变更单（聚合）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/change-signals": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按状态与类型列出信号，默认 pending（§7.3）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "变更信号队列",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "pending|converted|dismissed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "七类信号之一",
+                        "name": "signal_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 100）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ChangeSignal]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "采集一条更新信号（KnowAxis V3.0 §7.3 七类：内部事件/源系统状态/外部订阅/依赖链/用户反馈/冲突/连接器健康）。同一来源的同类信号在待处理期间自动去重，重复上报不会堆积。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "上报变更信号",
+                "parameters": [
+                    {
+                        "description": "信号",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.collectSignalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ChangeSignal}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/change-signals/{id}/convert": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把信号转成变更单草稿（§7.3 默认动作）。风险级与变更类型由信号类型决定——外部法规更新默认高风险、源系统作废默认下架，避免把高风险信号误标为低风险。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "信号转变更单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "信号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ChangeSignal}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/change-signals/{id}/dismiss": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "判定信号为误报并移出队列（§7.3 可驳回，避免噪声长期占用待办）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "驳回信号",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "信号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ChangeSignal}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/chunker/preview": {
             "post": {
                 "security": [
@@ -3408,6 +4631,544 @@ const docTemplate = `{
                     "risk": "read"
                 },
                 "x-agent-hint": "Read saved earlier revisions of a document chunk. Current revision is returned by chunk.get."
+            }
+        },
+        "/comments/{comment_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "软删一条评论（行保留供审计，列表剔除；被删回复的子回复提升为顶层）；仅作者本人或 Admin。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识评论"
+                ],
+                "summary": "删除评论（软删）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "评论ID",
+                        "name": "comment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "非作者且非 Admin",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/comments/{comment_id}/resolve": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "将评论标记为 resolved（记录 resolved_by）；仅作者本人或 Admin。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识评论"
+                ],
+                "summary": "标记评论已解决",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "评论ID",
+                        "name": "comment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "已解决",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "非作者且非 Admin",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/community/answers/{answer_id}/vote": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "给一条回答投\"有用\"票（§15.6 答案评价）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "答案有用",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "回答ID",
+                        "name": "answer_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/community/questions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按状态列出社区问题（open/answered/resolved/closed）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "问题列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态过滤",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 50）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [CommunityQuestion]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "在知识问答社区提问（KnowAxis V3.0 §15.6），可关联一篇知识、@一位专家、设置积分悬赏。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "提问",
+                "parameters": [
+                    {
+                        "description": "问题",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.askQuestionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityQuestion}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/community/questions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回问题及其全部回答（已采纳的排在最前）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "问题详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityQuestion}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/community/questions/{id}/accept": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "提问者采纳一条答案（§15.6），问题转为\"已解决\"。只有提问者可以采纳。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "采纳答案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "回答ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.acceptAnswerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityQuestion}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/community/questions/{id}/answers": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "回答问题并自动把问题状态推进为\"已回答\"。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "回答",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "回答",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.answerQuestionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/community/questions/{id}/convert": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把社区中的优质问答登记为正式知识（§15.6 一键转知识），问题随之关闭。知识本身仍走审核流程。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "问答转知识",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "知识ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.convertQuestionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityQuestion}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/community/reports": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "版主查看待处理举报（§15.6 治理）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "举报队列",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "open|dismissed|removed",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [CommunityReport]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "举报问题或回答（§15.6 治理），进入版主队列。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "举报内容",
+                "parameters": [
+                    {
+                        "description": "举报",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.reportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityReport}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/community/reports/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "版主驳回或移除内容（§15.6 治理）。判定移除时同时关闭被举报的问题。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识问答社区"
+                ],
+                "summary": "处理举报",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "举报ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "处置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.resolveReportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CommunityReport}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
             }
         },
         "/datasource": {
@@ -4142,6 +5903,447 @@ const docTemplate = `{
                 "x-agent-hint": "Test a saved data source using its stored credentials; no credentials are accepted or returned."
             }
         },
+        "/dlp/findings": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回本租户最近的 DLP 扫描命中记录（最新在前，limit 默认 50、硬上限 200）。matched_sample 是脱敏后的样本（只留前后 2 位），不落原文。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DLP"
+                ],
+                "summary": "列出 DLP 命中记录",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "条数上限（默认 50，最大 200）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dlp/patterns": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "为本租户注册一条自定义正则规则（Admin+）。v1 规则只存服务进程内存：不建表、重启丢失、多副本不同步；命中统一按 masked 处置并落 dlp_findings。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DLP"
+                ],
+                "summary": "注册自定义 DLP 规则",
+                "parameters": [
+                    {
+                        "description": "自定义规则",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.addDLPPatternRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "非法正则或类别",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/embed/push/events": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "记录卡片点击或忽略（忽略后同一张卡片 30 天内不再推送）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "推送交互",
+                "parameters": [
+                    {
+                        "description": "交互",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.pushEventRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success: true}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/embed/push/preferences": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "读取本人是否接收业务系统内的上下文推送（默认开启）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "推送开关",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: EmbedPushPreference}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "一键关闭或重新开启业务系统内的上下文推送（§15.5 可关闭）。关闭后不再返回卡片，也不再记录交互。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "关闭/开启推送",
+                "parameters": [
+                    {
+                        "description": "开关",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.pushPreferenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: EmbedPushPreference}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/embed/push/resolve": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "业务系统（MES/ERP/OA/CRM…）在处理工单、填表、查看设备时上报上下文，平台按推送规则返回相关知识卡片（KnowAxis V3.0 §15.5）。结果已按生命周期、文档 ACL、目录 ACL 过滤；用户关闭推送后返回 enabled=false。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "上下文推送",
+                "parameters": [
+                    {
+                        "description": "业务上下文",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.resolvePushRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: EmbedPushResult}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/embed/push/rules": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出业务系统上下文推送规则（管理员）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "推送规则列表",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [EmbedPushRule]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "新建一条\"业务上下文 → 知识\"的推送规则：按系统/场景/实体/属性匹配，用标签或知识 ID 选出内容。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "新增推送规则",
+                "parameters": [
+                    {
+                        "description": "规则",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.pushRuleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: EmbedPushRule}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/embed/push/rules/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "修改推送规则；匹配字段传空表示\"匹配任意\"。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "修改推送规则",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "规则 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "规则",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.pushRuleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: EmbedPushRule}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除一条推送规则（历史事件保留）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "删除推送规则",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "规则 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success: true}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/embed/push/stats": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按规则统计曝光/点击/忽略次数（管理员）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "嵌入式推送"
+                ],
+                "summary": "推送效果",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "统计窗口天数（默认 30）",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [EmbedPushRuleStats]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/evaluation/": {
             "get": {
                 "security": [
@@ -4258,6 +6460,561 @@ const docTemplate = `{
                 }
             }
         },
+        "/evidence-packs/{request_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回一次问答（request_id）的完整证据包：检索候选快照、上下文编译摘要、模型/提示词版本、答案、引用清单与当时权限基线，附哈希链锚点（hash_chain_prev/row）供链校验。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "证据包"
+                ],
+                "summary": "按请求ID回放证据包",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "请求追踪ID",
+                        "name": "request_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 证据包}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "证据包不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/export-requests": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按状态过滤列出本租户的导出申请（最新在前）；status 省略列出全部。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "导出管控"
+                ],
+                "summary": "列出导出申请",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态过滤（pending|approved|rejected|fulfilled）",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "申请一次导出（scope: knowledge|evidence_pack|audit，可带范围过滤与最高密级）。审批策略 v1：secret/confidential 或 audit scope 保持 pending 等人工审批（Admin 且 ≠申请人，四眼）；public/internal 且非审计导出自动 approve。watermark_text 省略时由服务端生成\"用户名-时间-随机4位\"。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "导出管控"
+                ],
+                "summary": "创建导出申请",
+                "parameters": [
+                    {
+                        "description": "导出申请",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createExportRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/export-requests/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 ID 返回本租户的一条导出申请（含审批痕迹与水印文本）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "导出管控"
+                ],
+                "summary": "查询导出申请",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "申请ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/export-requests/{id}/decide": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "对 pending 申请做 approve/reject 裁决（Admin+；四眼：审批人不得是申请人，服务层强制）。reject 必须带 note。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "导出管控"
+                ],
+                "summary": "审批导出申请",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "申请ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "裁决",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.decideExportRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "非 Admin 或四眼违规",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "申请不在 pending 状态",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/export-requests/{id}/fulfill": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "将 approved 申请置为 fulfilled 并返回水印文本（前端渲染在导出物上）；pending 须先审批，rejected/fulfilled 是终态。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "导出管控"
+                ],
+                "summary": "执行导出",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "申请ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "申请未批准",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/external-subscriptions/entries": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出订阅源已见过的条目，含每条匹配到的知识数与生成的信号数。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "已采集条目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订阅源 ID",
+                        "name": "feed_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 50）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ExternalSubscriptionEntry]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/external-subscriptions/feeds": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出本租户的法规/标准订阅源，含上次检查时间与上次错误。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "订阅源列表",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "只看启用的",
+                        "name": "enabled_only",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ExternalSubscriptionFeed]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "订阅法规/国标/行业标准/监管口径的 RSS/Atom/JSON Feed（KnowAxis V3.0 §7.3）。采集到的新条目会按领域标签匹配知识，并为每篇匹配到的知识生成一条 external_subscription 变更信号。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "新增外部订阅源",
+                "parameters": [
+                    {
+                        "description": "订阅源",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.externalFeedRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ExternalSubscriptionFeed}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/external-subscriptions/feeds/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "修改订阅配置。空字段表示不修改；domain_tags/knowledge_base_ids 传 [] 清空；auth_header 传 \"-\" 清除已存的认证头。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "修改订阅源",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订阅源 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "订阅源",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.externalFeedRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ExternalSubscriptionFeed}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "退订并清除已采集的条目标记（已生成的变更信号保留）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "删除订阅源",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订阅源 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success: true}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/external-subscriptions/feeds/{id}/sync": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "立即抓取并解析一个订阅源，为新条目匹配知识并生成变更信号，返回本次结果（抓取数/新条目数/匹配知识数/信号数）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "立即检查订阅源",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订阅源 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ExternalSubscriptionSyncResult}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/external-subscriptions/sweep": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "检查所有到期的订阅源（调度器每小时做一次，这里是运维手动触发）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更信号"
+                ],
+                "summary": "立即执行一轮到期检查",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ExternalSubscriptionSweepResult}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/faq/import/progress/{task_id}": {
             "get": {
                 "security": [
@@ -4309,6 +7066,1535 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "任务不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/glossary/expand": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "对查询文本分词命中术语后返回其全部别名（供检索同义词扩展；deprecated 术语不参与）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "术语表"
+                ],
+                "summary": "查询同义词扩展",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "查询文本",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/glossary/terms": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "keyword 对 standard_name/aliases/definition 模糊匹配；domain 过滤领域；两者均可省略（全量列出）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "术语表"
+                ],
+                "summary": "搜索/列出术语",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关键词",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "领域",
+                        "name": "domain",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "新增一条标准术语（租户内 standard_name 唯一；新术语必须 active）。别名/缩写/英文名放 aliases。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "术语表"
+                ],
+                "summary": "新建术语",
+                "parameters": [
+                    {
+                        "description": "术语",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createTermRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/glossary/terms/merge": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "将 source 术语并入 target：source 置 deprecated 且 superseded_by_id=target，保留映射。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "术语表"
+                ],
+                "summary": "合并术语",
+                "parameters": [
+                    {
+                        "description": "合并",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.mergeTermsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/glossary/terms/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 ID 返回术语（含 deprecated 状态与 superseded_by_id 重定向）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "术语表"
+                ],
+                "summary": "查询单个术语",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "术语ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按字段更新术语；nil 字段保持不变，改名会重新校验租户内唯一。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "术语表"
+                ],
+                "summary": "更新术语",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "术语ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.updateTermRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除=置 deprecated 并保留映射，不物理删；body 可带 superseded_by_id 指向接替术语供历史回答重定向。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "术语表"
+                ],
+                "summary": "删除术语（软删）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "术语ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "重定向（可选）",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.deleteTermRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-runs/{run_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按 ID 返回一次评测运行（聚合指标 + 逐题得分与缺口）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "查询单次评测",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "评测ID",
+                        "name": "run_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-sets": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "列出租户内的问题集；domain 可选过滤领域。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "列出黄金问题集",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "领域",
+                        "name": "domain",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "新增一份黄金问题集（租户内 name 唯一；kb_id 绑定评测知识库，可先建集后绑库）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "新建黄金问题集",
+                "parameters": [
+                    {
+                        "description": "问题集",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createGoldenSetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-sets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按 ID 返回问题集（含绑定的评测知识库）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "查询单个问题集",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按字段更新问题集；nil 字段保持不变，改名会重新校验租户内唯一。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "更新问题集",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.updateGoldenSetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "物理删除问题集，并级联删除其题目与全部评测记录。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "删除问题集",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-sets/{id}/gate": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "读取最近一次 completed 评测的 pass 结论；没有完成过的评测 = 不放行（失败闭合）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "发布门禁查询",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-sets/{id}/questions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "列出问题集内的全部题目（含 disabled，前端标灰展示）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "列出题目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按 question 文本 upsert：命中即覆盖可变字段（并重新启用），未命中即新增。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "批量导入题目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "题目数组",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.importGoldenQuestionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-sets/{id}/questions/{qid}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按字段更新题目；题干不可改（文本即题目身份），改题走\"删旧 + 导入新\"。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "更新题目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "题目ID",
+                        "name": "qid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.updateGoldenQuestionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "从问题集中物理删除一道题。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "删除题目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "题目ID",
+                        "name": "qid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-sets/{id}/run": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "对绑定的评测知识库同步跑一遍检索评测（v1：top5_hit/recall_at_5/NDCG/MRR），结果落库并返回。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "运行评测",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/golden-sets/{id}/runs": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按时间倒序列出问题集的评测运行；limit 默认 50。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "黄金问题集"
+                ],
+                "summary": "列出评测记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题集ID",
+                        "name": "id",
+                        "in": "path"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "条数",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/governance-approvals": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按主体类型列出待审的治理动作，用于审核工作台按 §6.2 的对象种类筛选。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "治理审批"
+                ],
+                "summary": "治理审批待办",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "主体类型（缺省为全部）",
+                        "name": "subject_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 100，上限 200）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ApprovalTask]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "为任何需要审批的治理动作创建审批任务（KnowAxis V3.0 §6.2）：官方答案、规则政策、本体变更、权限提权、外部分享、批量导出、删除下架、合并拆分、术语模板变更、模型 Prompt 上线、Agent 工具授权等。审批链由空间的审批流配置决定（或签/会签/逐级）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "治理审批"
+                ],
+                "summary": "提交治理动作审批",
+                "parameters": [
+                    {
+                        "description": "治理动作",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.governanceSubmitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalTask}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "该主体已有待审任务",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/governance-approvals/status": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某个治理主体的最新审批状态与回执。未提交过审批时返回空状态（不是 404）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "治理审批"
+                ],
+                "summary": "查询治理动作审批状态",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "主体类型（§6.2）",
+                        "name": "subject_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "主体ID",
+                        "name": "subject_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: GovernanceApprovalStatus}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/governance-approvals/{task_id}/decide": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "对治理审批任务投票。达到审批链要求后生成审批回执，动作方可生效；提交人不能批自己的动作。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "治理审批"
+                ],
+                "summary": "裁决治理动作审批",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "审批任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "裁决",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.governanceDecideRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalTask}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/graph/commits/{id}/rollback": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "把该 commit 产出的 active 实体/事实置 superseded（反向标记而非删除，v1）；commit 行不可变，幂等。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "回滚图谱变更集",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "commit ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {commit_id, entities_superseded, facts_superseded}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "commit 不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/graph/entities": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按 name/normalized_key 模糊匹配（只返回 active 行）。confidence 传逗号分隔白名单（默认 EXTRACTED,INFERRED；传 AMBIGUOUS 即人工审核队列视图）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "图谱实体检索",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关键词（模糊匹配 name/normalized_key）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "限定本体 Schema（空=全部）",
+                        "name": "schema_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "EXTRACTED,INFERRED",
+                        "description": "逗号分隔置信度白名单",
+                        "name": "confidence",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [实体]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "置信度非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/graph/extraction-cache/{chunk_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按 chunk_id 读取缓存行。带 content_hash+schema_version 查询参数时做命中判断（不一致返回 404 miss）；不带则原样返回缓存行（管理面查看）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "查看增量抽取缓存",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "chunk ID",
+                        "name": "chunk_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "命中判断用内容指纹",
+                        "name": "content_hash",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "命中判断用本体版本",
+                        "name": "schema_version",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 缓存行}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺参",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "缓存未命中",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "写入/覆盖 chunk 的抽取缓存（UNIQUE(chunk_id)，重复写入即覆盖）。缓存 key = content_hash + schema_version，命中判断见 GET。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "写入增量抽取缓存",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "chunk ID",
+                        "name": "chunk_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{content_hash, schema_version, extraction}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.graphExtractionCachePutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 缓存行}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺 content_hash",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/graph/facts/commit": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "一批实体/事实原子提交为不可变 commit：单事务 upsert、统计计数落 graph_commits、批次行回填 commit_id；事实端点必须在本批或库内存在。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "提交图谱变更集（GraphCommit）",
+                "parameters": [
+                    {
+                        "description": "{description, entities: [...], facts: [...], golden_gate_pass?}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.graphCommitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: commit}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "批次为空/字段非法/事实端点悬空",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/graph/facts/entities": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按 (entity_type, normalized_key) 归一 upsert：命中则合并 attributes、置信度就高不就低；AMBIGUOUS 直接带置信度入库但默认查询不可见。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "批量归一写入图谱实体",
+                "parameters": [
+                    {
+                        "description": "{entities: [...]}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.graphEntityBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {added, updated, entities}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "批次为空/字段非法/置信度非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/graph/impact": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "从实体出发沿 outgoing active 边（EXTRACTED/INFERRED）BFS 两层，返回受影响 facts 与被波及实体。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "图谱影响面查询",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "根实体ID",
+                        "name": "entity_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {root, facts, affected_entities, depth}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺 entity_id",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "实体不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/graph/path": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "递归 SQL 走 graph_facts 的 active 边（只走 EXTRACTED/INFERRED），返回 from→to 路径（实体+关系+置信度）。hops 钳制 1..3，缺省 3。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱事实层"
+                ],
+                "summary": "图谱路径查询",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "起点实体ID",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "终点实体ID",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 3,
+                        "description": "最大跳数 1-3",
+                        "name": "hops",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [{hops, steps:[{fact, source, target}]}]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺参/跳数非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "端点实体不存在",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
@@ -7214,6 +11500,187 @@ const docTemplate = `{
                 }
             }
         },
+        "/knowledge-bases/{id}/folder-acl": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某个空间的全部目录级授权。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "目录权限"
+                ],
+                "summary": "列出目录级 ACL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [FolderACL]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "为一个目录授予或拒绝某个动作（KnowAxis V3.0 §2.3）。子目录默认继承；开放父目录没有的动作会被拒绝，并记入治理清单（动作上限）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "目录权限"
+                ],
+                "summary": "授予目录级 ACL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "目录授权",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.folderGrantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: FolderACL}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "超出父级动作上限",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-bases/{id}/folder-acl/resolve": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "折叠该目录及其祖先的授权，返回有效允许/拒绝动作，并说明结论来自哪一层（§2.3 继承）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "目录权限"
+                ],
+                "summary": "解析某个目录的有效权限",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "目录路径（缺省为根）",
+                        "name": "folder_path",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: FolderACLDecision}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-bases/{id}/folder-acl/{grant_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除一条目录授权；撤权即时生效（权限源是数据库）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "目录权限"
+                ],
+                "summary": "撤销目录级 ACL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "授权ID",
+                        "name": "grant_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge-bases/{id}/graph-search": {
             "post": {
                 "security": [
@@ -8887,6 +13354,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/knowledge-bases/{id}/space-policy": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回空间类型推导出的有效策略：默认密级、是否强制审核、到期只读（§4.1 五种空间类型的默认策略）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "目录权限"
+                ],
+                "summary": "读取空间策略",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SpacePolicy}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge-bases/{id}/tags": {
             "get": {
                 "security": [
@@ -9214,6 +13719,413 @@ const docTemplate = `{
                 "x-agent-hint": "Deletes a tag that no document uses. If documents still use it, this fails; take the tag off them with knowledge.set_tags first. Documents are not deleted."
             }
         },
+        "/knowledge-candidates": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "分页返回本租户候选卡片（created_at 倒序），可按 status/level 过滤。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "过程经验沉淀"
+                ],
+                "summary": "获取候选卡片列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态过滤：candidate|in_review|confirmed|published|rejected|withdrawn",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "层级过滤：L0|L1|L2|L3",
+                        "name": "level",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "条数，默认50，上限200",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "偏移量",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {items, total}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "创建一张候选卡片（九类来源共用；手工/未来连接器共用入口）。自动做 v1 查重：同租户同标题精确命中标记 duplicate，标题 LIKE 相似命中标记 conflict，否则 unique。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "过程经验沉淀"
+                ],
+                "summary": "创建过程经验候选卡片",
+                "parameters": [
+                    {
+                        "description": "{title, source_type?, source_id?, level?(L0-L3,默认L1), confidence?(EXTRACTED|INFERRED|AMBIGUOUS,默认AMBIGUOUS), card?, evidence?}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createCandidateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 候选卡片}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数/来源/层级/置信非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-candidates/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按候选 ID 返回候选卡片（租户隔离）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "过程经验沉淀"
+                ],
+                "summary": "获取单张候选卡片",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "候选ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 候选卡片}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "候选不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-candidates/{id}/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "状态机推进：candidate→in_review 由提交人触发（提交人本人或 Admin）；in_review→confirmed 由审核人触发（v1 审核人 = Admin+，L1→L2 晋级）。重复/越权返回 403/409。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "过程经验沉淀"
+                ],
+                "summary": "确认推进候选卡片",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "候选ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 候选卡片}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺少候选ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "非提交人本人且非 Admin（或审核人不足 Admin）",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "候选不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许该动作",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-candidates/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "confirmed→published（§10.4 门禁：level=L3 需 Admin 且 confidence!=AMBIGUOUS，否则 400）。创建 manual 正式知识（title=候选标题、content=卡片字段拼 Markdown、lifecycle 默认 valid、level 写 CustomMetadata），knowledge_id 回填候选。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "过程经验沉淀"
+                ],
+                "summary": "发布候选卡片为正式知识",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "候选ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{kb_id?}",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.publishCandidateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 候选卡片（含 knowledge_id）}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "L3 门禁不满足/缺少候选ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "候选或目标 KB 不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许该动作",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-candidates/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "in_review→rejected（终态），记录审核人与意见。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "过程经验沉淀"
+                ],
+                "summary": "审核驳回候选卡片",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "候选ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{comment?}",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.rejectCandidateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 候选卡片}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺少候选ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "候选不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许该动作",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-candidates/{id}/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "提交人撤回（candidate|in_review→withdrawn；终态）。仅提交人本人可撤。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "过程经验沉淀"
+                ],
+                "summary": "撤回候选卡片",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "候选ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 候选卡片}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺少候选ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "仅提交人本人可撤回",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "候选不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许该动作",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge-chat/{session_id}": {
             "post": {
                 "security": [
@@ -9280,6 +14192,290 @@ const docTemplate = `{
                 }
             }
         },
+        "/knowledge-field-migrations": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回字段结构变更（新增/删除/改类型）产生的迁移任务（§4.7）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模板与字段"
+                ],
+                "summary": "字段迁移任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "pending|done|waived",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeFieldMigration]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-field-migrations/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把字段迁移任务标记为 done（已回填）或 waived（确认无需回填，记录理由）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模板与字段"
+                ],
+                "summary": "处置字段迁移任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "处置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.resolveMigrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: KnowledgeFieldMigration}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-gaps": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回按出现次数聚合的缺口清单（§14.4）：高频搜索无结果、问答拒答等信号按归一化问题聚成一行的待办。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "搜索质量"
+                ],
+                "summary": "知识缺口清单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态过滤（open|acknowledged|closed）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 50，上限 200）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeGap]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-gaps/{gap_id}": {
+            "patch": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "分派 Owner 或推进缺口状态（open→acknowledged→closed），关单时可关联补齐的知识（§14.4）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "搜索质量"
+                ],
+                "summary": "处理知识缺口",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "缺口ID",
+                        "name": "gap_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "处置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.updateGapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: KnowledgeGap}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-health": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回最新健康度快照（§14.6 六维度 + 0-100 健康分）；无快照时现算现返回。带 kb_id 为单库维度（Viewer+）；kb_id 缺省或 scope=tenant 为租户维度（需 Admin）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识健康度"
+                ],
+                "summary": "查询知识健康度看板",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID（缺省为租户维度）",
+                        "name": "kb_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "统计口径：tenant | knowledge_base（缺省按 kb_id 推断）",
+                        "name": "scope",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-health/compute": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "立即重算并追加一行快照。kb_id 缺省为租户维度；kb_id 不存在时 404。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识健康度"
+                ],
+                "summary": "强制重算知识健康度快照",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID（缺省为租户维度）",
+                        "name": "kb_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge-search": {
             "post": {
                 "security": [
@@ -9335,6 +14531,407 @@ const docTemplate = `{
                         "description": "请求参数错误",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-stars": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "查看已公开表彰的知识之星（KnowAxis V3.0 §15.4）。不传周期时返回最近几期。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识之星"
+                ],
+                "summary": "知识之星（公开）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "month/quarter",
+                        "name": "period_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM 或 YYYY-Qn",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 100）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeStarAward]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "管理员选定某一期的知识之星；排名按周期内贡献分自动计算，结果在公开前仅管理员可见。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识之星"
+                ],
+                "summary": "选定知识之星",
+                "parameters": [
+                    {
+                        "description": "评选结果",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.selectStarsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeStarAward]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-stars/admin": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "管理员查看含未公开的评选结果。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识之星"
+                ],
+                "summary": "知识之星（管理视图）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "month/quarter",
+                        "name": "period_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM 或 YYYY-Qn",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 100）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeStarAward]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-stars/candidates": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按周期内积分贡献排出候选人（管理员）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识之星"
+                ],
+                "summary": "知识之星候选",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "month/quarter（默认 month）",
+                        "name": "period_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "周期（默认当前）",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 50）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeStarCandidate]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-stars/publish": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把某一期的评选结果公开表彰（管理员）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识之星"
+                ],
+                "summary": "公开知识之星",
+                "parameters": [
+                    {
+                        "description": "周期（忽略 user_ids）",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.selectStarsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {published: N}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-templates": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回租户内的生效模板及其字段定义（可直接渲染录入表单）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模板与字段"
+                ],
+                "summary": "列出知识模板",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeTemplate]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "创建或更新一个知识模板。每次保存都生成新版本，旧版本保留以解释历史知识；字段的新增/删除/改类型会生成迁移任务（§4.7）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模板与字段"
+                ],
+                "summary": "保存知识模板（新版本）",
+                "parameters": [
+                    {
+                        "description": "模板定义",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.templateSaveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: KnowledgeTemplate}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-templates/{key}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 template_key 读取生效版本；带 ?version=N 时读取指定历史版本（解释历史知识时用）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模板与字段"
+                ],
+                "summary": "读取知识模板",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "指定版本（缺省为生效版本）",
+                        "name": "version",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: KnowledgeTemplate}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-templates/{key}/validate": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按模板的字段定义校验一组值：补齐默认值后执行必填/类型/范围/枚举/正则校验，返回补齐后的值与问题清单（KnowAxis V3.0 §3.2）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模板与字段"
+                ],
+                "summary": "校验字段值",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "字段值",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.validateFieldsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {values, problems}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -10244,6 +15841,238 @@ const docTemplate = `{
                 "x-agent-hint": "Removes the document with its chunks, embeddings and graph data. Cannot be undone."
             }
         },
+        "/knowledge/{id}/acl": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回该知识的全部 ACL 授权行。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "查询文档 ACL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "为单个用户授予或拒绝某一动作（deny 优先；密级 secret/confidential 必须显式 allow 才可问/可看）。不能自授。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "授予/更新文档级 ACL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "授权",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.aclGrantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/acl/move-preview": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "移动前回答\"谁将获得/失去访问\"（KnowAxis V3.0 §2.3）。只读投影：不写任何数据。移动本身会把文档级授权重置为目标空间继承，因此同时给出将被重置的授权条数。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "预览跨空间移动的访问差异",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "目标知识库ID",
+                        "name": "target_kb_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: KnowledgeMoveAccessPreview}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/acl/revocations": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某篇知识最近的撤权传播记录（KnowAxis V3.0 §2.6）：每个出口一行，含处置结果与当时的权限版本。\"撤权完成\"的标准是每个出口都验证过看不到，而不是事件已发出。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "撤权传播台账",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 100，上限 500）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [RevocationPropagation]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/acl/{acl_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除一条授权行；撤权在下次请求即时生效（权限源是数据库，非索引）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "撤销文档 ACL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "授权ID",
+                        "name": "acl_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge/{id}/cancel-parse": {
             "post": {
                 "security": [
@@ -10321,6 +16150,98 @@ const docTemplate = `{
                 }
             }
         },
+        "/knowledge/{id}/comments": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回知识条目下的评论线程：顶层评论各带 replies，均按时间正序；软删评论剔除，父评论被删的回复提升为顶层。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识评论"
+                ],
+                "summary": "列出知识评论（树形）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "在知识条目下创建评论或回复；parent_id 非空表示回复（一层嵌套，父评论必须同属该知识且为顶层）；anchor 为划词锚点（可省略=全局评论）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识评论"
+                ],
+                "summary": "添加知识评论",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "评论",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.addCommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge/{id}/download": {
             "get": {
                 "security": [
@@ -10360,6 +16281,205 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/feedback": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "对知识条目提交 correction（内容有误）或 stale_report（内容过期）质量任务，进入管理员处理队列。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "反馈与质量任务"
+                ],
+                "summary": "举报知识问题",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "举报内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ReportKnowledgeFeedbackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "task_type 非法或缺少知识ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/freshness": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回单条知识的新鲜度评分（KnowAxis V3.0 §7.9）：加权总分（V1 可达上限 70）、档位（good/aging/stale/critical）与可行动的丢分信号。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识生命周期"
+                ],
+                "summary": "查询知识新鲜度评分",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "x-agent": "knowledge_id",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, knowledge_id, data: {total, grade, top_signals}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "知识不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/parse-quality": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回该知识的解析质量评分（§3.5 六维度 + 加权总分 + 档位 good/fair/poor）；未评分时 404，可调 recompute 现算。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "解析质量"
+                ],
+                "summary": "查询单条知识的解析质量分",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "x-agent": "knowledge_id",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {六维度, total_score, grade, below_threshold, dimensions, threshold}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺少知识ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "知识或评分不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/parse-quality/recompute": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "立即按当前 chunks 与元数据重算解析质量分并落库（覆盖），返回完整的六维度构成与审计后的总分。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "解析质量"
+                ],
+                "summary": "重算单条知识的解析质量分",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "x-agent": "knowledge_id",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 评分行 + dimensions}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺少知识ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "知识不存在",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
@@ -10411,6 +16531,179 @@ const docTemplate = `{
                         "description": "请求参数错误",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/relations": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回当前文档的关联（含反向\"被引用\"），按关系类型与对端排序。AI 推荐的关联标注 origin=ai_suggested。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识关联"
+                ],
+                "summary": "列出知识关联",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [KnowledgeRelationView]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "在两篇知识之间建立有类型的关系（KnowAxis V3.0 §4.5：依据/替代/补充/冲突/前置/责任/相关）。关联双向存储，反向页面自动出现\"谁引用了当前页面\"；两端必须同租户。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识关联"
+                ],
+                "summary": "建立知识关联",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "关联",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.relationLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: KnowledgeRelation}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除一条有类型的关联（双向同时移除）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识关联"
+                ],
+                "summary": "删除知识关联",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "对端知识ID",
+                        "name": "to_knowledge_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "关系类型（缺省 related）",
+                        "name": "relation_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, removed}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{id}/relations/delete-impact": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回删除该文档会切断多少条关联（§4.5 删除/下架知识时检查引用关系）。供删除确认弹窗提示。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识关联"
+                ],
+                "summary": "删除前的影响检查",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {link_count}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -10502,6 +16795,69 @@ const docTemplate = `{
                 "x-agent-hint": "Runs in the background; follow it with knowledge.get_parse_progress. Search results change meanwhile."
             }
         },
+        "/knowledge/{id}/review/submit": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "冻结知识当前内容基线（content hash + chunk 数 + 标题 + custom_metadata 摘要），按密级路由风险级（confidential→high、secret→mid、其余 low），创建审批任务并把知识推进到 pending_review。同一知识已有待审任务时返回 409。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "提交知识进入审核",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "x-agent": "knowledge_id",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 审批任务}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "知识当前状态不允许提交审核",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "知识不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "该知识已有待审任务",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge/{id}/spans": {
             "get": {
                 "security": [
@@ -10577,6 +16933,348 @@ const docTemplate = `{
                     "risk": "read"
                 },
                 "x-agent-hint": "Use when a document is stuck or failed: tells a stalled parse from a running one, names the failed stage."
+            }
+        },
+        "/knowledge/{id}/symbols": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出一篇知识文档已索引的全部符号行（含 chunk 定位与 symbol_type）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "符号索引"
+                ],
+                "summary": "查看知识的符号索引",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识文档ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "从 text 抽取符号候选（大写字母≥2+数字组合的 token；E 前缀错误码放行）并按 (knowledge, chunk) 批量 upsert。chunk_id 空则对整篇建文档级索引；重复调用幂等。kb_id 由 :id 反查，不接受 body 传入。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "符号索引"
+                ],
+                "summary": "建符号索引",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识文档ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "建索引",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.indexSymbolsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{knowledge_id}/lifecycle": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回知识行与读取时解析出的生效行为（含到期/生效窗口），用于页面徽章与问答提示。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识生命周期"
+                ],
+                "summary": "查询知识生命周期状态",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "knowledge_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.lifecycleResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{knowledge_id}/lifecycle/transition": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按状态机应用一个生命周期动作（提交审核/发布/复审确认/标记过期/替代/冲突/下架/归档/恢复/治理配置）。非法迁移返回 400 并记录审计。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识生命周期"
+                ],
+                "summary": "执行知识生命周期动作",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "knowledge_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "生命周期动作",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.lifecycleTransitionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.lifecycleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{knowledge_id}/share-links": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某个知识已签发的全部外链（含 token，v1 无“仅显一次”存储），按创建时间倒序。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识外链分享"
+                ],
+                "summary": "列出知识的外链",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "knowledge_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.shareLinkListResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "为一个知识签发外链。密级上限校验：机密(confidential)一律拒绝；秘密(secret)不允许 download 权限。token 由服务端生成（crypto/rand 32B → base64url）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识外链分享"
+                ],
+                "summary": "创建知识外链分享",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "knowledge_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "分享配置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createShareLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.shareLinkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "密级不允许外发",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "知识不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge/{knowledge_id}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回已发布版本快照（不可变），按版本倒序。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识生命周期"
+                ],
+                "summary": "知识版本历史",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "knowledge_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数，1-200，默认 50",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
             }
         },
         "/knowledgebase/{kb_id}/wiki/auto-fix": {
@@ -11818,6 +18516,713 @@ const docTemplate = `{
                 "x-agent": {
                     "id": "wiki.get_stats",
                     "risk": "read"
+                }
+            }
+        },
+        "/learning-certificates": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某位用户的全部学习认证，状态按读取时刻解析（过期自动显示 expired）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "我的认证",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户（缺省为调用者本人）",
+                        "name": "user_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [LearningCertificate]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-certificates/{id}/revoke": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "撤销一份认证并记录原因（§15.5 认证可撤销，例如政策变更或违规）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "撤销学习认证",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "证书ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "撤销原因",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.revokeCertificateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: LearningCertificate}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-paths": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回租户内全部学习路径（最新在前）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "列出学习路径",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "新增一条学习路径（岗位/部门 → 有序知识清单）。steps 为 [{order, title, knowledge_id, description}]，order 从 1 起且唯一，写入时按 order 升序归一。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "新建学习路径",
+                "parameters": [
+                    {
+                        "description": "路径",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.gamificationCreatePathRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-paths/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 ID 返回路径（含 steps）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "查询单个学习路径",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "路径ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按字段更新路径；nil 字段保持不变，steps 替换时整体重新校验（order 唯一、按序归一）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "更新学习路径",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "路径ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.gamificationUpdatePathRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "物理删除路径及其全部学习进度（v1：硬删，审计留痕 gamification.path_deleted）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "删除学习路径",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "路径ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-paths/{id}/complete-step": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "记录当前用户完成路径的某一步（按 step_order，幂等）；progress_pct=完成步数/总步数，达 100% 时落 completed_at 并触发 path_completed 加分。主题固定为调用者本人。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "完成学习路径步骤",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "路径ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "步骤",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.gamificationCompleteStepRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-paths/{id}/start": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "为当前用户创建（或续用）路径进度（幂等：已开始则原样返回）。主题固定为调用者本人。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "开始学习路径",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "路径ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-paths/{path_id}/certify": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "完成学习路径的全部步骤后颁发认证（KnowAxis V3.0 §15.5）。未完成时返回 eligible=false 与差多少步，而不是报错——前端据此提示还差什么。已有有效证书直接复用。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "申请学习认证",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "学习路径ID",
+                        "name": "path_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "被认证的用户（缺省为调用者本人）",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "有效期（月，默认 12；0 表示不过期）",
+                        "name": "valid_months",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: LearningCertification}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-paths/{path_id}/exam": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "提交作答并按题库判分（§15.5）。判分只信题库的正确答案，不信提交内容；达到 80 分即通过。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "提交考试",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "学习路径ID",
+                        "name": "path_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "作答",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.submitExamRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: LearningExamAttempt}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-paths/{path_id}/exam-questions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某条学习路径的考题。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "考试题库",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "学习路径ID",
+                        "name": "path_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [LearningExamQuestion]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "为学习路径添加一道认证考题（§15.5 与考试/上岗资格关联）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "新增考试题",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "学习路径ID",
+                        "name": "path_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "题目",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createExamQuestionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: LearningExamQuestion}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-tasks": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回当前用户的学习任务（§15.5 SOP 变更联动派发的任务在这里）。只读当前登录者。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "我的学习任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "open|done|waived",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [LearningTask]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-tasks/assign": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把一条已变更的知识派给指定人员学习（§15.5 SOP 变更联动）。同一 (知识, 人员) 已有未完成任务时不重复派发。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "派发学习任务",
+                "parameters": [
+                    {
+                        "description": "指派",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.assignLearningTasksRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [LearningTask]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/learning-tasks/{id}/complete": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "标记一条学习任务已完成（只能完成自己的任务）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "学习认证"
+                ],
+                "summary": "完成学习任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: LearningTask}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
                 }
             }
         },
@@ -13221,6 +20626,35 @@ const docTemplate = `{
                 "x-agent-hint": "Lists the tools an MCP service offers, asking the service itself without saving a directory. Prefer mcp_service.get_metadata for ordinary directory queries; use this live query only when a current upstream check without saving is needed; to synchronize it use mcp_service.refresh_metadata. Use it to check that a service can do what an agent needs before binding it. An error means the service is unreachable; mcp_service.test says why."
             }
         },
+        "/me/center": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "一次返回\"我提交的审批 / 我的收藏 / 我的知识\"与概览计数（KnowAxis V3.0 §15.3）。收藏在权限失效或对象已删除时标记为不可见，而不是渲染成死链接。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "个人中心"
+                ],
+                "summary": "个人中心",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: PersonalCenter}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/me/env-vars": {
             "get": {
                 "security": [
@@ -13614,6 +21048,80 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_handler.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/points": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回当前用户的积分余额、等级（bronze/silver/gold/diamond/expert）与最近流水。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "查询我的积分",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "最近流水条数（默认 20，上限 100）",
+                        "name": "recent",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/me/points/leaderboard": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回租户内积分余额降序的前 N 名（rank 从 1 起；v1 返回原始 user_id，脱敏由展示层处理）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分与学习路径"
+                ],
+                "summary": "查询积分排行榜",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "条数（默认 20，上限 100）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -14370,6 +21878,58 @@ const docTemplate = `{
                 "x-agent-hint": "Finds exchanges in the user's own past conversations by what was said, each with its session_id. Matching is by meaning only when message indexing is on (see message.chat_history_stats); otherwise words must appear verbatim, so retry with the user's exact wording before concluding nothing matches."
             }
         },
+        "/messages/{message_id}/feedback": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "对一条回答记录 useful / useless 评价（同人对同一条消息重复评价为覆盖）。useless 会计入所属知识的近30天无用计数并可能自动生成质量任务。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "反馈与质量任务"
+                ],
+                "summary": "评价消息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "消息ID",
+                        "name": "message_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "评价内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.RateMessageFeedbackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "rating 非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/messages/{session_id}/load": {
             "get": {
                 "security": [
@@ -14513,6 +22073,505 @@ const docTemplate = `{
                         "description": "服务器错误",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/model-gateway/prompts": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "追加一个新版本（version=当前最大+1；内容与最新版相同则去重返回既有版本，幂等）。版本只增不改。\n返回平台内置、可由租户在 prompt_versions 中覆盖的模板键（§16.5）。配合 GET /model-gateway/prompts/:key/latest 使用：先看哪些可覆盖，再读当前生效版本。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json",
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关",
+                    "模型网关"
+                ],
+                "summary": "可覆盖的 Prompt 模板清单",
+                "parameters": [
+                    {
+                        "description": "版本内容",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.savePromptVersionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [string]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/model-gateway/prompts/{key}/latest": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回该模板键的最新版本；尚无版本时 data 为 null（调用方回退 YAML 内置模板）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "查询提示词模板最新版本",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/model-gateway/prompts/{key}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 template_key（prompt_templates 文件名去后缀，如 system_prompt/rewrite）列出全部版本，最新在前。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "列出提示词模板版本",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "追加一个新版本（version=当前最大+1；内容与最新版相同则去重返回既有版本，幂等）。版本只增不改。\n返回平台内置、可由租户在 prompt_versions 中覆盖的模板键（§16.5）。配合 GET /model-gateway/prompts/:key/latest 使用：先看哪些可覆盖，再读当前生效版本。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json",
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关",
+                    "模型网关"
+                ],
+                "summary": "可覆盖的 Prompt 模板清单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "版本内容",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.savePromptVersionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [string]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/model-gateway/prompts/{key}/versions/{version}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 template_key + version 返回版本内容（404 表示该版本不存在）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "查询提示词模板版本详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "版本号",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/model-gateway/routing-rules": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回本租户规则 + 平台级规则（tenant_id=0），按租户优先排序，即完整的生效路由图景。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "列出路由规则",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "将任务（chat/embedding/rerank/...）或数据密级（public/internal/secret/confidential）路由到指定模型；同租户同 scope+scope_value 唯一。platform=true 表示平台级规则（仅系统管理员）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "新建模型路由规则",
+                "parameters": [
+                    {
+                        "description": "路由规则",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createRuleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/model-gateway/routing-rules/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 ID 返回规则（含平台级规则；tenant_id=0 表示平台级）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "查询单条路由规则",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "规则ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 ID 更新规则（model_id / enabled；scope 与 scope_value 不可改，改路由=新建+删除）。平台级规则仅系统管理员可改。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "更新模型路由规则",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "规则ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.updateRuleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "物理删除规则（路由是配置不是生命周期数据）。平台级规则仅系统管理员可删。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "删除模型路由规则",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "规则ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/model-gateway/usage": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按天/模型返回最近 N 天（默认 30，上限 366）的 token 与调用次数累计（UTC 日）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型网关"
+                ],
+                "summary": "查询模型用量汇总",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "天数（默认 30，上限 366）",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -15341,6 +23400,1395 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/official-answers": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回租户内的官方答案，可按状态过滤（§13.7）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "列出官方答案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "draft|in_review|approved|published|expired|superseded|retired",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [OfficialAnswer]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "创建或编辑一条标准答案草稿。已批准或已发布的答案被编辑时会自动退回草稿并清空回执——被改过的正文不能沿用原来的审批（§13.7）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "新建/编辑官方答案",
+                "parameters": [
+                    {
+                        "description": "官方答案",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.officialAnswerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OfficialAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/official-answers/lookup": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "用归一化问题查生效中的官方答案（§13.7）。返回 effective_status 以便调用方区分\"未到生效日\"与\"已过期\"；没有匹配时返回 data=null（不是 404）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "按问题查官方答案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "问题原文",
+                        "name": "question",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "限定知识库（缺省查全局答案）",
+                        "name": "kb_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OfficialAnswerMatch}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/official-answers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回单条官方答案，附读取时解析出的生效状态（未到生效日/已过期）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "读取官方答案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "答案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OfficialAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/official-answers/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "待审 → 已批准。高风险答案必须提供审批回执 ID（§13.7 高风险内容禁止绕过审批），且作者不能批准自己写的答案。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "批准官方答案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "答案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "审批回执",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.approveAnswerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OfficialAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/official-answers/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "已批准 → 已发布。同一问题只能有一份生效答案，冲突返回 409（§13.7）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "发布官方答案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "答案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OfficialAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/official-answers/{id}/retire": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "撤回一条官方答案；提供 superseded_by_id 时标记为\"被替代\"，否则为\"已下线\"（§13.7 替代/回滚）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "下线/替代官方答案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "答案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "替代关系",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.retireAnswerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OfficialAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/official-answers/{id}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "草稿 → 待审。没有绑定证据的答案不能提交：无来源的标准答案无法审计或撤回（§13.7）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "官方答案"
+                ],
+                "summary": "提交官方答案审核",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "答案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OfficialAnswer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/properties/{property_id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "更新属性的数据类型/必填/约束配置；仅 draft Schema 可改。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "更新类型属性",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "属性ID",
+                        "name": "property_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologyPropertyUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "从 draft Schema 的类型删除属性。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "删除类型属性",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "属性ID",
+                        "name": "property_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/proposals": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "分页返回本租户提案（created_at 倒序），可按 status 过滤（pending|approved|rejected|applied）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体建模提案"
+                ],
+                "summary": "本体建模提案列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态过滤",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "条数，默认50，上限200",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "偏移量",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {items, total}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "未知状态值",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "两种模式二选一：knowledge_ids 非空时由 chat 模型读文档（≤8 篇，每篇 ≤4000 字）产出结构化提案；proposal 非空时直接采用提交的 payload（无模型时的直通入口）。生成 pending 提案，不直接修改生效本体。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体建模提案"
+                ],
+                "summary": "创建本体建模提案（文档驱动 AI 自动建模 / 手工提交）",
+                "parameters": [
+                    {
+                        "description": "{name, domain?, knowledge_ids?, proposal?, rationale?}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.schemaProposalCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 提案}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数非法/文档缺失/模型输出不是提案 JSON",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/proposals/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按提案 ID 返回提案（租户隔离），含结构化 proposal 与 compatibility_report。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体建模提案"
+                ],
+                "summary": "本体建模提案详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "提案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 提案}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "提案不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/proposals/{id}/apply": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "approved 且兼容性报告无 blocker 时，通过 OntologyService 落成 draft 本体（同名 draft 追加并提示版本升级；同名已发布则派生下一版本 draft）。回填 applied_schema_id 并置 status=applied。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体建模提案"
+                ],
+                "summary": "应用提案落地为正式本体",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "提案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 落地结果}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "状态非 approved / 存在 blocker / 提案结构非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "提案不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许落地",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/proposals/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "pending→approved（Admin+，且审批人 != 提案创建人：四眼）。批准只表示同意落地，仍需 apply 才会写入正式本体。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体建模提案"
+                ],
+                "summary": "批准本体建模提案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "提案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{comment?}",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.schemaProposalDecideRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 提案}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "缺少提案ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "非 Admin 或审批人即创建人",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "提案不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许批准",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/proposals/{id}/compatibility-check": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "与现有已发布本体比对：新类型（可自动通过）/ 同名类型属性变更（warning）/ 关系端点缺失（blocker），结果写入 compatibility_report。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体建模提案"
+                ],
+                "summary": "提案兼容性检查",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "提案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 兼容性报告}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "提案结构非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "提案不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/proposals/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "pending→rejected（终态，Admin+，四眼），记录审核人与意见。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体建模提案"
+                ],
+                "summary": "驳回本体建模提案",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "提案ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{comment?}",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.schemaProposalDecideRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 提案}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "非 Admin 或审批人即创建人",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "提案不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "状态机不允许驳回",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/relations/{relation_id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "更新关系两端类型/基数/描述；仅 draft Schema 可改。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "更新本体关系",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关系ID",
+                        "name": "relation_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologyRelationUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "从 draft Schema 删除关系。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "删除本体关系",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关系ID",
+                        "name": "relation_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/schemas": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回当前租户的全部本体 Schema（不含聚合结构）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "本体 Schema 列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "新建一个 draft 状态的本体 Schema，version=1；名称在租户内唯一。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "创建本体 Schema（草稿）",
+                "parameters": [
+                    {
+                        "description": "Schema",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologySchemaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/schemas/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回 Schema 及其类型（含各自属性）与关系词汇表。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "本体 Schema 详情（聚合）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SchemaID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "修改 draft Schema 的名称/描述；已发布历史不可变。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "更新本体 Schema（仅草稿）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SchemaID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologySchemaUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "删除空草稿 Schema 及其残留子资源；已发布/已归档不可删。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "删除本体 Schema（仅草稿且无类型）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SchemaID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/schemas/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "校验（≥1 类型、关系两端类型存在）后将 draft 流转为 published，版本号 +1。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "发布本体 Schema",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SchemaID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/schemas/{id}/relations": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "向 draft Schema 添加关系（belongs_to/depends_on 等），两端类型必须已定义。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "新增本体关系",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SchemaID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "关系",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologyRelationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/schemas/{id}/types": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "向 draft Schema 添加一个类型（Device/SOP/ErrorCode 等）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "新增本体类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SchemaID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "类型",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologyTypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/types/{type_id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "更新类型显示名/定义/别名/治理配置；仅 draft Schema 可改。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "更新本体类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "类型ID",
+                        "name": "type_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologyTypeUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "从 draft Schema 删除类型并连同其属性。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "删除本体类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "类型ID",
+                        "name": "type_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/ontology/types/{type_id}/properties": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "向 draft Schema 的类型添加属性（string/number/boolean/date/enum/ref）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "本体Schema"
+                ],
+                "summary": "新增类型属性",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "类型ID",
+                        "name": "type_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "属性",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.ontologyPropertyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/operations/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "一次返回知识资产概况、治理待办（待审/待复审/过期/冲突/质量任务/影响任务/缺口/迁移/权限违规）、审核效率（通过率、平均决策时长、逾期）与搜索质量（KnowAxis V3.0 §16.1）。所有数字直接来自对应垂直领域的表，不重新定义口径。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运营看板"
+                ],
+                "summary": "运营看板",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "统计窗口（天，默认 30，上限 365）",
+                        "name": "window_days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: OperationsDashboard}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -16478,6 +25926,1134 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ListSharesResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/parse-quality/queue": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回本租户解析质量低于阈值（§3.5，\u003c60）的文档，按总分升序（最差在前），行内附知识标题/文件名/解析状态/错误信息。这些文档可搜但不可作高置信来源。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "解析质量"
+                ],
+                "summary": "获取解析异常队列",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "返回条数，1-200，默认 50",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {items, total, threshold}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/share/{token}": {
+            "get": {
+                "description": "无鉴权：凭 token 访问。撤销/过期/未知 token 统一返回 404，避免状态泄露。成功时记录访问（visit_log 最近 100 条 + 计数 + 审计）并返回只读投影；仅 download 权限附带文件下载地址。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识外链分享"
+                ],
+                "summary": "解析知识外链（公开）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "外链token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.shareLinkResolutionResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "链接不可用（未知/已撤销/已过期）",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/quality-tasks": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回本空间的质量任务队列，按创建时间倒序。可用 status 过滤（open / processing / done / waived）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "反馈与质量任务"
+                ],
+                "summary": "质量任务列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务状态过滤：open | processing | done | waived",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "status 非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/quality-tasks/{task_id}": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "变更质量任务的状态 / 负责人 / 处理说明。置为 done 需提供 resolution_note；waived 需在同一字段写明豁免理由；done/waived 可重新打开。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "反馈与质量任务"
+                ],
+                "summary": "处理质量任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "变更内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.UpdateQualityTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "非法流转或缺少处理说明",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "任务不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/recycle-bin": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "列出本工作区的回收站条目（新→旧）；entity_type 可选过滤（v1 仅 knowledge）；restored_at 非空表示已恢复。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "回收站"
+                ],
+                "summary": "查看回收站",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "实体类型过滤（knowledge）",
+                        "name": "entity_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/recycle-bin/{recycle_id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "恢复一条软删的知识条目：清除 deleted_at 并盖 restored_at（该条目退出 30 天清空倒计时）。v1 范围：恢复元数据行；分块/向量/文件在删除时已释放，恢复后需重新 ingest。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "回收站"
+                ],
+                "summary": "从回收站恢复",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "回收站条目ID",
+                        "name": "recycle_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "已恢复",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/review/queue": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回本租户待复审知识（KnowAxis V3.0 §7.7）：已处于 pending_review_cycle 的条目 + 尚为 valid 但复审到期或显式有效期已过的条目。按复审基线时间升序（最久未复审在前），分页；行内附新鲜度评分与入队原因。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识治理"
+                ],
+                "summary": "获取待复审清单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，1-100，默认 20",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: PageResult{total, page, page_size, data: [FreshnessReviewQueueItem]}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/review/receipts": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按创建时间倒序返回本租户审批回执哈希链（从链尾向链首逐行验证 prev_hash）。limit 默认 200，硬上限 200。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "审批回执链回放",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 200,
+                        "x-agent": true,
+                        "description": "条数，1-200",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [回执]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/review/receipts/{receipt_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按回执 ID 返回审批回执（发布凭据 + 内容基线快照 + 哈希链锚点）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "获取单条审批回执",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "回执ID",
+                        "name": "receipt_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 回执}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "回执不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/review/tasks": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回本租户全部待审任务（v1：Admin+ 看全量待办池，按提交时间升序）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "获取审批待办列表",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [审批任务]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/review/tasks/{task_id}/chain": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回一张审核任务的节点链（逐级顺序、每层或签/会签、谁已投票、当前激活层）。多级审批上线前提交的历史任务会显示为一个隐式节点。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "读取审批链状态",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "审批任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalChainState}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/review/tasks/{task_id}/chain/approvers": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "在途给某个审批节点追加一位审批人（§6.3 加签）。会签节点同时把所需通过人数 +1，否则新增的人可以被忽略。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "加签",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "审批任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "节点与审批人",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.approverMutationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalChainState}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/review/tasks/{task_id}/chain/transfer": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把某个节点上的一位审批人替换为另一位（§6.3 转签）。已终结的节点不允许转签，否则审批记录与实际责任人脱节。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "转签",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "审批任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "节点、原审批人与新审批人",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.approverMutationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ApprovalChainState}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/review/tasks/{task_id}/decide": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "审批人对待审任务投一票。四眼校验（不得审批自己提交的任务）；驳回立即退回草稿；通过票数达到法定人数（dual 模式或 high 风险需 2 个不同审批人）才生成回执并发布。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "审批裁决",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{decision: approved|rejected, reason_code?, comment?}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.decideReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: 审批任务}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数/原因码非法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "403": {
+                        "description": "四眼校验失败：不能审批自己提交的任务",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "任务不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "任务已不在待审状态",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/review/tasks/{task_id}/pre-review": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回该审批任务的历史预审运行（最新在前），每次运行含 findings、模型版本与 Prompt 版本，供审批人对比改稿前后提示的差异与追溯口径。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "获取 AI 预审历史",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "审批任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "条数，1-50，默认 20",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, task_id, data: [AIPreReviewRun]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "任务不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "对一次审批任务执行 AI 预审（KnowAxis V3.0 §6.5），返回\"检查清单 + 风险提示\"：完整性/引用/冲突/敏感/表述/术语/时效/重复八项。每条提示带 evidence（依据原文）、locator（位置）与 suggestion（修改建议）；不返回通过/不通过，也不改变审批状态。规则类检查始终执行；模型类检查（引用/冲突）不可用时降级为一条 info 提示。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "触发 AI 预审",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "审批任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, task_id, data: [PreReviewFinding], summary: PreReviewSummary}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "knowledge_id 与任务不一致",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "任务或知识不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/review/tasks/{task_id}/sla-events": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某张审核任务的催办/升级记录（§6.3）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识审核"
+                ],
+                "summary": "审核 SLA 处置台账",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "审批任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ApprovalSLAEvent]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/rewards/admin/redemptions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "管理员查看租户内所有兑换单。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "全部兑换记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态过滤",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 50）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [RewardRedemption]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/rewards/admin/redemptions/{id}/resolve": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "管理员标记已发放（fulfilled）或驳回（rejected）；驳回时积分退回、库存回补。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "处理兑换单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "兑换单 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "处理结果",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.resolveRedemptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: RewardRedemption}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/rewards/catalog": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出启用的积分礼品/福利（KnowAxis V3.0 §15.4 积分可兑换礼品/福利）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "兑换目录",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "管理员查看全部（含已下架）",
+                        "name": "all",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [RewardCatalogItem]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "管理员新增积分礼品/福利。stock=-1 表示不限量。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "新增兑换项",
+                "parameters": [
+                    {
+                        "description": "兑换项",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.rewardItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: RewardCatalogItem}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/rewards/catalog/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "管理员修改积分礼品/福利；空字段表示不修改。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "修改兑换项",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "兑换项 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "兑换项",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.rewardItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: RewardCatalogItem}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/rewards/catalog/{id}/redeem": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "用本人积分兑换一件礼品（KnowAxis V3.0 §15.4）。扣分、库存与兑换单在同一事务内完成；余额不足或库存不足时不会产生任何变更。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "兑换积分礼品",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "兑换项 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "备注",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.redeemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: RewardRedemption}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/rewards/redemptions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出本人的兑换单。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "我的兑换记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "pending/fulfilled/rejected/canceled",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 50）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [RewardRedemption]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/rewards/redemptions/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "本人取消待处理的兑换单，积分退回、库存回补。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "积分兑换"
+                ],
+                "summary": "取消兑换",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "兑换单 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: RewardRedemption}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -17781,6 +28357,130 @@ const docTemplate = `{
                 }
             }
         },
+        "/search-quality": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回窗口内的查询量、零结果率、权限过滤量、点击率与平均耗时（KnowAxis V3.0 §12.5）。权限过滤量是聚合数字，用于运营判断\"内容存在但看不到\"，不会回传给检索用户。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "搜索质量"
+                ],
+                "summary": "搜索质量概览",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "统计窗口（天，默认 30，上限 365）",
+                        "name": "window_days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SearchQualityOverview}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/search-quality/frequent-queries": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回窗口内出现次数最多的查询词；zero_only=true 时只看返回空结果的查询，即\"高频零结果\"清单（§12.5）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "搜索质量"
+                ],
+                "summary": "高频查询 / 高频零结果",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "统计窗口（天，默认 30）",
+                        "name": "window_days",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "只看零结果查询",
+                        "name": "zero_only",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回条数（默认 20，上限 200）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [FrequentQuery]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/search-quality/logs/{log_id}/click": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "记录某次查询产生了点击（点击率指标的数据源，§12.5）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "搜索质量"
+                ],
+                "summary": "回填查询点击",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "查询日志ID",
+                        "name": "log_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/sessions": {
             "get": {
                 "security": [
@@ -18503,6 +29203,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/sessions/{session_id}/evidence-packs": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "返回该会话最近 limit 条证据包，按创建时间正序（可逐条回放整段问答链路）。limit 默认 50，硬上限 200。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "证据包"
+                ],
+                "summary": "会话证据包时间线",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会话ID",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "x-agent": true,
+                        "description": "条数，1-200",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [证据包]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "缺少租户上下文",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{session_id}/fork": {
             "post": {
                 "security": [
@@ -19177,6 +29926,50 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/share-links/{share_link_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "置 revoked_at 立即失效该外链（单条 UPDATE，幂等安全）。未知/已撤销返回 404。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识外链分享"
+                ],
+                "summary": "撤销知识外链",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "外链ID",
+                        "name": "share_link_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
@@ -20117,6 +30910,55 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Storage backend not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/symbol-lookup": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "从 q 用同一正则抽取符号候选，对 symbol_index 等值命中，按符号长度降序返回 [{knowledge_id, chunk_id, symbol, locator}]。kb_ids 逗号分隔，缺省全租户。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "符号索引"
+                ],
+                "summary": "符号精确命中",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "查询文本",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "知识库ID列表（逗号分隔）",
+                        "name": "kb_ids",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
@@ -21364,7 +32206,7 @@ const docTemplate = `{
                     "id": "system.get_info",
                     "risk": "read"
                 },
-                "x-agent-hint": "Reads the backend version, edition, build, runtime, database migration status and configured engines. Empty or unknown means unavailable information. Engine configuration does not prove connectivity. Raw migration errors are omitted. Frontend build/version is separate and is not reported by this API; do not infer frontend/backend version agreement or available upgrades."
+                "x-agent-hint": "Reads the backend version, edition, build, runtime, database migration status and configured engines. Docreader build information is omitted when its service is unavailable or does not support GetInfo. Empty or unknown means unavailable information. Engine configuration does not prove connectivity. Raw migration errors are omitted. Frontend build/version is separate and is not reported by this API; do not infer frontend/backend version agreement or available upgrades."
             }
         },
         "/system/parser-engines": {
@@ -21899,7 +32741,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "获取空间级别的KV配置（支持web-search-config、prompt-templates、parser-engine-config、storage-engine-config、chat-history-config、retrieval-config）",
+                "description": "获取空间级别的KV配置。支持 web-search-config、prompt-templates、parser-engine-config、\nstorage-engine-config、chat-history-config、retrieval-config、memory-config、\nassistant-config、default-settings。",
                 "consumes": [
                     "application/json"
                 ],
@@ -21944,7 +32786,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "更新空间级别的KV配置（支持web-search-config、parser-engine-config、storage-engine-config、chat-history-config、retrieval-config）",
+                "description": "更新空间级别的KV配置。支持 web-search-config、parser-engine-config、storage-engine-config、\nchat-history-config、retrieval-config、memory-config、assistant-config、default-settings。",
                 "consumes": [
                     "application/json"
                 ],
@@ -24847,6 +35689,10 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "planned": {
+                    "description": "Planned marks a declared-but-unimplemented connector. The UI must show it\nas unavailable rather than letting an operator configure a source whose\nevery operation returns \"not implemented\" (V3.0 §3.3 business systems).",
+                    "type": "boolean"
+                },
                 "priority": {
                     "description": "Priority order for UI display (lower = higher priority)",
                     "type": "integer"
@@ -25258,6 +36104,13 @@ const docTemplate = `{
                     "additionalProperties": {
                         "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_handler_dto.CredentialFieldMetadata"
                     }
+                },
+                "default_for": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-agent": true
                 },
                 "description": {
                     "type": "string",
@@ -26408,6 +37261,42 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "aipre.completed",
+                "aipre.failed",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -26469,9 +37358,57 @@ const docTemplate = `{
                 "wiki.content_changed",
                 "faq.import_started",
                 "faq.import_completed",
-                "faq.import_failed"
+                "faq.import_failed",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "parse_quality.computed"
             ],
             "x-enum-varnames": [
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -26533,7 +37470,19 @@ const docTemplate = `{
                 "AuditActionWikiContentChanged",
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
-                "AuditActionFAQImportFailed"
+                "AuditActionFAQImportFailed",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "ParseQualityAuditActionComputed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -26575,10 +37524,18 @@ const docTemplate = `{
                     ],
                     "x-agent": true
                 },
+                "prev_hash": {
+                    "description": "PrevHash is the row_hash of the previous entry of the same tenant\n(empty for the genesis row). Written by the repository inside the\ninsert transaction; callers must not set it (KnowAxis V3.0 §6.7).",
+                    "type": "string"
+                },
                 "request_method": {
                     "type": "string"
                 },
                 "request_path": {
+                    "type": "string"
+                },
+                "row_hash": {
+                    "description": "RowHash = sha256(prev_hash + canonical fields). Unique per row; makes\nthe per-tenant audit stream tamper-evident (append-only + hash chain).",
                     "type": "string"
                 },
                 "scope_id": {
@@ -27037,6 +37994,19 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Tencent_WeKnora_internal_types.ChangeCloseCondition": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "description": "Description 人类可读的描述。",
+                    "type": "string"
+                },
+                "key": {
+                    "description": "Key 机器可读的条件键（如 \"verify_sample_qa\"）。",
+                    "type": "string"
+                }
+            }
+        },
         "github_com_Tencent_WeKnora_internal_types.ChatHistoryConfig": {
             "type": "object",
             "properties": {
@@ -27151,11 +38121,31 @@ const docTemplate = `{
                 "max_rounds": {
                     "type": "integer"
                 },
+                "parent_slot_aggregation": {
+                    "description": "ParentSlotAggregation collapses hits that share a ParentChunkID into one\ntop-k slot, so sibling children of the same parent cannot crowd out other\npages. Set by the knowledge-search API; off by default.",
+                    "type": "boolean"
+                },
+                "prompt_version": {
+                    "description": "PromptVersionTag is the \"\u003ctemplate\u003e@v\u003cn\u003e\" tag of the tenant prompt version\nthat produced this answer (§16.5). Empty means the built-in template.",
+                    "type": "string"
+                },
                 "query": {
                     "type": "string"
                 },
                 "query_understand_model_id": {
                     "description": "QueryUnderstandModelID, when set, overrides the chat model used for\nthe query-understanding (rewrite + intent classification) stage only.\nEmpty means fall back to ChatModelID.",
+                    "type": "string"
+                },
+                "refusal_marker": {
+                    "description": "RefusalMarker records which §13.5 refusal case this turn hit (empty when\nthe answer is normal). Written to the Evidence Pack so an audit can tell\n\"refused because every source was expired\" from \"answered normally\".",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.EvidencePackRefusal"
+                        }
+                    ]
+                },
+                "refusal_notice": {
+                    "description": "RefusalNotice is the caveat appended to an answer that is allowed but\nqualified (stale-only evidence, or a high-risk question without an\nofficial source).",
                     "type": "string"
                 },
                 "rerank_model_id": {
@@ -28222,6 +39212,35 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Tencent_WeKnora_internal_types.DefaultSettings": {
+            "type": "object",
+            "properties": {
+                "asr_model_id": {
+                    "description": "ASRModelID is the default ASR model.",
+                    "type": "string"
+                },
+                "chat_model_id": {
+                    "description": "ChatModelID is the default KnowledgeQA model.",
+                    "type": "string"
+                },
+                "embedding_model_id": {
+                    "description": "EmbeddingModelID is the default Embedding model.",
+                    "type": "string"
+                },
+                "rerank_model_id": {
+                    "description": "RerankModelID is the default Rerank model.",
+                    "type": "string"
+                },
+                "utility_model_id": {
+                    "description": "UtilityModelID is the KnowledgeQA model for short generation tasks\nsuch as writing MCP usage instructions. Empty follows the chat default.",
+                    "type": "string"
+                },
+                "vlm_model_id": {
+                    "description": "VLMModelID is the default VLLM or vision-capable KnowledgeQA model.",
+                    "type": "string"
+                }
+            }
+        },
         "github_com_Tencent_WeKnora_internal_types.DockerSandboxConfig": {
             "type": "object",
             "properties": {
@@ -28420,6 +39439,31 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "github_com_Tencent_WeKnora_internal_types.EvidencePackRefusal": {
+            "type": "string",
+            "enum": [
+                "",
+                "refused",
+                "conflict",
+                "no_evidence",
+                "out_of_scope",
+                "expired_only",
+                "stale_only",
+                "speculative",
+                "no_official_source"
+            ],
+            "x-enum-varnames": [
+                "EvidenceRefusalNone",
+                "EvidenceRefusalRefused",
+                "EvidenceRefusalConflict",
+                "EvidenceRefusalNoEvidence",
+                "EvidenceRefusalOutOfScope",
+                "EvidenceRefusalExpiredOnly",
+                "EvidenceRefusalStaleOnly",
+                "EvidenceRefusalSpeculative",
+                "EvidenceRefusalNoOfficialSource"
+            ]
         },
         "github_com_Tencent_WeKnora_internal_types.ExtractConfig": {
             "type": "object",
@@ -29176,6 +40220,31 @@ const docTemplate = `{
                 "rougel": {
                     "description": "ROUGE-L score",
                     "type": "number"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.GraphFactEvidence": {
+            "type": "object",
+            "properties": {
+                "chunk_id": {
+                    "description": "ChunkID 证据所在的 chunk。",
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "description": "KnowledgeID 证据所在的知识条目。",
+                    "type": "string"
+                },
+                "locator": {
+                    "description": "Locator 原文定位（SourceLocator 语义，可为空=只有 chunk 级溯源）。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SourceLocator"
+                        }
+                    ]
+                },
+                "quote": {
+                    "description": "Quote 原文片段（LLM 输出的支撑引文）。",
+                    "type": "string"
                 }
             }
         },
@@ -29949,10 +41018,19 @@ const docTemplate = `{
                     "type": "string",
                     "x-agent": true
                 },
+                "classification": {
+                    "description": "Classification is the data sensitivity level (public/internal/secret/\nconfidential). Final visibility = classification allowance ∩ ACL.",
+                    "type": "string",
+                    "x-agent": true
+                },
                 "created_at": {
                     "description": "Creation time of the knowledge",
                     "type": "string",
                     "x-agent": true
+                },
+                "current_version": {
+                    "description": "CurrentVersion is the latest published version number.",
+                    "type": "integer"
                 },
                 "custom_metadata": {
                     "description": "CustomMetadata is user-authored descriptive metadata. It is deliberately\nseparate from Metadata, which contains internal ingestion state and IDs.",
@@ -29970,6 +41048,10 @@ const docTemplate = `{
                     "description": "Description of the knowledge",
                     "type": "string"
                 },
+                "effective_at": {
+                    "description": "EffectiveAt marks when the entry becomes effective (pending_effective →\nvalid is evaluated lazily on read, never by a silent cron flip).",
+                    "type": "string"
+                },
                 "embedding_model_id": {
                     "description": "ID of the embedding model",
                     "type": "string"
@@ -29983,6 +41065,10 @@ const docTemplate = `{
                     "description": "Error message of the knowledge",
                     "type": "string",
                     "x-agent": true
+                },
+                "expires_at": {
+                    "description": "ExpiresAt marks when the entry stops backing answers (read-time expiry).",
+                    "type": "string"
                 },
                 "file_hash": {
                     "description": "File hash of the knowledge",
@@ -30036,6 +41122,18 @@ const docTemplate = `{
                     "description": "Last FAQ import result (for FAQ type knowledge only)",
                     "type": "object"
                 },
+                "last_reviewed_at": {
+                    "description": "LastReviewedAt / LastReviewedBy record the latest \"confirmed valid\"\nreview action, shown on the reading page as the verification badge.",
+                    "type": "string"
+                },
+                "last_reviewed_by": {
+                    "type": "string"
+                },
+                "lifecycle_status": {
+                    "description": "LifecycleStatus is the governance state of this knowledge entry\n(KnowAxis V3.0 §7.1). It decides search/QA behaviour; legacy rows start\nas \"valid\" so existing deployments keep working unchanged.",
+                    "type": "string",
+                    "x-agent": true
+                },
                 "metadata": {
                     "description": "Metadata of the knowledge",
                     "type": "object"
@@ -30061,6 +41159,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeProfile"
                         }
                     ]
+                },
+                "replaced_by_id": {
+                    "description": "ReplacedByID points at the newer knowledge that replaced this entry.",
+                    "type": "string"
+                },
+                "review_cycle_days": {
+                    "description": "ReviewCycleDays is the review cadence in days; 0 disables the cycle.",
+                    "type": "integer"
                 },
                 "source": {
                     "description": "Source of the knowledge (e.g. URL address for url type, \"manual\" for manual type)",
@@ -30164,6 +41270,10 @@ const docTemplate = `{
                     "description": "CreatorName 是 CreatorID 对应用户的展示名（username / email 等），\n仅在列表场景由 handler 批量回填，不落库；为空表示创建者无法解析（用户已删除、\nCreatorID 为空的老数据等）。前端用它在卡片来源徽章上做 mine vs workspace 的二分。",
                     "type": "string"
                 },
+                "default_classification": {
+                    "description": "DefaultClassification applies to new content without an explicit\nclassification (V3.0 §2.4 定密：无确认时按空间默认密级处理).",
+                    "type": "string"
+                },
                 "deleted_at": {
                     "description": "Deletion time of the knowledge base",
                     "allOf": [
@@ -30181,6 +41291,10 @@ const docTemplate = `{
                     "description": "ID of the embedding model. model.list returns the ids. Cannot change after the knowledge base has documents.",
                     "type": "string",
                     "x-agent": "embedding_model_id"
+                },
+                "expires_at": {
+                    "description": "ExpiresAt ends the space's life: project close or external NDA expiry\nturns it read-only (§4.1).",
+                    "type": "string"
                 },
                 "extract_config": {
                     "description": "Extract config",
@@ -30292,9 +41406,17 @@ const docTemplate = `{
                     "x-agent": true,
                     "x-agent-detail": true
                 },
+                "require_review": {
+                    "description": "RequireReview forces new content through the approval flow.",
+                    "type": "boolean"
+                },
                 "share_count": {
                     "description": "ShareCount indicates the number of organizations this knowledge base is shared with (not stored in database)",
                     "type": "integer"
+                },
+                "space_kind": {
+                    "description": "SpaceKind distinguishes personal/team/public/project/external-collab\nspaces and drives their default policy (V3.0 §4.1). Empty means team.",
+                    "type": "string"
                 },
                 "storage_backend_id": {
                     "description": "StorageBackendID binds this KB to one concrete storage instance. The\nlegacy provider field remains readable during migration only.",
@@ -30716,6 +41838,83 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Tencent_WeKnora_internal_types.KnowledgeCandidateCard": {
+            "type": "object",
+            "properties": {
+                "cause_candidate": {
+                    "description": "CauseCandidate 疑似原因（候选≠定论，措辞保留不确定性）。",
+                    "type": "string"
+                },
+                "evidence_links": {
+                    "description": "EvidenceLinks 补充证据链接/单号（与表级 evidence 结构化引用互补）。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "measures": {
+                    "description": "Measures 处置措施（有序步骤）。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "phenomenon": {
+                    "description": "Phenomenon 现象/触发条件（什么情况下适用）。",
+                    "type": "string"
+                },
+                "scope": {
+                    "description": "Scope 适用范围（机型/工位/工序/工况等边界条件）。",
+                    "type": "string"
+                },
+                "validation": {
+                    "description": "Validation 验证情况（如何验证有效、由谁验证）。",
+                    "type": "string"
+                },
+                "what": {
+                    "description": "What 一句话结论（这张卡沉淀了什么经验）。",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.KnowledgeCandidateEvidence": {
+            "type": "object",
+            "properties": {
+                "locator": {
+                    "type": "string"
+                },
+                "quote": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "source_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.KnowledgeCommentAnchor": {
+            "type": "object",
+            "properties": {
+                "chunk_id": {
+                    "description": "ChunkID pins the comment to one chunk of the knowledge (empty = document level).",
+                    "type": "string"
+                },
+                "end_offset": {
+                    "description": "EndOffset is the quote's end offset (exclusive; must be \u003e= StartOffset).",
+                    "type": "integer"
+                },
+                "quote": {
+                    "description": "Quote is the selected text the comment refers to.",
+                    "type": "string"
+                },
+                "start_offset": {
+                    "description": "StartOffset is the quote's start offset inside the chunk text (runes).",
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_Tencent_WeKnora_internal_types.KnowledgeFolderNode": {
             "type": "object",
             "properties": {
@@ -30769,6 +41968,63 @@ const docTemplate = `{
                     "x-agent": true
                 }
             }
+        },
+        "github_com_Tencent_WeKnora_internal_types.KnowledgeLifecycleResolved": {
+            "type": "object",
+            "properties": {
+                "effectiveStatus": {
+                    "description": "EffectiveStatus applies scheduled effective/expiry windows on top of\nStatus. It is what search/QA/UI should act on.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeLifecycleStatus"
+                        }
+                    ]
+                },
+                "reasons": {
+                    "description": "Reasons lists the machine-readable signals that produced EffectiveStatus\n(e.g. \"not_yet_effective\", \"expires_at_reached\"), for UI badges.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "description": "Status is the stored lifecycle_status.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeLifecycleStatus"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.KnowledgeLifecycleStatus": {
+            "type": "string",
+            "enum": [
+                "draft",
+                "pending_review",
+                "pending_effective",
+                "valid",
+                "pending_review_cycle",
+                "stale",
+                "expired",
+                "replaced",
+                "conflict",
+                "delisted",
+                "archived"
+            ],
+            "x-enum-varnames": [
+                "KnowledgeLifecycleDraft",
+                "KnowledgeLifecyclePendingReview",
+                "KnowledgeLifecyclePendingEffective",
+                "KnowledgeLifecycleValid",
+                "KnowledgeLifecyclePendingReviewCycle",
+                "KnowledgeLifecycleStale",
+                "KnowledgeLifecycleExpired",
+                "KnowledgeLifecycleReplaced",
+                "KnowledgeLifecycleConflict",
+                "KnowledgeLifecycleDelisted",
+                "KnowledgeLifecycleArchived"
+            ]
         },
         "github_com_Tencent_WeKnora_internal_types.KnowledgeMoveProgress": {
             "type": "object",
@@ -31017,6 +42273,27 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "description": "Last updated time",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.LearningPathStep": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "description": "Description explains what completing the step means.",
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "description": "KnowledgeID points at the knowledge entry to study; empty means a\nfree-text step (v1 allows offline/offline-training steps).",
+                    "type": "string"
+                },
+                "order": {
+                    "description": "Order is the 1-based position within the path (unique per path;\nenforced by the service on write).",
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "Title is the step headline.",
                     "type": "string"
                 }
             }
@@ -33014,6 +44291,10 @@ const docTemplate = `{
                     "description": "MinerU 云 API 解析参数",
                     "type": "string"
                 },
+                "mineru_effort": {
+                    "description": "hybrid: medium/high; empty = server default",
+                    "type": "string"
+                },
                 "mineru_enable_formula": {
                     "type": "boolean"
                 },
@@ -34023,6 +45304,13 @@ const docTemplate = `{
                     "type": "boolean",
                     "x-agent": true
                 },
+                "exclude_knowledge_ids": {
+                    "description": "ExcludeKnowledgeIDs drops these knowledge IDs from recall. The knowledge\nbase service fills it from the lifecycle state machine (draft, pending\nreview, expired, replaced, delisted, archived entries never back answers;\nV3.0 §7.1). Explicit IDs win: when KnowledgeIDs is set, the caller asked\nfor specific documents and lifecycle filtering still applies to the rest.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "keyword_threshold": {
                     "description": "Minimum keyword score a hit needs; 0 keeps every keyword hit.",
                     "type": "number",
@@ -34141,6 +45429,10 @@ const docTemplate = `{
                     "description": "KnowledgeChannel indicates through which channel the knowledge was ingested (web, api, wechat, etc.)",
                     "type": "string"
                 },
+                "knowledge_classification": {
+                    "description": "KnowledgeClassification is the source document's classification at\nretrieval time. Carried on the hit so the Evidence Pack permission\nsnapshot (§13.4) and the citation redaction path (§2.7) can decide\nwithout a second lookup.",
+                    "type": "string"
+                },
                 "knowledge_custom_metadata": {
                     "description": "KnowledgeCustomMetadata is user-authored context safe to expose to models.",
                     "type": "string"
@@ -34157,6 +45449,10 @@ const docTemplate = `{
                     "description": "Knowledge ID",
                     "type": "string",
                     "x-agent": true
+                },
+                "knowledge_lifecycle_status": {
+                    "description": "KnowledgeLifecycleStatus is the source document's lifecycle state at\nretrieval time, for the same reason.",
+                    "type": "string"
                 },
                 "knowledge_source": {
                     "description": "Knowledge source\nUsed to indicate the source of the knowledge, such as \"url\"",
@@ -34525,6 +45821,162 @@ const docTemplate = `{
                 },
                 "permission": {
                     "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.OrgMemberRole"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ShareLink": {
+            "type": "object",
+            "properties": {
+                "approval_status": {
+                    "description": "ApprovalStatus is 'approved' in v1 (直通); 'pending' is reserved.",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "Creation time.",
+                    "type": "string"
+                },
+                "created_by": {
+                    "description": "CreatedBy is the authenticated user that issued the link.",
+                    "type": "string"
+                },
+                "expires_at": {
+                    "description": "ExpiresAt is the link expiry; nil means the link lives until revoked.",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Unique identifier of the share link.",
+                    "type": "string",
+                    "x-agent": "share_link_id"
+                },
+                "knowledge_id": {
+                    "description": "KnowledgeID is the shared source document.",
+                    "type": "string"
+                },
+                "link_type": {
+                    "description": "LinkType is the audience (org | people).",
+                    "type": "string"
+                },
+                "permission": {
+                    "description": "Permission is the capability (view | download).",
+                    "type": "string"
+                },
+                "revoked_at": {
+                    "description": "RevokedAt is set when the link is revoked; nil means still active.",
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "description": "TenantID is the owning workspace (the knowledge owner's tenant).",
+                    "type": "integer"
+                },
+                "token": {
+                    "description": "Token is the visitor credential (see the generation规范 above).",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "Last update time.",
+                    "type": "string"
+                },
+                "visit_count": {
+                    "description": "VisitCount is the total number of resolved visits (never trimmed).",
+                    "type": "integer"
+                },
+                "visit_log": {
+                    "description": "VisitLog holds the most recent ShareLinkVisit entries (newest first,\ncapped at ShareLinkVisitLogMaxEntries).",
+                    "type": "object"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ShareLinkKnowledgeView": {
+            "type": "object",
+            "properties": {
+                "classification": {
+                    "description": "Classification is the sensitivity level (public/internal/secret).",
+                    "type": "string"
+                },
+                "current_version": {
+                    "description": "CurrentVersion is the latest published version number.",
+                    "type": "integer"
+                },
+                "description": {
+                    "description": "Description of the document.",
+                    "type": "string"
+                },
+                "download_available": {
+                    "description": "DownloadAvailable distinguishes \"no permission\" from \"signing not\nconfigured\": true whenever permission=download and a URL was minted.",
+                    "type": "boolean"
+                },
+                "download_url": {
+                    "description": "DownloadURL is the presigned file address. Present only when the\nlink's permission is download AND the deployment can sign URLs; it is\na relative URL (the visitor's origin is the prefix).",
+                    "type": "string"
+                },
+                "effective_status": {
+                    "description": "EffectiveStatus is the read-time resolved behaviour (e.g. a valid row\npast its expires_at reads as expired here too).",
+                    "type": "string"
+                },
+                "file_name": {
+                    "description": "FileName / FileType / FileSize describe the source file.",
+                    "type": "string"
+                },
+                "file_size": {
+                    "type": "integer"
+                },
+                "file_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID of the knowledge entry.",
+                    "type": "string"
+                },
+                "lifecycle_reasons": {
+                    "description": "LifecycleReasons carries the machine-readable signals behind\nEffectiveStatus (mirrors KnowledgeLifecycleResolved.Reasons).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "lifecycle_status": {
+                    "description": "LifecycleStatus is the stored lifecycle state.",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "Title of the document.",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ShareLinkPublicMeta": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "description": "ExpiresAt mirrors the row; nil = valid until revoked.",
+                    "type": "string"
+                },
+                "link_type": {
+                    "description": "LinkType is the audience (org | people).",
+                    "type": "string"
+                },
+                "permission": {
+                    "description": "Permission is the capability granted (view | download).",
+                    "type": "string"
+                },
+                "token": {
+                    "description": "Token echoes the resolved credential so the page can render the\nvisitor watermark without re-parsing its own URL.",
+                    "type": "string"
+                },
+                "visited_at": {
+                    "description": "VisitedAt is the timestamp of this very visit.",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ShareLinkResolution": {
+            "type": "object",
+            "properties": {
+                "knowledge": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ShareLinkKnowledgeView"
+                },
+                "share": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ShareLinkPublicMeta"
                 }
             }
         },
@@ -35307,6 +46759,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.CredentialsConfig"
+                        }
+                    ]
+                },
+                "default_settings": {
+                    "description": "Default settings: the workspace's default model for each type and purpose",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.DefaultSettings"
                         }
                     ]
                 },
@@ -36294,6 +47754,19 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Tencent_WeKnora_internal_types.WebSearchClients": {
+            "type": "object",
+            "properties": {
+                "fetch": {
+                    "description": "Fetch is the provider type whose API reads pages, or \"local\" for WeKnora's own reader.",
+                    "type": "string"
+                },
+                "search": {
+                    "description": "Search is the provider type whose API runs searches.",
+                    "type": "string"
+                }
+            }
+        },
         "github_com_Tencent_WeKnora_internal_types.WebSearchConfig": {
             "type": "object",
             "properties": {
@@ -36514,6 +47987,14 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.WebSearchProviderTypeInfo": {
             "type": "object",
             "properties": {
+                "clients": {
+                    "description": "Search and fetch readers registered for this type; nil when the type is not registered.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.WebSearchClients"
+                        }
+                    ]
+                },
                 "config_fields": {
                     "description": "Provider-specific non-secret configuration rendered dynamically by the frontend.",
                     "type": "array",
@@ -38515,6 +49996,14 @@ const docTemplate = `{
                     "type": "string",
                     "x-agent": true
                 },
+                "docreader_commit_id": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "docreader_version": {
+                    "type": "string",
+                    "x-agent": true
+                },
                 "edition": {
                     "type": "string",
                     "x-agent": true
@@ -39010,6 +50499,10 @@ const docTemplate = `{
                     "description": "CreatorName 是 CreatorID 对应用户的展示名（username / email 等），\n仅在列表场景由 handler 批量回填，不落库；为空表示创建者无法解析（用户已删除、\nCreatorID 为空的老数据等）。前端用它在卡片来源徽章上做 mine vs workspace 的二分。",
                     "type": "string"
                 },
+                "default_classification": {
+                    "description": "DefaultClassification applies to new content without an explicit\nclassification (V3.0 §2.4 定密：无确认时按空间默认密级处理).",
+                    "type": "string"
+                },
                 "deleted_at": {
                     "description": "Deletion time of the knowledge base",
                     "allOf": [
@@ -39027,6 +50520,10 @@ const docTemplate = `{
                     "description": "ID of the embedding model. model.list returns the ids. Cannot change after the knowledge base has documents.",
                     "type": "string",
                     "x-agent": "embedding_model_id"
+                },
+                "expires_at": {
+                    "description": "ExpiresAt ends the space's life: project close or external NDA expiry\nturns it read-only (§4.1).",
+                    "type": "string"
                 },
                 "extract_config": {
                     "description": "Extract config",
@@ -39148,9 +50645,17 @@ const docTemplate = `{
                     "x-agent": true,
                     "x-agent-detail": true
                 },
+                "require_review": {
+                    "description": "RequireReview forces new content through the approval flow.",
+                    "type": "boolean"
+                },
                 "share_count": {
                     "description": "ShareCount indicates the number of organizations this knowledge base is shared with (not stored in database)",
                     "type": "integer"
+                },
+                "space_kind": {
+                    "description": "SpaceKind distinguishes personal/team/public/project/external-collab\nspaces and drives their default policy (V3.0 §4.1). Empty means team.",
+                    "type": "string"
                 },
                 "storage_backend_id": {
                     "description": "StorageBackendID binds this KB to one concrete storage instance. The\nlegacy provider field remains readable during migration only.",
@@ -40598,6 +52103,26 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.RateMessageFeedbackRequest": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "description": "Comment carries the free-text explanation.",
+                    "type": "string"
+                },
+                "rating": {
+                    "description": "Rating: useful | useless.",
+                    "type": "string"
+                },
+                "reason_codes": {
+                    "description": "ReasonCodes lists machine-readable reasons (useless ratings).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "internal_handler.RefreshTokenResponse": {
             "type": "object",
             "properties": {
@@ -40701,6 +52226,23 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeProcessOverrides"
                         }
                     ]
+                }
+            }
+        },
+        "internal_handler.ReportKnowledgeFeedbackRequest": {
+            "type": "object",
+            "properties": {
+                "chunk_id": {
+                    "description": "ChunkID optionally pins the reported passage.",
+                    "type": "string"
+                },
+                "comment": {
+                    "description": "Comment explains the problem.",
+                    "type": "string"
+                },
+                "task_type": {
+                    "description": "TaskType: correction | stale_report.",
+                    "type": "string"
                 }
             }
         },
@@ -41621,6 +53163,23 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.UpdateQualityTaskRequest": {
+            "type": "object",
+            "properties": {
+                "assignee_id": {
+                    "description": "AssigneeID reassigns the task (empty string clears the assignee).",
+                    "type": "string"
+                },
+                "resolution_note": {
+                    "description": "ResolutionNote — required to close as done; carries the waived reason.",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status: open | processing | done | waived.",
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.UpdateStoreRequest": {
             "type": "object",
             "required": [
@@ -41797,6 +53356,14 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.acceptAnswerRequest": {
+            "type": "object",
+            "properties": {
+                "answer_id": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.acceptInvitationByTokenRequest": {
             "type": "object",
             "required": [
@@ -41805,6 +53372,79 @@ const docTemplate = `{
             "properties": {
                 "token": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_handler.aclGrantRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "subject_id"
+            ],
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "effect": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "subject_id": {
+                    "type": "string"
+                },
+                "subject_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.addCommentRequest": {
+            "type": "object",
+            "required": [
+                "body"
+            ],
+            "properties": {
+                "anchor": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeCommentAnchor"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.addDLPPatternRequest": {
+            "type": "object",
+            "required": [
+                "pattern"
+            ],
+            "properties": {
+                "finding_type": {
+                    "description": "FindingType 命中类别（可省略，默认 custom_pattern）。",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name 规则名（可省略，服务层自动命名 custom-N）。",
+                    "type": "string"
+                },
+                "pattern": {
+                    "description": "Pattern Go 正则。",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.addItemRequest": {
+            "type": "object",
+            "required": [
+                "knowledge_id"
+            ],
+            "properties": {
+                "knowledge_id": {
+                    "type": "string",
+                    "maxLength": 36
                 }
             }
         },
@@ -41837,6 +53477,14 @@ const docTemplate = `{
                         "type": "string"
                     },
                     "x-agent": true
+                }
+            }
+        },
+        "internal_handler.answerQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
                 }
             }
         },
@@ -41908,6 +53556,126 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.approvalFlowNodeRequest": {
+            "type": "object",
+            "properties": {
+                "assignee_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "assignee_kind": {
+                    "description": "role | users",
+                    "type": "string"
+                },
+                "assignee_role": {
+                    "type": "string"
+                },
+                "mode": {
+                    "description": "or | and",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "seq": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler.approvalFlowRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "escalate_role": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "nodes": {
+                    "description": "Nodes is the approval chain (§6.3): 或签 / 会签 / 逐级 都由它表达。\nOmit to clear the definition and fall back to the implicit single node.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.approvalFlowNodeRequest"
+                    }
+                },
+                "reminder_hours": {
+                    "type": "integer"
+                },
+                "rules": {
+                    "type": "object"
+                },
+                "sla_hours": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler.approveAnswerRequest": {
+            "type": "object",
+            "properties": {
+                "receipt_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.approverMutationRequest": {
+            "type": "object",
+            "properties": {
+                "approver_id": {
+                    "type": "string"
+                },
+                "from_id": {
+                    "type": "string"
+                },
+                "node_id": {
+                    "type": "string"
+                },
+                "to_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.askQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "bounty": {
+                    "type": "integer"
+                },
+                "expert_id": {
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.assignLearningTasksRequest": {
+            "type": "object",
+            "properties": {
+                "assignee_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "knowledge_id": {
+                    "type": "string"
+                },
+                "source": {
                     "type": "string"
                 }
             }
@@ -42024,6 +53792,223 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.changeVerifyRequest": {
+            "type": "object",
+            "properties": {
+                "result": {
+                    "description": "Result is the verification conclusion (§7.2 关闭条件②).",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.collectSignalRequest": {
+            "type": "object",
+            "properties": {
+                "confidence": {
+                    "type": "string"
+                },
+                "knowledge_base_id": {
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "type": "string"
+                },
+                "payload": {
+                    "type": "object"
+                },
+                "signal_type": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.convertQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "knowledge_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.createCandidateRequest": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "card": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeCandidateCard"
+                },
+                "confidence": {
+                    "type": "string",
+                    "maxLength": 16
+                },
+                "evidence": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeCandidateEvidence"
+                    }
+                },
+                "level": {
+                    "type": "string",
+                    "maxLength": 8
+                },
+                "source_id": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "source_type": {
+                    "type": "string",
+                    "maxLength": 24
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "internal_handler.createChangeRequestRequest": {
+            "type": "object",
+            "required": [
+                "change_type",
+                "reason",
+                "title"
+            ],
+            "properties": {
+                "announce_at": {
+                    "type": "string"
+                },
+                "change_type": {
+                    "type": "string",
+                    "enum": [
+                        "text_fix",
+                        "content_revision",
+                        "param_change",
+                        "replacement",
+                        "delist",
+                        "restructure"
+                    ]
+                },
+                "close_conditions": {
+                    "description": "CloseConditions 结构化关闭前置条件（v1 只读展示）。",
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ChangeCloseCondition"
+                    }
+                },
+                "effective_at": {
+                    "description": "EffectiveAt / AnnounceAt / ExpiresAt 生效/公告/失效时间（可选）。",
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "note": {
+                    "description": "Note 创建人补充说明，冻结进 baseline。",
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "regulation",
+                        "process",
+                        "product",
+                        "correction",
+                        "customer",
+                        "other"
+                    ]
+                },
+                "risk_level": {
+                    "type": "string",
+                    "enum": [
+                        "low",
+                        "mid",
+                        "high"
+                    ]
+                },
+                "rollback_plan": {
+                    "description": "RollbackPlan 回滚方案。",
+                    "type": "string",
+                    "maxLength": 5000
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "internal_handler.createExamQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "correct_index": {
+                    "type": "integer"
+                },
+                "explanation": {
+                    "type": "string"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "prompt": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.createExportRequestRequest": {
+            "type": "object",
+            "required": [
+                "scope"
+            ],
+            "properties": {
+                "max_classification": {
+                    "description": "MaxClassification 本次导出允许的最高密级；省略按 internal。",
+                    "type": "string"
+                },
+                "scope": {
+                    "description": "Scope: knowledge | evidence_pack | audit.",
+                    "type": "string"
+                },
+                "scope_filter": {
+                    "description": "ScopeFilter 是导出范围过滤（kb_ids / 条数 / 时间窗），结构按 scope\n各异，v1 不做严格 schema 校验。",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "watermark_text": {
+                    "description": "WatermarkText 自定义水印；省略由服务端生成。",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.createGoldenSetRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "kb_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.createInvitationRequest": {
             "type": "object",
             "required": [
@@ -42056,6 +54041,57 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.createRuleRequest": {
+            "type": "object",
+            "required": [
+                "model_id",
+                "scope",
+                "scope_value"
+            ],
+            "properties": {
+                "enabled": {
+                    "description": "Enabled defaults to true when omitted.",
+                    "type": "boolean"
+                },
+                "model_id": {
+                    "description": "ModelID is the models-table ID calls are routed to.",
+                    "type": "string"
+                },
+                "platform": {
+                    "description": "Platform marks the rule as platform-level (tenant 0, inherited by\nevery tenant). Only system administrators may set it.",
+                    "type": "boolean"
+                },
+                "scope": {
+                    "description": "Scope: task | classification.",
+                    "type": "string"
+                },
+                "scope_value": {
+                    "description": "ScopeValue: task key (chat/embedding/rerank/...) or classification\nvalue (public/internal/secret/confidential).",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.createShareLinkRequest": {
+            "type": "object",
+            "required": [
+                "link_type",
+                "permission"
+            ],
+            "properties": {
+                "expires_at": {
+                    "description": "ExpiresAt is the optional link expiry.",
+                    "type": "string"
+                },
+                "link_type": {
+                    "description": "LinkType is the audience: \"org\" or \"people\".",
+                    "type": "string"
+                },
+                "permission": {
+                    "description": "Permission is the capability: \"view\" or \"download\".",
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.createTenantRequest": {
             "type": "object",
             "required": [
@@ -42070,6 +54106,135 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 128,
                     "minLength": 1
+                }
+            }
+        },
+        "internal_handler.createTermRequest": {
+            "type": "object",
+            "required": [
+                "standard_name"
+            ],
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "counter_examples": {
+                    "type": "string"
+                },
+                "definition": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "standard_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.decideExportRequestRequest": {
+            "type": "object",
+            "required": [
+                "decision"
+            ],
+            "properties": {
+                "decision": {
+                    "description": "Decision: approve | reject.",
+                    "type": "string"
+                },
+                "note": {
+                    "description": "Note 审批备注（reject 时必填，服务层校验）。",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.decideReviewRequest": {
+            "type": "object",
+            "required": [
+                "decision"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "decision": {
+                    "type": "string",
+                    "enum": [
+                        "approved",
+                        "rejected"
+                    ]
+                },
+                "reason_code": {
+                    "type": "string",
+                    "maxLength": 32
+                }
+            }
+        },
+        "internal_handler.delegationRequest": {
+            "type": "object",
+            "properties": {
+                "delegate_id": {
+                    "type": "string"
+                },
+                "delegator_id": {
+                    "type": "string"
+                },
+                "expires_in_hours": {
+                    "description": "ExpiresInHours bounds the delegation; 0 means no expiry (must be revoked\nexplicitly). A finite default keeps a forgotten delegation from lasting\nforever.",
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.deleteTermRequest": {
+            "type": "object",
+            "properties": {
+                "superseded_by_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.externalFeedRequest": {
+            "type": "object",
+            "properties": {
+                "auth_header": {
+                    "type": "string"
+                },
+                "check_interval_hours": {
+                    "type": "integer"
+                },
+                "domain_tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "feed_url": {
+                    "type": "string"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "knowledge_base_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -42088,6 +54253,276 @@ const docTemplate = `{
                     },
                     "x-agent": "entry_ids",
                     "x-agent-maximum": "20"
+                }
+            }
+        },
+        "internal_handler.folderGrantRequest": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "effect": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "folder_path": {
+                    "type": "string"
+                },
+                "inherit_children": {
+                    "type": "boolean"
+                },
+                "subject_id": {
+                    "type": "string"
+                },
+                "subject_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.gamificationCompleteStepRequest": {
+            "type": "object",
+            "required": [
+                "step_order"
+            ],
+            "properties": {
+                "step_order": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "internal_handler.gamificationCreatePathRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.LearningPathStep"
+                    }
+                }
+            }
+        },
+        "internal_handler.gamificationUpdatePathRequest": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.LearningPathStep"
+                    }
+                }
+            }
+        },
+        "internal_handler.goldenEvidenceRefRequest": {
+            "type": "object",
+            "properties": {
+                "chunk_id": {
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "type": "string"
+                },
+                "locator": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.goldenQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "expected_answer": {
+                    "type": "string"
+                },
+                "expected_evidence": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.goldenEvidenceRefRequest"
+                    }
+                },
+                "freshness_expectation": {
+                    "type": "string"
+                },
+                "question": {
+                    "type": "string"
+                },
+                "risk_level": {
+                    "type": "string"
+                },
+                "simulated_user_role": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.governanceDecideRequest": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "decision": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.governanceSubmitRequest": {
+            "type": "object",
+            "properties": {
+                "kb_id": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "risk_level": {
+                    "type": "string"
+                },
+                "snapshot": {
+                    "type": "object"
+                },
+                "subject_id": {
+                    "type": "string"
+                },
+                "subject_type": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.graphCommitRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "entities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.graphEntityRequest"
+                    }
+                },
+                "facts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.graphFactRequest"
+                    }
+                },
+                "golden_gate_pass": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.graphEntityBatchRequest": {
+            "type": "object",
+            "required": [
+                "entities"
+            ],
+            "properties": {
+                "entities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.graphEntityRequest"
+                    }
+                }
+            }
+        },
+        "internal_handler.graphEntityRequest": {
+            "type": "object",
+            "required": [
+                "entity_type",
+                "name"
+            ],
+            "properties": {
+                "attributes": {
+                    "type": "object"
+                },
+                "confidence": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "normalized_key": {
+                    "type": "string"
+                },
+                "schema_id": {
+                    "type": "string"
+                },
+                "source_knowledge_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.graphExtractionCachePutRequest": {
+            "type": "object",
+            "required": [
+                "content_hash"
+            ],
+            "properties": {
+                "content_hash": {
+                    "type": "string"
+                },
+                "extraction": {
+                    "type": "object"
+                },
+                "schema_version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler.graphFactRequest": {
+            "type": "object",
+            "required": [
+                "relation_name",
+                "source_entity_id",
+                "target_entity_id"
+            ],
+            "properties": {
+                "confidence": {
+                    "type": "string"
+                },
+                "evidence": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.GraphFactEvidence"
+                    }
+                },
+                "relation_name": {
+                    "type": "string"
+                },
+                "schema_id": {
+                    "type": "string"
+                },
+                "source_entity_id": {
+                    "type": "string"
+                },
+                "target_entity_id": {
+                    "type": "string"
                 }
             }
         },
@@ -42149,6 +54584,35 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.importGoldenQuestionsRequest": {
+            "type": "object",
+            "required": [
+                "questions"
+            ],
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.goldenQuestionRequest"
+                    }
+                }
+            }
+        },
+        "internal_handler.indexSymbolsRequest": {
+            "type": "object",
+            "required": [
+                "text"
+            ],
+            "properties": {
+                "chunk_id": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.invitationLookupRequest": {
             "type": "object",
             "required": [
@@ -42177,6 +54641,57 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.lifecycleResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.Knowledge"
+                },
+                "resolved": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeLifecycleResolved"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.lifecycleTransitionRequest": {
+            "type": "object",
+            "required": [
+                "action"
+            ],
+            "properties": {
+                "action": {
+                    "description": "Action is one of the KnowledgeLifecycleAction constants.",
+                    "type": "string"
+                },
+                "change_note": {
+                    "description": "ChangeNote is stored on the published version snapshot (publish action).",
+                    "type": "string"
+                },
+                "classification": {
+                    "description": "Classification / EffectiveAt / ExpiresAt / ReviewCycleDays apply to the\nupdate_settings action.",
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "receipt_id": {
+                    "description": "ReceiptID links a publish to its approval receipt (filled by the review\nservice; accepted here for direct administrative publishing).",
+                    "type": "string"
+                },
+                "replaced_by_id": {
+                    "description": "ReplacedByID is required for the replace action.",
+                    "type": "string"
+                },
+                "review_cycle_days": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_handler.meEnvVarRequest": {
             "type": "object",
             "properties": {
@@ -42195,6 +54710,214 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.mergeTermsRequest": {
+            "type": "object",
+            "required": [
+                "source_id",
+                "target_id"
+            ],
+            "properties": {
+                "source_id": {
+                    "type": "string"
+                },
+                "target_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.officialAnswerRequest": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "type": "string"
+                },
+                "conditions": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "evidence": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "exceptions": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "knowledge_base_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "question": {
+                    "type": "string"
+                },
+                "risk_level": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.ontologyPropertyRequest": {
+            "type": "object",
+            "required": [
+                "data_type",
+                "name"
+            ],
+            "properties": {
+                "config": {
+                    "type": "object"
+                },
+                "data_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.ontologyPropertyUpdateRequest": {
+            "type": "object",
+            "required": [
+                "data_type"
+            ],
+            "properties": {
+                "config": {
+                    "type": "object"
+                },
+                "data_type": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.ontologyRelationRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "source_type_id",
+                "target_type_id"
+            ],
+            "properties": {
+                "cardinality": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "source_type_id": {
+                    "type": "string"
+                },
+                "target_type_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.ontologyRelationUpdateRequest": {
+            "type": "object",
+            "required": [
+                "source_type_id",
+                "target_type_id"
+            ],
+            "properties": {
+                "cardinality": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "source_type_id": {
+                    "type": "string"
+                },
+                "target_type_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.ontologySchemaRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.ontologySchemaUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.ontologyTypeRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "aliases": {
+                    "type": "object"
+                },
+                "config": {
+                    "type": "object"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.ontologyTypeUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "object"
+                },
+                "config": {
+                    "type": "object"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.platformAPIKeyCreateRequest": {
             "type": "object",
             "properties": {
@@ -42208,6 +54931,104 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.publishCandidateRequest": {
+            "type": "object",
+            "properties": {
+                "kb_id": {
+                    "type": "string",
+                    "maxLength": 36
+                }
+            }
+        },
+        "internal_handler.pushEventRequest": {
+            "type": "object",
+            "properties": {
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "event_type": {
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "type": "string"
+                },
+                "rule_id": {
+                    "type": "string"
+                },
+                "scene": {
+                    "type": "string"
+                },
+                "system": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.pushPreferenceRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.pushRuleRequest": {
+            "type": "object",
+            "properties": {
+                "attributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "entity_value": {
+                    "type": "string"
+                },
+                "knowledge_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "scene": {
+                    "type": "string"
+                },
+                "system": {
+                    "type": "string"
+                },
+                "tag_names": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_handler.redeemRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
                     "type": "string"
                 }
             }
@@ -42236,6 +55057,44 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.rejectCandidateRequest": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 2000
+                }
+            }
+        },
+        "internal_handler.relationLinkRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                },
+                "relation_type": {
+                    "description": "RelationType is one of based_on/replaces/supplements/conflicts/\nprerequisite/responsible/related.",
+                    "type": "string"
+                },
+                "to_knowledge_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.reportRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                },
+                "target_id": {
+                    "type": "string"
+                },
+                "target_type": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.resolveAncestorsRequest": {
             "type": "object",
             "properties": {
@@ -42244,6 +55103,95 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "internal_handler.resolveMigrationRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.resolvePushRequest": {
+            "type": "object",
+            "properties": {
+                "attributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "scene": {
+                    "type": "string"
+                },
+                "system": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.resolveRedemptionRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.resolveReportRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.retireAnswerRequest": {
+            "type": "object",
+            "properties": {
+                "superseded_by_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.revokeCertificateRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.rewardItemRequest": {
+            "type": "object",
+            "properties": {
+                "cost_points": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "stock": {
+                    "type": "integer"
                 }
             }
         },
@@ -42287,6 +55235,200 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_handler.savePromptVersionRequest": {
+            "type": "object",
+            "required": [
+                "content"
+            ],
+            "properties": {
+                "change_note": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.scheduleRequest": {
+            "type": "object",
+            "properties": {
+                "effective_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.schemaProposalCreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "knowledge_ids": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "proposal": {
+                    "$ref": "#/definitions/internal_handler.schemaProposalInput"
+                },
+                "rationale": {
+                    "type": "string",
+                    "maxLength": 4000
+                }
+            }
+        },
+        "internal_handler.schemaProposalDecideRequest": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 4000
+                }
+            }
+        },
+        "internal_handler.schemaProposalInput": {
+            "type": "object",
+            "properties": {
+                "relations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.schemaProposalRelationInput"
+                    }
+                },
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.schemaProposalTypeInput"
+                    }
+                }
+            }
+        },
+        "internal_handler.schemaProposalPropertyInput": {
+            "type": "object",
+            "properties": {
+                "data_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.schemaProposalRelationInput": {
+            "type": "object",
+            "properties": {
+                "cardinality": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "source_type": {
+                    "type": "string"
+                },
+                "target_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.schemaProposalTypeInput": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.schemaProposalPropertyInput"
+                    }
+                }
+            }
+        },
+        "internal_handler.selectStarsRequest": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string"
+                },
+                "period_type": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_handler.shareLinkListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ShareLink"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.shareLinkResolutionResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ShareLinkResolution"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler.shareLinkResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ShareLink"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -42443,6 +55585,77 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.submitExamRequest": {
+            "type": "object",
+            "properties": {
+                "choices": {
+                    "description": "Choices maps question_id → selected option index.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "internal_handler.templateFieldRequest": {
+            "type": "object",
+            "properties": {
+                "default_value": {
+                    "type": "string"
+                },
+                "editable_role": {
+                    "type": "string"
+                },
+                "field_key": {
+                    "type": "string"
+                },
+                "field_type": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "recall_field": {
+                    "type": "boolean"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "rules": {
+                    "type": "object"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler.templateSaveRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.templateFieldRequest"
+                    }
+                },
+                "kb_id": {
+                    "description": "KBID sizes the field-migration tasks (affected entry count).",
+                    "type": "string"
+                },
+                "knowledge_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "template_key": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.tenantAPIKeyCreateResponse": {
             "type": "object",
             "properties": {
@@ -42528,6 +55741,83 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.updateGapRequest": {
+            "type": "object",
+            "properties": {
+                "assignee_id": {
+                    "type": "string"
+                },
+                "resolved_knowledge_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.updateGoldenQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "expected_answer": {
+                    "type": "string"
+                },
+                "expected_evidence": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler.goldenEvidenceRefRequest"
+                    }
+                },
+                "freshness_expectation": {
+                    "type": "string"
+                },
+                "risk_level": {
+                    "type": "string"
+                },
+                "simulated_user_role": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.updateGoldenSetRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "kb_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.updateImpactTaskRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "open",
+                        "done",
+                        "waived"
+                    ]
+                }
+            }
+        },
         "internal_handler.updateLastFAQImportResultDisplayStatusRequest": {
             "type": "object",
             "required": [
@@ -42567,6 +55857,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.updateRuleRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "model_id": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.updateTenantRequest": {
             "type": "object",
             "properties": {
@@ -42582,6 +55883,41 @@ const docTemplate = `{
                     "maxLength": 128,
                     "minLength": 1,
                     "x-agent": true
+                }
+            }
+        },
+        "internal_handler.updateTermRequest": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "counter_examples": {
+                    "type": "string"
+                },
+                "definition": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "standard_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.validateFieldsRequest": {
+            "type": "object",
+            "properties": {
+                "values": {
+                    "type": "object",
+                    "additionalProperties": true
                 }
             }
         },
@@ -42858,9 +56194,6 @@ const docTemplate = `{
         },
         "internal_handler_session.SearchKnowledgeRequest": {
             "type": "object",
-            "required": [
-                "query"
-            ],
             "properties": {
                 "disable_keywords_match": {
                     "description": "Vector recall only",
@@ -42875,18 +56208,18 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "knowledge_base_id": {
-                    "description": "Single knowledge base ID (for backward compatibility)",
+                    "description": "KnowledgeBaseID is a single KB (for backward compatibility).",
                     "type": "string"
                 },
                 "knowledge_base_ids": {
-                    "description": "IDs of knowledge bases to search (multi-KB support)",
+                    "description": "KnowledgeBaseIDs lists the KBs to search (multi-KB support).",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "knowledge_ids": {
-                    "description": "IDs of specific knowledge (files) to search",
+                    "description": "KnowledgeIDs narrows the search to specific knowledge (file) IDs.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -42897,14 +56230,22 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "mentioned_items": {
-                    "description": "Optional scoped tag mentions",
+                    "description": "MentionedItems carries optional scoped tag mentions.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/internal_handler_session.MentionedItemRequest"
                     }
                 },
+                "parent_slot_aggregation": {
+                    "description": "ParentSlotAggregation gives one top-k slot to all hits sharing a parent\nchunk, returning the parent body with the matched child ids.",
+                    "type": "boolean"
+                },
                 "query": {
-                    "description": "Query text to search for",
+                    "description": "Query is the text query. It is required unless QueryImage is set: an\nimage-only request searches by visual similarity.",
+                    "type": "string"
+                },
+                "query_image": {
+                    "description": "QueryImage is a base64 (optionally a data URI) image used as the vector\nquery instead of Query text. When both are set the image drives vector\nrecall and the text drives keyword recall and rerank.",
                     "type": "string"
                 },
                 "rerank": {
@@ -42916,7 +56257,7 @@ const docTemplate = `{
                     ]
                 },
                 "tag_ids": {
-                    "description": "Tag IDs for filtering within a single KB",
+                    "description": "TagIDs filters within a single KB.",
                     "type": "array",
                     "items": {
                         "type": "string"

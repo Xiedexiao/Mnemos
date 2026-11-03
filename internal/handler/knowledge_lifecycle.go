@@ -47,9 +47,9 @@ type lifecycleTransitionRequest struct {
 // lifecycleResponse wraps a knowledge row plus its resolved lifecycle
 // behaviour for UI badges.
 type lifecycleResponse struct {
-	Success   bool                          `json:"success"`
-	Data      *types.Knowledge              `json:"data"`
-	Resolved  types.KnowledgeLifecycleResolved `json:"resolved"`
+	Success  bool                             `json:"success"`
+	Data     *types.Knowledge                 `json:"data"`
+	Resolved types.KnowledgeLifecycleResolved `json:"resolved"`
 }
 
 // TransitionKnowledgeLifecycle godoc

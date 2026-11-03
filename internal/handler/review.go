@@ -45,13 +45,12 @@ func reviewKnowledgeIDParam(c *gin.Context) string {
 // @Produce      json
 // @Param        id  path  string  true  "知识ID"  extensions(x-agent=knowledge_id)
 // @Success      200  {object}  map[string]interface{}  "{success, data: 审批任务}"
-// @Failure      400  {object}  errors.AppError  "知识当前状态不允许提交审核"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "知识不存在"
-// @Failure      409  {object}  errors.AppError  "该知识已有待审任务"
+// @Failure      400  {object}  apperrors.AppError  "知识当前状态不允许提交审核"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "知识不存在"
+// @Failure      409  {object}  apperrors.AppError  "该知识已有待审任务"
 // @Security     Bearer
 // @Security     ApiKeyAuth
-// @x-agent      {"id":"knowledge.review_submit","risk":"write","role":"contributor"}
 // @Router       /knowledge/{id}/review/submit [post]
 func (h *ReviewHandler) SubmitReview(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -80,9 +79,8 @@ func (h *ReviewHandler) SubmitReview(c *gin.Context) {
 // @Tags         知识审核
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}  "{success, data: [审批任务]}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"review.list_tasks","risk":"read","role":"admin"}
 // @Router       /review/tasks [get]
 func (h *ReviewHandler) ListTasks(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -120,12 +118,11 @@ type decideReviewRequest struct {
 // @Param        task_id  path  string  true  "任务ID"
 // @Param        request  body  handler.decideReviewRequest  true  "{decision: approved|rejected, reason_code?, comment?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 审批任务}"
-// @Failure      400  {object}  errors.AppError  "参数/原因码非法"
-// @Failure      403  {object}  errors.AppError  "四眼校验失败：不能审批自己提交的任务"
-// @Failure      404  {object}  errors.AppError  "任务不存在"
-// @Failure      409  {object}  errors.AppError  "任务已不在待审状态"
+// @Failure      400  {object}  apperrors.AppError  "参数/原因码非法"
+// @Failure      403  {object}  apperrors.AppError  "四眼校验失败：不能审批自己提交的任务"
+// @Failure      404  {object}  apperrors.AppError  "任务不存在"
+// @Failure      409  {object}  apperrors.AppError  "任务已不在待审状态"
 // @Security     Bearer
-// @x-agent      {"id":"review.decide","risk":"write","role":"admin"}
 // @Router       /review/tasks/{task_id}/decide [post]
 func (h *ReviewHandler) Decide(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -166,10 +163,9 @@ func (h *ReviewHandler) Decide(c *gin.Context) {
 // @Produce      json
 // @Param        receipt_id  path  string  true  "回执ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 回执}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "回执不存在"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "回执不存在"
 // @Security     Bearer
-// @x-agent      {"id":"review.get_receipt","risk":"read","role":"viewer"}
 // @Router       /review/receipts/{receipt_id} [get]
 func (h *ReviewHandler) GetReceipt(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -199,9 +195,8 @@ func (h *ReviewHandler) GetReceipt(c *gin.Context) {
 // @Produce      json
 // @Param        limit  query  int  false  "条数，1-200"  default(200)  extensions(x-agent)
 // @Success      200  {object}  map[string]interface{}  "{success, data: [回执]}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"review.receipt_chain","risk":"read","role":"admin"}
 // @Router       /review/receipts [get]
 func (h *ReviewHandler) GetReceiptChain(c *gin.Context) {
 	ctx := c.Request.Context()

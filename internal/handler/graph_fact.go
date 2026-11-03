@@ -114,10 +114,9 @@ type graphExtractionCachePutRequest struct {
 // @Produce      json
 // @Param        request  body  graphEntityBatchRequest  true  "{entities: [...]}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: {added, updated, entities}}"
-// @Failure      400  {object}  errors.AppError  "批次为空/字段非法/置信度非法"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "批次为空/字段非法/置信度非法"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.upsert_entities","risk":"write","role":"contributor"}
 // @Router       /graph/facts/entities [post]
 func (h *GraphFactHandler) UpsertEntities(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -152,10 +151,9 @@ func (h *GraphFactHandler) UpsertEntities(c *gin.Context) {
 // @Produce      json
 // @Param        request  body  graphCommitRequest  true  "{description, entities: [...], facts: [...], golden_gate_pass?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: commit}"
-// @Failure      400  {object}  errors.AppError  "批次为空/字段非法/事实端点悬空"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "批次为空/字段非法/事实端点悬空"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.create_commit","risk":"write","role":"contributor"}
 // @Router       /graph/facts/commit [post]
 func (h *GraphFactHandler) CreateCommit(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -202,10 +200,9 @@ func (h *GraphFactHandler) CreateCommit(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "commit ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: {commit_id, entities_superseded, facts_superseded}}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "commit 不存在"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "commit 不存在"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.rollback_commit","risk":"write","role":"admin"}
 // @Router       /graph/commits/{id}/rollback [post]
 func (h *GraphFactHandler) RollbackCommit(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -237,10 +234,9 @@ func (h *GraphFactHandler) RollbackCommit(c *gin.Context) {
 // @Param        schema_id   query  string  false  "限定本体 Schema（空=全部）"
 // @Param        confidence  query  string  false  "逗号分隔置信度白名单"  default(EXTRACTED,INFERRED)
 // @Success      200  {object}  map[string]interface{}  "{success, data: [实体]}"
-// @Failure      400  {object}  errors.AppError  "置信度非法"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "置信度非法"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.search_entities","risk":"read","role":"viewer"}
 // @Router       /graph/entities [get]
 func (h *GraphFactHandler) SearchEntities(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -277,11 +273,10 @@ func (h *GraphFactHandler) SearchEntities(c *gin.Context) {
 // @Param        to    query  string  true  "终点实体ID"
 // @Param        hops  query  int     false  "最大跳数 1-3"  default(3)
 // @Success      200  {object}  map[string]interface{}  "{success, data: [{hops, steps:[{fact, source, target}]}]}"
-// @Failure      400  {object}  errors.AppError  "缺参/跳数非法"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "端点实体不存在"
+// @Failure      400  {object}  apperrors.AppError  "缺参/跳数非法"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "端点实体不存在"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.path_query","risk":"read","role":"viewer"}
 // @Router       /graph/path [get]
 func (h *GraphFactHandler) PathQuery(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -315,11 +310,10 @@ func (h *GraphFactHandler) PathQuery(c *gin.Context) {
 // @Produce      json
 // @Param        entity_id  query  string  true  "根实体ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: {root, facts, affected_entities, depth}}"
-// @Failure      400  {object}  errors.AppError  "缺 entity_id"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "实体不存在"
+// @Failure      400  {object}  apperrors.AppError  "缺 entity_id"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "实体不存在"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.impact_query","risk":"read","role":"viewer"}
 // @Router       /graph/impact [get]
 func (h *GraphFactHandler) ImpactQuery(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -346,11 +340,10 @@ func (h *GraphFactHandler) ImpactQuery(c *gin.Context) {
 // @Param        content_hash    query  string  false "命中判断用内容指纹"
 // @Param        schema_version  query  int     false "命中判断用本体版本"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 缓存行}"
-// @Failure      400  {object}  errors.AppError  "缺参"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "缓存未命中"
+// @Failure      400  {object}  apperrors.AppError  "缺参"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "缓存未命中"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.get_cache","risk":"read","role":"contributor"}
 // @Router       /graph/extraction-cache/{chunk_id} [get]
 func (h *GraphFactHandler) GetExtractionCache(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -398,10 +391,9 @@ func (h *GraphFactHandler) GetExtractionCache(c *gin.Context) {
 // @Param        chunk_id  path  string                            true  "chunk ID"
 // @Param        request   body  graphExtractionCachePutRequest    true  "{content_hash, schema_version, extraction}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 缓存行}"
-// @Failure      400  {object}  errors.AppError  "缺 content_hash"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "缺 content_hash"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"graph_fact.put_cache","risk":"write","role":"contributor"}
 // @Router       /graph/extraction-cache/{chunk_id} [put]
 func (h *GraphFactHandler) LetExtractionCache(c *gin.Context) {
 	ctx := c.Request.Context()

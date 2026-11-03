@@ -47,10 +47,9 @@ func evidenceSessionIDParam(c *gin.Context) string {
 // @Produce      json
 // @Param        request_id  path  string  true  "请求追踪ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 证据包}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "证据包不存在"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "证据包不存在"
 // @Security     Bearer
-// @x-agent      {"id":"evidence.get_by_request","risk":"read","role":"viewer"}
 // @Router       /evidence-packs/{request_id} [get]
 func (h *EvidencePackHandler) GetByRequestID(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -81,9 +80,8 @@ func (h *EvidencePackHandler) GetByRequestID(c *gin.Context) {
 // @Param        session_id  path  string  true  "会话ID"
 // @Param        limit  query  int  false  "条数，1-200"  default(50)  extensions(x-agent)
 // @Success      200  {object}  map[string]interface{}  "{success, data: [证据包]}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"evidence.list_by_session","risk":"read","role":"viewer"}
 // @Router       /sessions/{session_id}/evidence-packs [get]
 func (h *EvidencePackHandler) ListBySession(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -78,10 +78,9 @@ type listChangeRequestsRequest struct {
 // @Produce      json
 // @Param        request  body  handler.createChangeRequestRequest  true  "{title, reason, change_type, risk_level?, note?, rollback_plan?, effective_at?, close_conditions?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单}"
-// @Failure      400  {object}  errors.AppError  "参数非法"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "参数非法"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"cr.create","risk":"write","role":"admin"}
 // @Router       /change-requests [post]
 func (h *ChangeRequestHandler) Create(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -123,9 +122,8 @@ func (h *ChangeRequestHandler) Create(c *gin.Context) {
 // @Param        limit   query  int     false  "条数，1-200"  default(50)
 // @Param        offset  query  int     false  "偏移量"       default(0)
 // @Success      200  {object}  map[string]interface{}  "{success, data: [变更单], total}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"cr.list","risk":"read","role":"viewer"}
 // @Router       /change-requests [get]
 func (h *ChangeRequestHandler) List(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -160,10 +158,9 @@ func (h *ChangeRequestHandler) List(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "变更单ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "变更单不存在"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "变更单不存在"
 // @Security     Bearer
-// @x-agent      {"id":"cr.get","risk":"read","role":"viewer"}
 // @Router       /change-requests/{id} [get]
 func (h *ChangeRequestHandler) Get(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -192,10 +189,9 @@ func (h *ChangeRequestHandler) Get(c *gin.Context) {
 // @Param        id      path  string  true  "变更单ID"
 // @Param        request body  handler.addItemRequest  true  "{knowledge_id}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
-// @Failure      404  {object}  errors.AppError  "变更单/知识不存在"
-// @Failure      409  {object}  errors.AppError  "状态不允许或知识已在单内"
+// @Failure      404  {object}  apperrors.AppError  "变更单/知识不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态不允许或知识已在单内"
 // @Security     Bearer
-// @x-agent      {"id":"cr.add_item","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/items [post]
 func (h *ChangeRequestHandler) AddItem(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -228,10 +224,9 @@ func (h *ChangeRequestHandler) AddItem(c *gin.Context) {
 // @Param        id            path  string  true  "变更单ID"
 // @Param        knowledge_id  path  string  true  "知识ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
-// @Failure      404  {object}  errors.AppError  "变更单/条目不存在"
-// @Failure      409  {object}  errors.AppError  "状态不允许修改条目"
+// @Failure      404  {object}  apperrors.AppError  "变更单/条目不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态不允许修改条目"
 // @Security     Bearer
-// @x-agent      {"id":"cr.remove_item","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/items/{knowledge_id} [delete]
 func (h *ChangeRequestHandler) RemoveItem(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -259,10 +254,9 @@ func (h *ChangeRequestHandler) RemoveItem(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "变更单ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
-// @Failure      400  {object}  errors.AppError  "状态机不允许/无条目/条目知识缺失"
-// @Failure      404  {object}  errors.AppError  "变更单不存在"
+// @Failure      400  {object}  apperrors.AppError  "状态机不允许/无条目/条目知识缺失"
+// @Failure      404  {object}  apperrors.AppError  "变更单不存在"
 // @Security     Bearer
-// @x-agent      {"id":"cr.analyze","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/analyze [post]
 func (h *ChangeRequestHandler) Analyze(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -284,10 +278,9 @@ func (h *ChangeRequestHandler) Analyze(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "变更单ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
-// @Failure      404  {object}  errors.AppError  "变更单不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许"
+// @Failure      404  {object}  apperrors.AppError  "变更单不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许"
 // @Security     Bearer
-// @x-agent      {"id":"cr.submit","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/submit [post]
 func (h *ChangeRequestHandler) SubmitForApproval(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -311,10 +304,9 @@ func (h *ChangeRequestHandler) SubmitForApproval(c *gin.Context) {
 // @Param        id      path  string  true  "变更单ID"
 // @Param        request body  handler.scheduleRequest  false  "{effective_at?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
-// @Failure      404  {object}  errors.AppError  "变更单不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许"
+// @Failure      404  {object}  apperrors.AppError  "变更单不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许"
 // @Security     Bearer
-// @x-agent      {"id":"cr.schedule","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/schedule [post]
 func (h *ChangeRequestHandler) Schedule(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -344,10 +336,9 @@ func (h *ChangeRequestHandler) Schedule(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "变更单ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合，failed 项可见）}"
-// @Failure      400  {object}  errors.AppError  "状态机不允许/无条目"
-// @Failure      404  {object}  errors.AppError  "变更单不存在"
+// @Failure      400  {object}  apperrors.AppError  "状态机不允许/无条目"
+// @Failure      404  {object}  apperrors.AppError  "变更单不存在"
 // @Security     Bearer
-// @x-agent      {"id":"cr.publish","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/publish [post]
 func (h *ChangeRequestHandler) Publish(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -369,11 +360,10 @@ func (h *ChangeRequestHandler) Publish(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "变更单ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
-// @Failure      400  {object}  errors.AppError  "关闭门禁未满足（含未闭环清单）"
-// @Failure      404  {object}  errors.AppError  "变更单不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许"
+// @Failure      400  {object}  apperrors.AppError  "关闭门禁未满足（含未闭环清单）"
+// @Failure      404  {object}  apperrors.AppError  "变更单不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许"
 // @Security     Bearer
-// @x-agent      {"id":"cr.close","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/close [post]
 func (h *ChangeRequestHandler) Close(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -398,7 +388,6 @@ func (h *ChangeRequestHandler) Close(c *gin.Context) {
 // @Param        request  body  changeVerifyRequest         true  "验证结论"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
 // @Security     Bearer
-// @x-agent      {"id":"cr.verify","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/verify [post]
 func (h *ChangeRequestHandler) MarkVerified(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -427,7 +416,6 @@ func (h *ChangeRequestHandler) MarkVerified(c *gin.Context) {
 // @Param        id  path  string  true  "变更单ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
 // @Security     Bearer
-// @x-agent      {"id":"cr.notify","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/notify [post]
 func (h *ChangeRequestHandler) MarkNotified(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -450,10 +438,9 @@ func (h *ChangeRequestHandler) MarkNotified(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "变更单ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 变更单（聚合）}"
-// @Failure      404  {object}  errors.AppError  "变更单不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许"
+// @Failure      404  {object}  apperrors.AppError  "变更单不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许"
 // @Security     Bearer
-// @x-agent      {"id":"cr.rollback","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/rollback [post]
 func (h *ChangeRequestHandler) Rollback(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -478,10 +465,9 @@ func (h *ChangeRequestHandler) Rollback(c *gin.Context) {
 // @Param        task_id  path  string  true  "影响任务ID"
 // @Param        request  body  handler.updateImpactTaskRequest  true  "{status: open|done|waived, note?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 影响任务}"
-// @Failure      400  {object}  errors.AppError  "status 非法"
-// @Failure      404  {object}  errors.AppError  "变更单/任务不存在（或任务不属于该单）"
+// @Failure      400  {object}  apperrors.AppError  "status 非法"
+// @Failure      404  {object}  apperrors.AppError  "变更单/任务不存在（或任务不属于该单）"
 // @Security     Bearer
-// @x-agent      {"id":"cr.update_task","risk":"write","role":"admin"}
 // @Router       /change-requests/{id}/impact-tasks/{task_id} [post]
 func (h *ChangeRequestHandler) UpdateImpactTask(c *gin.Context) {
 	ctx := c.Request.Context()

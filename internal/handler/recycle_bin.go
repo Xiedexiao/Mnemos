@@ -1,6 +1,10 @@
 package handler
 
 import (
+	// Referenced only by the @Failure annotations (errors.AppError); swag
+	// resolves annotation types through the file's imports.
+	_ "github.com/Tencent/WeKnora/internal/errors"
+
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	"github.com/gin-gonic/gin"

@@ -48,10 +48,9 @@ type createCandidateRequest struct {
 // @Produce      json
 // @Param        request  body  handler.createCandidateRequest  true  "{title, source_type?, source_id?, level?(L0-L3,默认L1), confidence?(EXTRACTED|INFERRED|AMBIGUOUS,默认AMBIGUOUS), card?, evidence?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 候选卡片}"
-// @Failure      400  {object}  errors.AppError  "参数/来源/层级/置信非法"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "参数/来源/层级/置信非法"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"candidate.create","risk":"write","role":"contributor"}
 // @Router       /knowledge-candidates [post]
 func (h *KnowledgeCandidateHandler) Create(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -94,9 +93,8 @@ func (h *KnowledgeCandidateHandler) Create(c *gin.Context) {
 // @Param        limit   query  int     false  "条数，默认50，上限200"
 // @Param        offset  query  int     false  "偏移量"
 // @Success      200  {object}  map[string]interface{}  "{success, data: {items, total}}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"candidate.list","risk":"read","role":"viewer"}
 // @Router       /knowledge-candidates [get]
 func (h *KnowledgeCandidateHandler) List(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -139,10 +137,9 @@ func (h *KnowledgeCandidateHandler) List(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "候选ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 候选卡片}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "候选不存在"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "候选不存在"
 // @Security     Bearer
-// @x-agent      {"id":"candidate.get","risk":"read","role":"viewer"}
 // @Router       /knowledge-candidates/{id} [get]
 func (h *KnowledgeCandidateHandler) Get(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -172,12 +169,11 @@ func (h *KnowledgeCandidateHandler) Get(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "候选ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 候选卡片}"
-// @Failure      400  {object}  errors.AppError  "缺少候选ID"
-// @Failure      403  {object}  errors.AppError  "非提交人本人且非 Admin（或审核人不足 Admin）"
-// @Failure      404  {object}  errors.AppError  "候选不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许该动作"
+// @Failure      400  {object}  apperrors.AppError  "缺少候选ID"
+// @Failure      403  {object}  apperrors.AppError  "非提交人本人且非 Admin（或审核人不足 Admin）"
+// @Failure      404  {object}  apperrors.AppError  "候选不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许该动作"
 // @Security     Bearer
-// @x-agent      {"id":"candidate.confirm","risk":"write","role":"admin"}
 // @Router       /knowledge-candidates/{id}/confirm [post]
 func (h *KnowledgeCandidateHandler) Confirm(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -215,12 +211,11 @@ type publishCandidateRequest struct {
 // @Param        id       path  string                        true  "候选ID"
 // @Param        request  body  handler.publishCandidateRequest  false "{kb_id?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 候选卡片（含 knowledge_id）}"
-// @Failure      400  {object}  errors.AppError  "L3 门禁不满足/缺少候选ID"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "候选或目标 KB 不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许该动作"
+// @Failure      400  {object}  apperrors.AppError  "L3 门禁不满足/缺少候选ID"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "候选或目标 KB 不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许该动作"
 // @Security     Bearer
-// @x-agent      {"id":"candidate.publish","risk":"write","role":"admin"}
 // @Router       /knowledge-candidates/{id}/publish [post]
 func (h *KnowledgeCandidateHandler) Publish(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -264,11 +259,10 @@ type rejectCandidateRequest struct {
 // @Param        id       path  string                        true  "候选ID"
 // @Param        request  body  handler.rejectCandidateRequest  false "{comment?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 候选卡片}"
-// @Failure      400  {object}  errors.AppError  "缺少候选ID"
-// @Failure      404  {object}  errors.AppError  "候选不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许该动作"
+// @Failure      400  {object}  apperrors.AppError  "缺少候选ID"
+// @Failure      404  {object}  apperrors.AppError  "候选不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许该动作"
 // @Security     Bearer
-// @x-agent      {"id":"candidate.reject","risk":"write","role":"admin"}
 // @Router       /knowledge-candidates/{id}/reject [post]
 func (h *KnowledgeCandidateHandler) Reject(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -304,12 +298,11 @@ func (h *KnowledgeCandidateHandler) Reject(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "候选ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 候选卡片}"
-// @Failure      400  {object}  errors.AppError  "缺少候选ID"
-// @Failure      403  {object}  errors.AppError  "仅提交人本人可撤回"
-// @Failure      404  {object}  errors.AppError  "候选不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许该动作"
+// @Failure      400  {object}  apperrors.AppError  "缺少候选ID"
+// @Failure      403  {object}  apperrors.AppError  "仅提交人本人可撤回"
+// @Failure      404  {object}  apperrors.AppError  "候选不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许该动作"
 // @Security     Bearer
-// @x-agent      {"id":"candidate.withdraw","risk":"write","role":"contributor"}
 // @Router       /knowledge-candidates/{id}/withdraw [post]
 func (h *KnowledgeCandidateHandler) Withdraw(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -52,7 +52,7 @@ type decideExportRequestRequest struct {
 // @Produce      json
 // @Param        request body createExportRequestRequest true "导出申请"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  errors.AppError
+// @Failure      400  {object}  apperrors.AppError
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /export-requests [post]
@@ -109,8 +109,8 @@ func (h *ExportControlHandler) ListRequests(c *gin.Context) {
 // @Param        id      path  string                       true  "申请ID"
 // @Param        request body  decideExportRequestRequest   true  "裁决"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      403  {object}  errors.AppError  "非 Admin 或四眼违规"
-// @Failure      409  {object}  errors.AppError  "申请不在 pending 状态"
+// @Failure      403  {object}  apperrors.AppError  "非 Admin 或四眼违规"
+// @Failure      409  {object}  apperrors.AppError  "申请不在 pending 状态"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /export-requests/{id}/decide [post]
@@ -142,7 +142,7 @@ func (h *ExportControlHandler) Decide(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "申请ID"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      409  {object}  errors.AppError  "申请未批准"
+// @Failure      409  {object}  apperrors.AppError  "申请未批准"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /export-requests/{id}/fulfill [post]
@@ -164,7 +164,7 @@ func (h *ExportControlHandler) Fulfill(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "申请ID"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      404  {object}  errors.AppError
+// @Failure      404  {object}  apperrors.AppError
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /export-requests/{id} [get]

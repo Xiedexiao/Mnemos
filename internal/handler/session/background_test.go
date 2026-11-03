@@ -63,7 +63,7 @@ func TestPersistedMessageAcknowledgesTheNoticesItCarries(t *testing.T) {
 	h := &Handler{messageService: &imageCompletionMessages{}, background: work}
 	ctx := types.WithExecutionTenant(context.Background(), 1)
 
-	require.NoError(t, h.completeAssistantMessage(ctx, messageCarryingNotices(), "", ""))
+	require.NoError(t, h.completeAssistantMessage(ctx, messageCarryingNotices(), "", "", "", ""))
 
 	require.ElementsMatch(t, []string{"sj_3"}, pendingIDs(t, work, ref))
 }
@@ -73,7 +73,7 @@ func TestFailedPersistLeavesNoticesForTheNextRun(t *testing.T) {
 	h := &Handler{messageService: &imageCompletionMessages{err: errors.New("db down")}, background: work}
 	ctx := types.WithExecutionTenant(context.Background(), 1)
 
-	require.Error(t, h.completeAssistantMessage(ctx, messageCarryingNotices(), "", ""))
+	require.Error(t, h.completeAssistantMessage(ctx, messageCarryingNotices(), "", "", "", ""))
 
 	require.ElementsMatch(t, []string{"sj_1", "sj_2", "sj_3"}, pendingIDs(t, work, ref))
 }

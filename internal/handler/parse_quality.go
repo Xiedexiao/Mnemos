@@ -64,11 +64,10 @@ func newParseQualityResponse(score *types.ParseQualityScore) parseQualityRespons
 // @Produce      json
 // @Param        id  path  string  true  "知识ID"  extensions(x-agent=knowledge_id)
 // @Success      200  {object}  map[string]interface{}  "{success, data: {六维度, total_score, grade, below_threshold, dimensions, threshold}}"
-// @Failure      400  {object}  errors.AppError  "缺少知识ID"
-// @Failure      404  {object}  errors.AppError  "知识或评分不存在"
+// @Failure      400  {object}  apperrors.AppError  "缺少知识ID"
+// @Failure      404  {object}  apperrors.AppError  "知识或评分不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
-// @x-agent      {"id":"knowledge.parse_quality_get","risk":"read","role":"viewer"}
 // @Router       /knowledge/{id}/parse-quality [get]
 func (h *ParseQualityHandler) GetParseQuality(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -96,11 +95,10 @@ func (h *ParseQualityHandler) GetParseQuality(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "知识ID"  extensions(x-agent=knowledge_id)
 // @Success      200  {object}  map[string]interface{}  "{success, data: 评分行 + dimensions}"
-// @Failure      400  {object}  errors.AppError  "缺少知识ID"
-// @Failure      404  {object}  errors.AppError  "知识不存在"
+// @Failure      400  {object}  apperrors.AppError  "缺少知识ID"
+// @Failure      404  {object}  apperrors.AppError  "知识不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
-// @x-agent      {"id":"knowledge.parse_quality_recompute","risk":"write","role":"contributor"}
 // @Router       /knowledge/{id}/parse-quality/recompute [post]
 func (h *ParseQualityHandler) RecomputeParseQuality(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -130,9 +128,8 @@ func (h *ParseQualityHandler) RecomputeParseQuality(c *gin.Context) {
 // @Produce      json
 // @Param        limit  query  int  false  "返回条数，1-200，默认 50"
 // @Success      200  {object}  map[string]interface{}  "{success, data: {items, total, threshold}}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"parse_quality.queue","risk":"read","role":"admin"}
 // @Router       /parse-quality/queue [get]
 func (h *ParseQualityHandler) ListParseQualityQueue(c *gin.Context) {
 	ctx := c.Request.Context()

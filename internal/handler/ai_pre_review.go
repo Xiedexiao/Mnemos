@@ -39,11 +39,10 @@ func NewAIPreReviewHandler(preReviewService interfaces.AIPreReviewService) *AIPr
 // @Produce      json
 // @Param        task_id  path  string  true  "审批任务ID"
 // @Success      200  {object}  map[string]interface{}  "{success, task_id, data: [PreReviewFinding], summary: PreReviewSummary}"
-// @Failure      400  {object}  errors.AppError  "knowledge_id 与任务不一致"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "任务或知识不存在"
+// @Failure      400  {object}  apperrors.AppError  "knowledge_id 与任务不一致"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "任务或知识不存在"
 // @Security     Bearer
-// @x-agent      {"id":"review.pre_review_run","risk":"write","role":"admin"}
 // @Router       /review/tasks/{task_id}/pre-review [post]
 func (h *AIPreReviewHandler) RunPreReview(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -85,10 +84,9 @@ func (h *AIPreReviewHandler) RunPreReview(c *gin.Context) {
 // @Param        task_id  path   string  true   "审批任务ID"
 // @Param        limit    query  int     false  "条数，1-50，默认 20"
 // @Success      200  {object}  map[string]interface{}  "{success, task_id, data: [AIPreReviewRun]}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "任务不存在"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "任务不存在"
 // @Security     Bearer
-// @x-agent      {"id":"review.pre_review_list","risk":"read","role":"admin"}
 // @Router       /review/tasks/{task_id}/pre-review [get]
 func (h *AIPreReviewHandler) ListRuns(c *gin.Context) {
 	ctx := c.Request.Context()

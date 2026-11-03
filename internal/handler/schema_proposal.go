@@ -143,10 +143,9 @@ func schemaProposalListFilter(c *gin.Context) types.SchemaProposalListFilter {
 // @Produce      json
 // @Param        request body handler.schemaProposalCreateRequest true "{name, domain?, knowledge_ids?, proposal?, rationale?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 提案}"
-// @Failure      400  {object}  errors.AppError  "参数非法/文档缺失/模型输出不是提案 JSON"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "参数非法/文档缺失/模型输出不是提案 JSON"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"ontology.proposal_create","risk":"write","role":"contributor"}
 // @Router       /ontology/proposals [post]
 func (h *SchemaProposalHandler) CreateSchemaProposal(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -198,10 +197,9 @@ func (h *SchemaProposalHandler) CreateSchemaProposal(c *gin.Context) {
 // @Param        limit   query  int     false  "条数，默认50，上限200"
 // @Param        offset  query  int     false  "偏移量"
 // @Success      200  {object}  map[string]interface{}  "{success, data: {items, total}}"
-// @Failure      400  {object}  errors.AppError  "未知状态值"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      400  {object}  apperrors.AppError  "未知状态值"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"ontology.proposal_list","risk":"read","role":"viewer"}
 // @Router       /ontology/proposals [get]
 func (h *SchemaProposalHandler) ListSchemaProposals(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -229,10 +227,9 @@ func (h *SchemaProposalHandler) ListSchemaProposals(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "提案ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 提案}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "提案不存在"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "提案不存在"
 // @Security     Bearer
-// @x-agent      {"id":"ontology.proposal_get","risk":"read","role":"viewer"}
 // @Router       /ontology/proposals/{id} [get]
 func (h *SchemaProposalHandler) GetSchemaProposal(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -262,11 +259,10 @@ func (h *SchemaProposalHandler) GetSchemaProposal(c *gin.Context) {
 // @Produce      json
 // @Param        id  path  string  true  "提案ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 兼容性报告}"
-// @Failure      400  {object}  errors.AppError  "提案结构非法"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "提案不存在"
+// @Failure      400  {object}  apperrors.AppError  "提案结构非法"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "提案不存在"
 // @Security     Bearer
-// @x-agent      {"id":"ontology.proposal_compatibility_check","risk":"write","role":"contributor"}
 // @Router       /ontology/proposals/{id}/compatibility-check [post]
 func (h *SchemaProposalHandler) CheckSchemaProposalCompatibility(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -298,13 +294,12 @@ func (h *SchemaProposalHandler) CheckSchemaProposalCompatibility(c *gin.Context)
 // @Param        id       path  string                            true  "提案ID"
 // @Param        request  body  handler.schemaProposalDecideRequest false "{comment?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 提案}"
-// @Failure      400  {object}  errors.AppError  "缺少提案ID"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      403  {object}  errors.AppError  "非 Admin 或审批人即创建人"
-// @Failure      404  {object}  errors.AppError  "提案不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许批准"
+// @Failure      400  {object}  apperrors.AppError  "缺少提案ID"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      403  {object}  apperrors.AppError  "非 Admin 或审批人即创建人"
+// @Failure      404  {object}  apperrors.AppError  "提案不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许批准"
 // @Security     Bearer
-// @x-agent      {"id":"ontology.proposal_approve","risk":"write","role":"admin"}
 // @Router       /ontology/proposals/{id}/approve [post]
 func (h *SchemaProposalHandler) ApproveSchemaProposal(c *gin.Context) {
 	h.decideSchemaProposal(c, true)
@@ -319,12 +314,11 @@ func (h *SchemaProposalHandler) ApproveSchemaProposal(c *gin.Context) {
 // @Param        id       path  string                            true  "提案ID"
 // @Param        request  body  handler.schemaProposalDecideRequest false "{comment?}"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 提案}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      403  {object}  errors.AppError  "非 Admin 或审批人即创建人"
-// @Failure      404  {object}  errors.AppError  "提案不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许驳回"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      403  {object}  apperrors.AppError  "非 Admin 或审批人即创建人"
+// @Failure      404  {object}  apperrors.AppError  "提案不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许驳回"
 // @Security     Bearer
-// @x-agent      {"id":"ontology.proposal_reject","risk":"write","role":"admin"}
 // @Router       /ontology/proposals/{id}/reject [post]
 func (h *SchemaProposalHandler) RejectSchemaProposal(c *gin.Context) {
 	h.decideSchemaProposal(c, false)
@@ -376,12 +370,11 @@ func (h *SchemaProposalHandler) decideSchemaProposal(c *gin.Context, approve boo
 // @Produce      json
 // @Param        id  path  string  true  "提案ID"
 // @Success      200  {object}  map[string]interface{}  "{success, data: 落地结果}"
-// @Failure      400  {object}  errors.AppError  "状态非 approved / 存在 blocker / 提案结构非法"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
-// @Failure      404  {object}  errors.AppError  "提案不存在"
-// @Failure      409  {object}  errors.AppError  "状态机不允许落地"
+// @Failure      400  {object}  apperrors.AppError  "状态非 approved / 存在 blocker / 提案结构非法"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
+// @Failure      404  {object}  apperrors.AppError  "提案不存在"
+// @Failure      409  {object}  apperrors.AppError  "状态机不允许落地"
 // @Security     Bearer
-// @x-agent      {"id":"ontology.proposal_apply","risk":"write","role":"admin"}
 // @Router       /ontology/proposals/{id}/apply [post]
 func (h *SchemaProposalHandler) ApplySchemaProposal(c *gin.Context) {
 	ctx := c.Request.Context()

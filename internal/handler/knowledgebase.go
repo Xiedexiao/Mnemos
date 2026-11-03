@@ -362,8 +362,8 @@ type ImageAttrSchemaData struct {
 // @Param        request        body      types.SearchParams true   "搜索参数"
 // @Param        resource_urls  query     string  false  "文件引用形式，public 返回可加载直链"  Enums(handle, public)  default(handle)
 // @Success      200            {object}  handler.HybridSearchResponse  "搜索结果"
-// @Failure      400            {object}  errors.AppError               "请求参数错误"
-// @Failure      404            {object}  errors.AppError               "知识库不存在"
+// @Failure      400            {object}  apperrors.AppError               "请求参数错误"
+// @Failure      404            {object}  apperrors.AppError               "知识库不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.search","risk":"probe","method":"post","max_items":30}
@@ -466,8 +466,8 @@ func (h *KnowledgeBaseHandler) HybridSearch(c *gin.Context) {
 // @Produce      json
 // @Param        request  body      types.KnowledgeBase  true  "知识库信息"
 // @Success      201      {object}  handler.DataResponse{data=handler.KnowledgeBaseView}  "创建的知识库"
-// @Failure      400      {object}  errors.AppError                                      "请求参数错误"
-// @Failure      500      {object}  errors.AppError                                      "服务器错误"
+// @Failure      400      {object}  apperrors.AppError                                      "请求参数错误"
+// @Failure      500      {object}  apperrors.AppError                                      "服务器错误"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.create","risk":"write","label_param":"name"}
@@ -572,9 +572,9 @@ func (h *KnowledgeBaseHandler) validateAndGetKnowledgeBase(
 // @Param        id         path      string  true   "知识库ID"  extensions(x-agent=knowledge_base_id)
 // @Param        agent_id   query     string  false  "共享智能体 ID（用于校验智能体是否有权访问该知识库）"
 // @Success      200  {object}  handler.DataResponse{data=handler.KnowledgeBaseView}  "知识库详情"
-// @Failure      400  {object}  errors.AppError  "请求参数错误"
-// @Failure      403  {object}  errors.AppError  "无权访问知识库"
-// @Failure      404  {object}  errors.AppError  "知识库不存在"
+// @Failure      400  {object}  apperrors.AppError  "请求参数错误"
+// @Failure      403  {object}  apperrors.AppError  "无权访问知识库"
+// @Failure      404  {object}  apperrors.AppError  "知识库不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.get","risk":"read"}
@@ -610,8 +610,8 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBase(c *gin.Context) {
 // @Param        agent_id  query     string  false  "共享智能体 ID（传入时返回该智能体可用的知识库）"
 // @Param        creator   query     string  false  "按创建者过滤，仅 mine 与 others 生效"  Enums(mine, others)
 // @Success      200       {object}  handler.DataResponse{data=[]handler.KnowledgeBaseView}  "知识库列表"
-// @Failure      400       {object}  errors.AppError                                         "请求参数错误"
-// @Failure      500       {object}  errors.AppError                                         "服务器错误"
+// @Failure      400       {object}  apperrors.AppError                                         "请求参数错误"
+// @Failure      500       {object}  apperrors.AppError                                         "服务器错误"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.list","risk":"read","max_items":200}
@@ -787,9 +787,9 @@ func pickUserDisplayName(u *types.User) string {
 // @Produce      json
 // @Param        id  path      string  true  "知识库ID"
 // @Success      200  {object}  handler.DataResponse{data=handler.KnowledgeBaseView}  "更新后的知识库"
-// @Failure      400  {object}  errors.AppError                                      "请求参数错误"
-// @Failure      404  {object}  errors.AppError                                      "知识库不存在"
-// @Failure      500  {object}  errors.AppError                                      "服务器错误"
+// @Failure      400  {object}  apperrors.AppError                                      "请求参数错误"
+// @Failure      404  {object}  apperrors.AppError                                      "知识库不存在"
+// @Failure      500  {object}  apperrors.AppError                                      "服务器错误"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /knowledge-bases/{id}/pin [put]
@@ -858,9 +858,9 @@ func (r *UpdateKnowledgeBaseRequest) UnmarshalJSON(data []byte) error {
 // @Param        id       path      string                     true  "知识库ID"
 // @Param        request  body      UpdateKnowledgeBaseRequest true  "更新请求"
 // @Success      200      {object}  handler.DataResponse{data=handler.KnowledgeBaseView}  "更新后的知识库"
-// @Failure      400      {object}  errors.AppError                                      "请求参数错误"
-// @Failure      403      {object}  errors.AppError                                      "无权限"
-// @Failure      404      {object}  errors.AppError                                      "知识库不存在"
+// @Failure      400      {object}  apperrors.AppError                                      "请求参数错误"
+// @Failure      403      {object}  apperrors.AppError                                      "无权限"
+// @Failure      404      {object}  apperrors.AppError                                      "知识库不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @Router       /knowledge-bases/{id} [put]
@@ -1253,9 +1253,9 @@ func fillOmittedIndexingFlags(raw []byte, kb *types.KnowledgeBase) {
 // @Param        id       path      string                            true  "知识库ID"  extensions(x-agent=knowledge_base_id)
 // @Param        request  body      handler.PatchKnowledgeBaseRequest true  "要修改的字段"
 // @Success      200      {object}  handler.DataResponse{data=handler.KnowledgeBaseView}  "更新后的知识库"
-// @Failure      400      {object}  errors.AppError                                      "请求参数错误"
-// @Failure      403      {object}  errors.AppError                                      "无权限"
-// @Failure      404      {object}  errors.AppError                                      "知识库不存在"
+// @Failure      400      {object}  apperrors.AppError                                      "请求参数错误"
+// @Failure      403      {object}  apperrors.AppError                                      "无权限"
+// @Failure      404      {object}  apperrors.AppError                                      "知识库不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.update","risk":"write","target":"knowledge_base.get","label":"name"}
@@ -1344,9 +1344,9 @@ func (h *KnowledgeBaseHandler) PatchKnowledgeBase(c *gin.Context) {
 // @Produce      json
 // @Param        id   path      string  true  "知识库ID"  extensions(x-agent=knowledge_base_id)
 // @Success      200  {object}  handler.DataResponse{data=types.KnowledgeBaseProfile}  "生成的知识库画像"
-// @Failure      400  {object}  errors.AppError                                       "知识库类型不支持或未配置模型"
-// @Failure      403  {object}  errors.AppError                                       "无权限"
-// @Failure      404  {object}  errors.AppError                                       "知识库不存在"
+// @Failure      400  {object}  apperrors.AppError                                       "知识库类型不支持或未配置模型"
+// @Failure      403  {object}  apperrors.AppError                                       "无权限"
+// @Failure      404  {object}  apperrors.AppError                                       "知识库不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.generate_profile","risk":"write","target":"knowledge_base.get","label":"name"}
@@ -1397,9 +1397,9 @@ const knowledgeBaseProfileRequestTimeout = 2 * time.Minute
 // @Produce      json
 // @Param        id   path      string  true  "知识库ID"  extensions(x-agent=knowledge_base_id)
 // @Success      200  {object}  handler.MessageResponse  "删除成功"
-// @Failure      400  {object}  errors.AppError          "请求参数错误"
-// @Failure      403  {object}  errors.AppError          "仅所有者可删除"
-// @Failure      404  {object}  errors.AppError          "知识库不存在"
+// @Failure      400  {object}  apperrors.AppError          "请求参数错误"
+// @Failure      403  {object}  apperrors.AppError          "仅所有者可删除"
+// @Failure      404  {object}  apperrors.AppError          "知识库不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.delete","risk":"destructive","target":"knowledge_base.get","label":"name"}
@@ -1471,9 +1471,9 @@ type DuplicateKnowledgeBaseResponse struct {
 // @Produce      json
 // @Param        request  body      CopyKnowledgeBaseRequest   true  "复制请求"
 // @Success      200      {object}  handler.DataResponse{data=handler.CopyKnowledgeBaseResponse}  "任务ID"
-// @Failure      400      {object}  errors.AppError                                              "请求参数错误"
-// @Failure      401      {object}  errors.AppError                                              "未认证"
-// @Failure      403      {object}  errors.AppError                                              "无权限"
+// @Failure      400      {object}  apperrors.AppError                                              "请求参数错误"
+// @Failure      401      {object}  apperrors.AppError                                              "未认证"
+// @Failure      403      {object}  apperrors.AppError                                              "无权限"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent {"id":"knowledge_base.copy","risk":"write","target":"knowledge_base.get","label":"name"}
@@ -1627,9 +1627,9 @@ func (h *KnowledgeBaseHandler) CopyKnowledgeBase(c *gin.Context) {
 // @Produce      json
 // @Param        id       path      string                  true  "源知识库 ID" extensions(x-agent=knowledge_base_id)
 // @Success      201      {object}  handler.DataResponse{data=handler.DuplicateKnowledgeBaseData}  "创建后的知识库副本"
-// @Failure      400      {object}  errors.AppError                                               "请求参数错误"
-// @Failure      403      {object}  errors.AppError                                               "无权限"
-// @Failure      404      {object}  errors.AppError                                               "知识库不存在"
+// @Failure      400      {object}  apperrors.AppError                                               "请求参数错误"
+// @Failure      403      {object}  apperrors.AppError                                               "无权限"
+// @Failure      404      {object}  apperrors.AppError                                               "知识库不存在"
 // @Security     Bearer
 // @x-agent {"id":"knowledge_base.duplicate","risk":"write","target":"knowledge_base.get","label":"name"}
 // @x-agent-hint "Create an empty knowledge base with the source settings only. Does NOT copy documents, FAQ, chunks, indexes, wiki, sharing or pins. To copy content use knowledge_base.copy instead. Rename the new knowledge_base_id with knowledge_base.update if needed."
@@ -1697,8 +1697,8 @@ func (h *KnowledgeBaseHandler) DuplicateKnowledgeBase(c *gin.Context) {
 // @Produce      json
 // @Param        task_id  path      string  true  "任务ID" extensions(x-agent)
 // @Success      200      {object}  handler.DataResponse{data=types.KBCloneProgress}  "进度信息"
-// @Failure      400      {object}  errors.AppError                                  "请求参数错误"
-// @Failure      404      {object}  errors.AppError                                  "任务不存在"
+// @Failure      400      {object}  apperrors.AppError                                  "请求参数错误"
+// @Failure      404      {object}  apperrors.AppError                                  "任务不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent {"id":"knowledge_base.get_copy_progress","risk":"read"}
@@ -1814,10 +1814,10 @@ func validateKnowledgeBasePromptInstructions(kb *types.KnowledgeBase) error {
 // @Produce      json
 // @Param        id   path      string                  true  "源知识库 ID"  extensions(x-agent=knowledge_base_id)
 // @Success      200  {object}  handler.DataResponse{data=[]types.KnowledgeBase}  "可移动目标列表"
-// @Failure      400  {object}  errors.AppError                                   "请求参数错误"
-// @Failure      401  {object}  errors.AppError                                   "未认证"
-// @Failure      403  {object}  errors.AppError                                   "无权限"
-// @Failure      404  {object}  errors.AppError                                   "知识库不存在"
+// @Failure      400  {object}  apperrors.AppError                                   "请求参数错误"
+// @Failure      401  {object}  apperrors.AppError                                   "未认证"
+// @Failure      403  {object}  apperrors.AppError                                   "无权限"
+// @Failure      404  {object}  apperrors.AppError                                   "知识库不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
 // @x-agent      {"id":"knowledge_base.list_move_targets","risk":"read"}

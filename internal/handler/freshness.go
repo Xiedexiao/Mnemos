@@ -39,10 +39,9 @@ func NewFreshnessHandler(
 // @Produce      json
 // @Param        id  path  string  true  "知识ID"  extensions(x-agent=knowledge_id)
 // @Success      200  {object}  map[string]interface{}  "{success, knowledge_id, data: {total, grade, top_signals}}"
-// @Failure      404  {object}  errors.AppError  "知识不存在"
+// @Failure      404  {object}  apperrors.AppError  "知识不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
-// @x-agent      {"id":"knowledge.freshness_get","risk":"read","role":"viewer"}
 // @Router       /knowledge/{id}/freshness [get]
 func (h *FreshnessHandler) GetKnowledgeFreshness(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -71,9 +70,8 @@ func (h *FreshnessHandler) GetKnowledgeFreshness(c *gin.Context) {
 // @Param        page        query  int  false  "页码，默认 1"
 // @Param        page_size   query  int  false  "每页条数，1-100，默认 20"
 // @Success      200  {object}  map[string]interface{}  "{success, data: PageResult{total, page, page_size, data: [FreshnessReviewQueueItem]}}"
-// @Failure      401  {object}  errors.AppError  "缺少租户上下文"
+// @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
-// @x-agent      {"id":"review.queue","risk":"read","role":"admin"}
 // @Router       /review/queue [get]
 func (h *FreshnessHandler) ListReviewQueue(c *gin.Context) {
 	ctx := c.Request.Context()
