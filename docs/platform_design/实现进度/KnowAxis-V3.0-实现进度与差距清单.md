@@ -85,6 +85,23 @@
 | 无知识之星评选、积分不能兑换 | §15.4 | `knowledge_star_awards`（月/季、候选、选定、公开表彰）+ `reward_catalog_items`/`reward_redemptions`：库存与余额条件更新 + 兑换单 + 负分流水同事务；取消/驳回退回积分与库存；个人中心新增积分与激励页签。 | `858d18c` |
 | 业务系统内无法按上下文推送知识 | §15.5 | `embed_push_rules`/`preferences`/`events` + `/embed/push/resolve`：规则驱动匹配、生命周期/文档 ACL/目录 ACL 三道门（ACL 失败 fail-closed）、用户可一键关闭、忽略 30 天内不再推、曝光/点击/忽略统计；控制台新增「嵌入式推送」页签。 | `3edeb92` |
 
+
+### 第三批：全量测试修复（本轮）
+
+本轮不再加功能，而是把"跑不过"的部分修到全绿，因为一个长期红的测试套件会掩盖真正的回归。
+
+| 事项 | 根因 | 落点 | 提交 |
+|---|---|---|---|
+| 4 个仓储测试长期失败 | 手写 `knowledges` DDL 缺后续迁移新增的列；共享 fixture 补列后两处 `ALTER TABLE ADD COLUMN` 变成重复列；审计日志用 `db.Create` 绕过仓储的哈希链，第二行撞 `row_hash` 唯一索引 | 补齐 DDL 列、删除多余 ALTER、改走 `repo.Create` | `46f82f9` |
+| 布尔列显式 `false` 被存成 `true` | GORM 会省略带 `default` 标签的零值字段，于是 `FolderACL.InheritChildren=false` 落到数据库变 `true`——一条只针对某目录的 deny 会扩散到所有子目录 | 四个布尔列去掉 gorm default；补回归测试 | `a175aaf` |
+| 代理操作目录测试失败 | `docs/swagger.json` 自首次导入后从未重新生成；同时 21 个 handler 的 `@Failure` 用了文件里不存在的别名，swag 直接解析失败 | 修正注解别名、增加缺失导入、重新 `make docs` | `343ac7d` |
+| 前端 10 项失败 | 新增视图用了字面量圆角/字号（棘轮守卫）；8 个测试的正则假定 LF，而仓库以 CRLF 检出 | 改用设计令牌并下调基线；正则兼容 CRLF | `7505f51` |
+| 流式用量空指针 | `StreamResponse.Usage` 是指针，Done 事件可能不带用量 | 加 nil 保护 | `5d22dae` |
+| 官方答案重复校验失效 | 活动答案查询按 `version DESC` 取到正在发布的这一条，`active.ID == answer.ID` 后跳过校验 | 查询增加 `excludeAnswerID` 并在 SQL 中排除 | `5d22dae` |
+| ensurepip 恢复路径测试 | 本机 python3 未带 ensurepip 模块（Debian/Ubuntu 拆分） | 该子用例按环境跳过并说明原因 | `95ac9d6` |
+
+验证结果：`go test ./internal/...` 134 个包全通过、0 失败；`npm test` 2508 通过 / 1 跳过 / 0 失败；`type-check`、`check-i18n`、生产构建均通过。
+
 ---
 
 ## 二、仍未完成
@@ -172,6 +189,7 @@
 - **开放平台**：上下文推送 API 已完成，但搜索框/问答窗/知识卡片等嵌入式**前端组件**没有实现；无沙箱环境、无 API 版本弃用策略、无出站 Webhook（签名+重试）。
 - **SSO**：有 OIDC，无 SAML、无 SCIM、无用户组同步。
 - **模型与 Prompt 的剩余部分**：无灰度、无回滚、无 Token 预算告警、无模型降级链；密级维度尚未传入路由调用点。
+- **Agent 操作目录的覆盖面**：变更单、候选卡片、本体提案、审批任务、证据包、 freshness 等 50 个端点此前声明了 `@x-agent` 但响应是 `map[string]interface{}`，操作目录要求响应类型带字段标签，因此这些注解已移除（它们从未真正进入目录）。要暴露它们，需要先给这些响应补带 `x-agent` 标签的类型化 DTO。
 - 个人中心、问答社区、运营看板、成本分摊（按空间/场景）、知识之星与积分兑换已完成（见第 一 部分）。
 
 ### 第 17 章 非功能
