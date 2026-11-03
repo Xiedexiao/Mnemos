@@ -1446,3 +1446,129 @@ export function completeLearningTask(id: string) {
     {},
   )
 }
+
+// ============================================================================
+// §7.3 external subscriptions (regulation / standards feeds)
+// ============================================================================
+
+// ExternalSubscriptionFeed is one subscribed regulation/standards feed.
+export interface ExternalSubscriptionFeed {
+  id: string
+  tenant_id: number
+  name: string
+  feed_url: string
+  format: 'rss' | 'atom' | 'json' | 'auto' | string
+  domain_tags: string[]
+  knowledge_base_ids: string[]
+  enabled: boolean
+  check_interval_hours: number
+  last_checked_at?: string | null
+  last_success_at?: string | null
+  last_error: string
+  has_auth_header: boolean
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+// ExternalSubscriptionEntry is one entry already seen in a feed.
+export interface ExternalSubscriptionEntry {
+  id: string
+  feed_id: string
+  external_id: string
+  title: string
+  url: string
+  published_at?: string | null
+  matched_knowledge_count: number
+  signal_count: number
+  created_at: string
+}
+
+// ExternalSubscriptionSyncResult reports one feed check.
+export interface ExternalSubscriptionSyncResult {
+  feed_id: string
+  fetched: number
+  new_entries: number
+  matched_knowledge: number
+  signals: number
+  unmatched_entries: number
+  truncated: boolean
+  synced_at: string
+}
+
+// ExternalSubscriptionFeedPayload is the create/update body. On update an empty
+// field means "unchanged"; [] clears the list and auth_header "-" clears the
+// stored secret.
+export interface ExternalSubscriptionFeedPayload {
+  name?: string
+  feed_url?: string
+  format?: string
+  domain_tags?: string[]
+  knowledge_base_ids?: string[]
+  enabled?: boolean
+  check_interval_hours?: number
+  auth_header?: string
+}
+
+interface ExternalFeedListResponse {
+  success: boolean
+  data: ExternalSubscriptionFeed[]
+}
+
+interface ExternalFeedResponse {
+  success: boolean
+  data: ExternalSubscriptionFeed
+}
+
+interface ExternalEntryListResponse {
+  success: boolean
+  data: ExternalSubscriptionEntry[]
+}
+
+interface ExternalSyncResponse {
+  success: boolean
+  data: ExternalSubscriptionSyncResult
+}
+
+// GET /api/v1/external-subscriptions/feeds
+export function listExternalFeeds(enabledOnly = false) {
+  const query = enabledOnly ? '?enabled_only=true' : ''
+  return get<ExternalFeedListResponse>(`/api/v1/external-subscriptions/feeds${query}`)
+}
+
+// POST /api/v1/external-subscriptions/feeds
+export function createExternalFeed(payload: ExternalSubscriptionFeedPayload) {
+  return post<ExternalFeedResponse>('/api/v1/external-subscriptions/feeds', payload)
+}
+
+// PUT /api/v1/external-subscriptions/feeds/:id
+export function updateExternalFeed(id: string, payload: ExternalSubscriptionFeedPayload) {
+  return put<ExternalFeedResponse>(
+    `/api/v1/external-subscriptions/feeds/${encodeURIComponent(id)}`,
+    payload,
+  )
+}
+
+// DELETE /api/v1/external-subscriptions/feeds/:id
+export function deleteExternalFeed(id: string) {
+  return del<{ success: boolean }>(
+    `/api/v1/external-subscriptions/feeds/${encodeURIComponent(id)}`,
+  )
+}
+
+// POST /api/v1/external-subscriptions/feeds/:id/sync
+export function syncExternalFeed(id: string) {
+  return post<ExternalSyncResponse>(
+    `/api/v1/external-subscriptions/feeds/${encodeURIComponent(id)}/sync`,
+    {},
+  )
+}
+
+// GET /api/v1/external-subscriptions/entries
+export function listExternalEntries(feedId = '', limit = 50) {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (feedId) params.set('feed_id', feedId)
+  return get<ExternalEntryListResponse>(
+    `/api/v1/external-subscriptions/entries?${params.toString()}`,
+  )
+}

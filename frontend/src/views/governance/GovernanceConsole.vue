@@ -409,7 +409,162 @@
           </template>
         </t-table>
       </t-tab-panel>
+
+      <!-- ================= 外部订阅（§7.3 法规/标准采集） ================= -->
+      <t-tab-panel value="feeds" :label="t('governanceConsole.tabFeeds')">
+        <div class="governance-toolbar">
+          <t-button theme="primary" size="small" @click="openFeedDialog()">
+            {{ t('governanceConsole.feedAdd') }}
+          </t-button>
+          <span class="governance-hint">{{ t('governanceConsole.feedHint') }}</span>
+        </div>
+        <t-table
+          row-key="id"
+          :data="feeds"
+          :columns="feedColumns"
+          size="medium"
+          hover
+          :loading="loading"
+          :empty="t('governanceConsole.emptyFeeds')"
+        >
+          <template #feed="{ row }">
+            <div class="governance-subject">
+              <span class="governance-subject__title">{{ row.name }}</span>
+              <span class="governance-subject__meta">{{ row.feed_url }}</span>
+              <span class="governance-subject__meta">
+                {{ row.domain_tags && row.domain_tags.length
+                  ? row.domain_tags.join(' / ')
+                  : t('governanceConsole.feedNoDomain') }}
+              </span>
+            </div>
+          </template>
+          <template #enabled="{ row }">
+            <t-switch
+              size="small"
+              :value="row.enabled"
+              :loading="busyId === row.id"
+              @change="(value: any) => toggleFeed(row, Boolean(value))"
+            />
+          </template>
+          <template #last_checked_at="{ row }">
+            {{ row.last_checked_at ? formatTime(row.last_checked_at) : t('governanceConsole.feedNeverChecked') }}
+          </template>
+          <template #feedStatus="{ row }">
+            <t-tag v-if="row.last_error" size="small" variant="light" theme="danger">
+              {{ t('governanceConsole.feedFailed') }}
+            </t-tag>
+            <t-tag v-else size="small" variant="light" theme="success">
+              {{ t('governanceConsole.feedOk') }}
+            </t-tag>
+          </template>
+          <template #op="{ row }">
+            <div class="governance-actions">
+              <t-button theme="primary" variant="text" size="small"
+                :loading="busyId === row.id" @click="syncFeed(row)">
+                {{ t('governanceConsole.feedSync') }}
+              </t-button>
+              <t-button variant="text" size="small" @click="openEntries(row)">
+                {{ t('governanceConsole.feedEntries') }}
+              </t-button>
+              <t-button variant="text" size="small" @click="openFeedDialog(row)">
+                {{ t('governanceConsole.feedEdit') }}
+              </t-button>
+              <t-popconfirm :content="t('governanceConsole.feedDeleteConfirm')"
+                @confirm="removeFeed(row)">
+                <t-button theme="danger" variant="text" size="small"
+                  :loading="busyId === row.id">
+                  {{ t('governanceConsole.feedDelete') }}
+                </t-button>
+              </t-popconfirm>
+            </div>
+          </template>
+        </t-table>
+
+        <div v-if="lastSync" class="governance-sync-result">
+          {{ t('governanceConsole.feedSyncResult', {
+            fetched: lastSync.fetched,
+            created: lastSync.new_entries,
+            matched: lastSync.matched_knowledge,
+            signals: lastSync.signals,
+            unmatched: lastSync.unmatched_entries,
+          }) }}
+        </div>
+      </t-tab-panel>
     </t-tabs>
+
+    <t-dialog
+      v-model:visible="feedDialogVisible"
+      :header="editingFeedId ? t('governanceConsole.feedEdit') : t('governanceConsole.feedAdd')"
+      width="640px"
+      :confirm-btn="t('governanceConsole.feedSave')"
+      @confirm="saveFeed"
+    >
+      <t-form label-width="150px" label-align="right">
+        <t-form-item :label="t('governanceConsole.feedName')">
+          <t-input v-model="feedForm.name" :placeholder="t('governanceConsole.feedNamePlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.feedUrl')">
+          <t-input v-model="feedForm.feed_url" placeholder="https://www.sac.gov.cn/rss.xml" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.feedFormat')">
+          <t-select v-model="feedForm.format">
+            <t-option value="auto" :label="t('governanceConsole.feedFormatAuto')" />
+            <t-option value="rss" label="RSS 2.0" />
+            <t-option value="atom" label="Atom" />
+            <t-option value="json" label="JSON Feed" />
+          </t-select>
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.feedDomainTags')">
+          <t-input v-model="feedForm.domain_tags"
+            :placeholder="t('governanceConsole.feedDomainPlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.feedKbIds')">
+          <t-input v-model="feedForm.knowledge_base_ids"
+            :placeholder="t('governanceConsole.feedKbPlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.feedInterval')">
+          <t-input-number v-model="feedForm.check_interval_hours" :min="1" :max="720" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.feedAuthHeader')">
+          <t-input v-model="feedForm.auth_header"
+            :placeholder="t('governanceConsole.feedAuthPlaceholder')" />
+        </t-form-item>
+        <t-form-item>
+          <span class="governance-hint">{{ t('governanceConsole.feedAuthHint') }}</span>
+        </t-form-item>
+      </t-form>
+    </t-dialog>
+
+    <t-dialog
+      v-model:visible="entriesVisible"
+      :header="t('governanceConsole.feedEntriesTitle', { name: entriesFeedName })"
+      width="720px"
+      :footer="false"
+    >
+      <t-table
+        row-key="id"
+        :data="entries"
+        :columns="entryColumns"
+        size="small"
+        :empty="t('governanceConsole.emptyEntries')"
+      >
+        <template #title="{ row }">
+          <div class="governance-subject">
+            <span class="governance-subject__title">{{ row.title }}</span>
+            <span class="governance-subject__meta">{{ row.url }}</span>
+          </div>
+        </template>
+        <template #published_at="{ row }">
+          {{ row.published_at ? formatTime(row.published_at) : '—' }}
+        </template>
+        <template #counts="{ row }">
+          {{ t('governanceConsole.feedEntryCounts', {
+            matched: row.matched_knowledge_count,
+            signals: row.signal_count,
+          }) }}
+        </template>
+      </t-table>
+    </t-dialog>
   </div>
 </template>
 
@@ -449,7 +604,16 @@ import {
   convertChangeSignal,
   dismissChangeSignal,
   listChangeSignals,
+  createExternalFeed,
+  deleteExternalFeed,
+  listExternalEntries,
+  listExternalFeeds,
+  syncExternalFeed,
+  updateExternalFeed,
   type ChangeSignal,
+  type ExternalSubscriptionEntry,
+  type ExternalSubscriptionFeed,
+  type ExternalSubscriptionSyncResult,
   type GovernanceApprovalTask,
   type KnowledgeGap,
   type KnowledgeTemplate,
@@ -482,7 +646,8 @@ type TabValue =
   | 'searchQuality'
   | 'gaps'
   | 'changeRequests'
-  | 'signals';
+  | 'signals'
+  | 'feeds';
 
 const activeTab = ref<TabValue>('approvals');
 const loading = ref(false);
@@ -532,6 +697,24 @@ const changeRequests = ref<ChangeRequest[]>([]);
 
 // ---- 变更信号 ----
 const signals = ref<ChangeSignal[]>([]);
+
+// ---- 外部订阅（§7.3） ----
+const feeds = ref<ExternalSubscriptionFeed[]>([]);
+const feedDialogVisible = ref(false);
+const editingFeedId = ref('');
+const feedForm = ref({
+  name: '',
+  feed_url: '',
+  format: 'auto',
+  domain_tags: '',
+  knowledge_base_ids: '',
+  check_interval_hours: 24,
+  auth_header: '',
+});
+const lastSync = ref<ExternalSubscriptionSyncResult | null>(null);
+const entriesVisible = ref(false);
+const entriesFeedName = ref('');
+const entries = ref<ExternalSubscriptionEntry[]>([]);
 
 // ---------------------------------------------------------------------------
 // 展示助手
@@ -720,6 +903,20 @@ const signalColumns = computed(() => [
   { colKey: 'op', title: t('governanceConsole.columnOp'), width: 180 },
 ]);
 
+const feedColumns = computed(() => [
+  { colKey: 'feed', title: t('governanceConsole.columnFeed'), ellipsis: true, minWidth: 280 },
+  { colKey: 'enabled', title: t('governanceConsole.columnEnabled'), width: 90 },
+  { colKey: 'last_checked_at', title: t('governanceConsole.columnLastChecked'), width: 170 },
+  { colKey: 'feedStatus', title: t('governanceConsole.columnStatus'), width: 100 },
+  { colKey: 'op', title: t('governanceConsole.columnOp'), width: 300 },
+]);
+
+const entryColumns = computed(() => [
+  { colKey: 'title', title: t('governanceConsole.columnFeed'), ellipsis: true, minWidth: 320 },
+  { colKey: 'published_at', title: t('governanceConsole.columnPublished'), width: 140 },
+  { colKey: 'counts', title: t('governanceConsole.columnItems'), width: 180 },
+]);
+
 const changeRequestColumns = computed(() => [
   { colKey: 'cr', title: t('governanceConsole.columnCrTitle'), ellipsis: true, minWidth: 240 },
   { colKey: 'change_type', title: t('governanceConsole.columnChangeType'), width: 140 },
@@ -832,6 +1029,115 @@ const runSignal = async (row: ChangeSignal, action: 'convert' | 'dismiss') => {
   }
 };
 
+const loadFeeds = () =>
+  withLoading(async () => {
+    const res = await listExternalFeeds();
+    feeds.value = res?.data || [];
+  });
+
+// openFeedDialog opens the create form, or the edit form pre-filled from a row.
+const openFeedDialog = (row?: ExternalSubscriptionFeed) => {
+  editingFeedId.value = row?.id || '';
+  feedForm.value = {
+    name: row?.name || '',
+    feed_url: row?.feed_url || '',
+    format: row?.format || 'auto',
+    domain_tags: (row?.domain_tags || []).join(', '),
+    knowledge_base_ids: (row?.knowledge_base_ids || []).join(', '),
+    check_interval_hours: row?.check_interval_hours || 24,
+    auth_header: '',
+  };
+  feedDialogVisible.value = true;
+};
+
+const splitList = (value: string): string[] =>
+  value
+    .split(/[,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const saveFeed = async () => {
+  const payload = {
+    name: feedForm.value.name.trim(),
+    feed_url: feedForm.value.feed_url.trim(),
+    format: feedForm.value.format,
+    domain_tags: splitList(feedForm.value.domain_tags),
+    knowledge_base_ids: splitList(feedForm.value.knowledge_base_ids),
+    check_interval_hours: feedForm.value.check_interval_hours,
+  };
+  try {
+    if (editingFeedId.value) {
+      await updateExternalFeed(editingFeedId.value, {
+        ...payload,
+        // 只在用户输入时提交认证头；留空表示保持原值。
+        ...(feedForm.value.auth_header.trim()
+          ? { auth_header: feedForm.value.auth_header.trim() }
+          : {}),
+      });
+    } else {
+      await createExternalFeed({
+        ...payload,
+        auth_header: feedForm.value.auth_header.trim(),
+      });
+    }
+    feedDialogVisible.value = false;
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadFeeds();
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+const toggleFeed = async (row: ExternalSubscriptionFeed, enabled: boolean) => {
+  busyId.value = row.id;
+  try {
+    await updateExternalFeed(row.id, { enabled });
+    await loadFeeds();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const syncFeed = async (row: ExternalSubscriptionFeed) => {
+  busyId.value = row.id;
+  try {
+    const res = await syncExternalFeed(row.id);
+    lastSync.value = res?.data || null;
+    await loadFeeds();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const removeFeed = async (row: ExternalSubscriptionFeed) => {
+  busyId.value = row.id;
+  try {
+    await deleteExternalFeed(row.id);
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadFeeds();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const openEntries = async (row: ExternalSubscriptionFeed) => {
+  entriesFeedName.value = row.name;
+  entries.value = [];
+  entriesVisible.value = true;
+  try {
+    const res = await listExternalEntries(row.id);
+    entries.value = res?.data || [];
+  } catch (error) {
+    handleError(error);
+  }
+};
+
 const loadChangeRequests = () =>
   withLoading(async () => {
     const res = await listChangeRequests();
@@ -863,6 +1169,8 @@ const reloadActiveTab = () => {
       return loadChangeRequests();
     case 'signals':
       return loadSignals();
+    case 'feeds':
+      return loadFeeds();
     default:
       return Promise.resolve();
   }
@@ -1149,6 +1457,27 @@ onMounted(() => {
 .is-overdue {
   color: var(--td-error-color);
   font-weight: 500;
+}
+
+.governance-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.governance-hint {
+  font-size: 12px;
+  color: var(--td-text-color-secondary);
+}
+
+.governance-sync-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--td-bg-color-secondarycontainer);
+  font-size: 13px;
+  color: var(--td-text-color-secondary);
 }
 
 .governance-metrics {

@@ -197,6 +197,9 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewLearningCertificateService))
 	must(container.Provide(repository.NewChangeSignalRepository))
 	must(container.Provide(service.NewChangeSignalService))
+	must(container.Provide(repository.NewExternalSubscriptionRepository))
+	must(container.Provide(service.NewExternalSubscriptionService))
+	must(container.Provide(service.NewExternalSubscriptionScheduler))
 	must(container.Provide(service.NewLearningTaskService))
 	must(container.Provide(service.NewOfficialAnswerService))
 	must(container.Provide(service.NewKnowledgeTemplateService))
@@ -642,6 +645,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	logger.Debugf(ctx, "[Container] Data source sync framework registered")
 	must(container.Invoke(startAuditLogRetention))
 	must(container.Invoke(startFreshnessReviewScheduler))
+	must(container.Invoke(startExternalSubscriptionScheduler))
 	logger.Debugf(ctx, "[Container] Audit log retention runner registered")
 	must(container.Invoke(startHousekeepingService))
 	logger.Debugf(ctx, "[Container] Knowledge housekeeping runner registered")
@@ -800,6 +804,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewCommunityHandler))
 	must(container.Provide(handler.NewLearningCertificateHandler))
 	must(container.Provide(handler.NewChangeSignalHandler))
+	must(container.Provide(handler.NewExternalSubscriptionHandler))
 	must(container.Provide(handler.NewLearningTaskHandler))
 	must(container.Provide(handler.NewOntologyHandler))
 	must(container.Provide(handler.NewGraphFactHandler))
@@ -2535,6 +2540,18 @@ func startFreshnessReviewScheduler(
 ) {
 	scheduler.Start(context.Background())
 	cleaner.RegisterWithName("FreshnessReviewScheduler", func() error {
+		scheduler.StopWithin(cleanupStepTimeout)
+		return nil
+	})
+}
+
+// startExternalSubscriptionScheduler boots the §7.3 regulation/standards feed
+// sweep: every hour it checks the feeds whose own interval has elapsed.
+func startExternalSubscriptionScheduler(
+	scheduler *service.ExternalSubscriptionScheduler, cleaner interfaces.ResourceCleaner,
+) {
+	scheduler.Start(context.Background())
+	cleaner.RegisterWithName("ExternalSubscriptionScheduler", func() error {
 		scheduler.StopWithin(cleanupStepTimeout)
 		return nil
 	})
