@@ -9730,6 +9730,11 @@ export default {
     colReviewsDone: '审批数',
     colAnswers: '回答数',
     colSubmitted: '提交数',
+    sectionObservability: '运行时可观测',
+    refusalRate: '拒答率',
+    permissionBlocked: '权限拦截',
+    avgLatency: '平均耗时（毫秒）',
+    slowQueries: '慢查询（>2 秒）',
   },
   reviewWorkbench: {
     title: '审核工作台',

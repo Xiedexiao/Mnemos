@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/application/service/retriever"
@@ -67,6 +68,11 @@ func (s *knowledgeBaseService) retrieveFromStores(
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(defaultMultiStoreFanoutLimit)
 
+	// 部分成功的降级（§17.1 "超时降级为精确 + BM25"）：一个 store 组超时或
+	// 报错不该让整次检索失败——用户仍然应该拿到其它组的命中，而不是一句
+	// "检索失败"。记录失败组数，全部失败时才返回不可用错误。
+	var failedGroups atomic.Int32
+
 	for i := range groups {
 		grp := groups[i]
 		g.Go(func() error {
@@ -74,12 +80,15 @@ func (s *knowledgeBaseService) retrieveFromStores(
 			defer cancel()
 			res, err := retrieveGroup(gcCtx, grp)
 			if err != nil {
+				failedGroups.Add(1)
 				logger.WarnWithFields(gctx, logger.Fields{
 					"tenant_id":  grp.OwnerTenantID,
 					"kb_count":   len(grp.KBIDs),
 					"store_kind": storeKindLabel(grp.StoreID),
 				}, fmt.Sprintf("multi-store retrieve failed: %v", err))
-				return fmt.Errorf("store group retrieve: %w", err)
+				// 不让 errgroup 取消兄弟组：它们是本次降级后唯一还能返回的
+				// 结果来源。
+				return nil
 			}
 			mu.Lock()
 			all = append(all, res...)
@@ -103,6 +112,20 @@ func (s *knowledgeBaseService) retrieveFromStores(
 		// no internal detail.
 		return nil, apperrors.NewVectorStoreUnavailableError(
 			"vector retrieval failed for one or more bound stores")
+	}
+
+	// 全部组都失败：没有任何结果可返回，才报不可用（fail-closed 对检索而言
+	// 是"明确失败"，而不是"静默返回空"——后者会让用户以为库里没有内容）。
+	if failedGroups.Load() == int32(len(groups)) {
+		return nil, apperrors.NewVectorStoreUnavailableError(
+			"vector retrieval failed for every bound store")
+	}
+	if failed := failedGroups.Load(); failed > 0 {
+		logger.WarnWithFields(ctx, logger.Fields{
+			"failed_groups": failed,
+			"total_groups":  len(groups),
+			"returned":      len(all),
+		}, "degraded retrieval: some store groups failed, returning partial results")
 	}
 
 	// Apply normalizer only when results span >1 distinct engine type.

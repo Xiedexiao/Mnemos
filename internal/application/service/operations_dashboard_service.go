@@ -58,8 +58,49 @@ func (s *operationsDashboardService) Get(
 	s.fillTrends(ctx, tenantID, since, windowDays, dashboard)
 	s.fillContributors(ctx, tenantID, since, dashboard)
 	s.fillCost(ctx, tenantID, since, dashboard)
+	s.fillObservability(ctx, tenantID, since, dashboard)
 	return dashboard, nil
 }
+
+// fillObservability builds the §17.2 runtime block.
+//
+// 全部取自 search_logs 与 approval_tasks：不引入独立指标库，所以看板上的
+// "拒答率/权限拦截/慢查询"与搜索质量页永远同源。
+func (s *operationsDashboardService) fillObservability(
+	ctx context.Context, tenantID uint64, since time.Time, dashboard *types.OperationsDashboard,
+) {
+	// 用 SUM(CASE WHEN ...) 而不是 COUNT(...) FILTER (WHERE ...)：结果相同，
+	// 但前者不依赖引擎版本（SQLite 需 ≥ 3.30 才支持 FILTER）。
+	var row struct {
+		Total          int64
+		ZeroResult     int64
+		PermissionKept int64
+		AvgLatency     float64
+		SlowQueries    int64
+	}
+	if err := s.db.WithContext(ctx).
+		Model(&types.SearchLog{}).
+		Select(`COUNT(*) AS total,
+			COALESCE(SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END), 0) AS zero_result,
+			COALESCE(SUM(permission_filtered_count), 0) AS permission_kept,
+			COALESCE(AVG(duration_ms), 0) AS avg_latency,
+			COALESCE(SUM(CASE WHEN duration_ms > ? THEN 1 ELSE 0 END), 0) AS slow_queries`,
+			slowQueryThresholdMs).
+		Where("tenant_id = ? AND created_at >= ?", tenantID, since).
+		Scan(&row).Error; err == nil {
+		dashboard.Observability.ZeroResultQueries = row.ZeroResult
+		dashboard.Observability.PermissionBlocked = row.PermissionKept
+		dashboard.Observability.AverageLatencyMs = row.AvgLatency
+		dashboard.Observability.SlowQueries = row.SlowQueries
+		if row.Total > 0 {
+			dashboard.Observability.RefusalRate = float64(row.ZeroResult) / float64(row.Total)
+		}
+	}
+	dashboard.Observability.OverdueApprovals = dashboard.Delivery.OverduePending
+}
+
+// slowQueryThresholdMs is the §17.1 "大规模 ≤ 2s" degradation threshold.
+const slowQueryThresholdMs = 2000
 
 // fillTrends builds the per-day series (§16.1 趋势).
 //

@@ -1179,6 +1179,14 @@ export interface OperationsDashboard {
     call_count: number
     by_model: Record<string, number>
   }
+  observability: {
+    zero_result_queries: number
+    refusal_rate: number
+    permission_blocked: number
+    average_latency_ms: number
+    slow_queries: number
+    overdue_approvals: number
+  }
   health?: Record<string, unknown>
   window_days: number
 }

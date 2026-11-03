@@ -116,6 +116,25 @@ type DashboardCost struct {
 	ByModel map[string]int64 `json:"by_model"`
 }
 
+// DashboardObservability is the §17.2 "可观测" block: the runtime signals an
+// operator watches, derived from the search log rather than a separate metric
+// store so the numbers can never disagree with the search-quality tab.
+type DashboardObservability struct {
+	// DegradedQueries counts searches that returned nothing (a proxy for
+	// zero-result pressure; the RAG path refuses on these).
+	ZeroResultQueries int64 `json:"zero_result_queries"`
+	// RefusalRate is zero-result / total queries in the window.
+	RefusalRate float64 `json:"refusal_rate"`
+	// PermissionBlocked is how many candidates policy removed before recall.
+	PermissionBlocked int64 `json:"permission_blocked"`
+	// AverageLatencyMs is mean retrieval latency.
+	AverageLatencyMs float64 `json:"average_latency_ms"`
+	// SlowQueries counts searches over the §17.1 2s degradation threshold.
+	SlowQueries int64 `json:"slow_queries"`
+	// OverdueApprovals is the审批 backlog past SLA (operator action signal).
+	OverdueApprovals int64 `json:"overdue_approvals"`
+}
+
 // OperationsDashboard is the composed §16.1 payload.
 type OperationsDashboard struct {
 	// Overview is the headline counts.
@@ -132,6 +151,8 @@ type OperationsDashboard struct {
 	Contributors []DashboardContributor `json:"contributors"`
 	// Cost is the model spend block (§16.1 成本).
 	Cost DashboardCost `json:"cost"`
+	// Observability is the §17.2 runtime-health block.
+	Observability DashboardObservability `json:"observability"`
 	// Health is the latest tenant-scope health snapshot, when one exists.
 	Health *KnowledgeHealthSnapshot `json:"health,omitempty"`
 	// WindowDays is the look-back window the time-based numbers cover.

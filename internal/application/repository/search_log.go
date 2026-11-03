@@ -47,10 +47,12 @@ func (r *searchLogRepository) Overview(
 	}
 	err := r.db.WithContext(ctx).
 		Model(&types.SearchLog{}).
+		// 用 SUM(CASE WHEN ...) 而不是 COUNT(...) FILTER (WHERE ...)：两者
+		// 结果相同，但前者不依赖引擎版本（SQLite 需 ≥ 3.30 才支持 FILTER）。
 		Select(`COUNT(*) AS total_queries,
-			COUNT(*) FILTER (WHERE result_count = 0) AS zero_result_queries,
+			COALESCE(SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END), 0) AS zero_result_queries,
 			COALESCE(SUM(permission_filtered_count), 0) AS permission_filtered_total,
-			COUNT(*) FILTER (WHERE clicked) AS clicked_queries,
+			COALESCE(SUM(CASE WHEN clicked THEN 1 ELSE 0 END), 0) AS clicked_queries,
 			COALESCE(AVG(duration_ms), 0) AS average_duration_ms`).
 		Where("tenant_id = ? AND created_at >= ?", tenantID, since).
 		Scan(&row).Error

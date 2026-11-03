@@ -9731,6 +9731,11 @@ export default {
     colReviewsDone: '승인 수',
     colAnswers: '답변 수',
     colSubmitted: '제출 수',
+    sectionObservability: '런타임 상태',
+    refusalRate: '거절 비율',
+    permissionBlocked: '권한 차단',
+    avgLatency: '평균 지연(ms)',
+    slowQueries: '느린 쿼리(>2초)',
   },
   reviewWorkbench: {
     title: 'Review workbench',

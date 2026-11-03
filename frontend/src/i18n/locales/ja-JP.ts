@@ -9731,6 +9731,11 @@ export default {
     colReviewsDone: '承認数',
     colAnswers: '回答数',
     colSubmitted: '申請数',
+    sectionObservability: '実行時ヘルス',
+    refusalRate: '拒否率',
+    permissionBlocked: '権限ブロック',
+    avgLatency: '平均レイテンシ(ms)',
+    slowQueries: '低速クエリ(>2秒)',
   },
   reviewWorkbench: {
     title: 'Review workbench',

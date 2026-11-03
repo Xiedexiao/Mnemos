@@ -9727,6 +9727,11 @@ export default {
     colReviewsDone: '審批數',
     colAnswers: '回答數',
     colSubmitted: '提交數',
+    sectionObservability: '執行時可觀測',
+    refusalRate: '拒答率',
+    permissionBlocked: '權限攔截',
+    avgLatency: '平均耗時（毫秒）',
+    slowQueries: '慢查詢（>2 秒）',
   },
   reviewWorkbench: {
     title: 'Review workbench',

@@ -140,6 +140,33 @@
         />
       </section>
 
+      <!-- 运行时可观测（§17.2） -->
+      <section class="ops-dashboard__section">
+        <h3 class="ops-dashboard__section-title">{{ t('opsDashboard.sectionObservability') }}</h3>
+        <div class="ops-dashboard__metrics">
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.refusalRate') }}</span>
+            <span class="ops-dashboard__value">
+              {{ ((data?.observability.refusal_rate ?? 0) * 100).toFixed(1) }}%
+            </span>
+          </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.permissionBlocked') }}</span>
+            <span class="ops-dashboard__value">{{ data?.observability.permission_blocked ?? 0 }}</span>
+          </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.avgLatency') }}</span>
+            <span class="ops-dashboard__value">
+              {{ Math.round(data?.observability.average_latency_ms ?? 0) }}
+            </span>
+          </div>
+          <div class="ops-dashboard__metric" :class="{ 'is-alert': (data?.observability.slow_queries ?? 0) > 0 }">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.slowQueries') }}</span>
+            <span class="ops-dashboard__value">{{ data?.observability.slow_queries ?? 0 }}</span>
+          </div>
+        </div>
+      </section>
+
       <!-- 成本（§16.1） -->
       <section class="ops-dashboard__section">
         <h3 class="ops-dashboard__section-title">{{ t('opsDashboard.sectionCost') }}</h3>

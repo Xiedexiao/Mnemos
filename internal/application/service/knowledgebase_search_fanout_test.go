@@ -737,11 +737,41 @@ func TestRetrieveFromStores_OneGroupFails_AllFail(t *testing.T) {
 		{Engine: buildBoundComposite(t, fakeBad), BaseParams: vectorParams("q"), TopK: 50, KBIDs: []string{"kb-bad"}},
 	}
 	s := &knowledgeBaseService{}
+	res, err := s.retrieveFromStores(context.Background(), groups, retriever.EngineAwareNormalizer{})
+	// §17.1 降级：一个 store 组失败不应让整次检索失败——另一个组的命中仍然
+	// 可用，用户拿到的是部分结果而不是"检索失败"。
+	require.NoError(t, err)
+	require.NotEmpty(t, res, "the healthy group still returns its hits")
+	for _, rr := range res {
+		for _, hit := range rr.Results {
+			if strings.Contains(hit.ChunkID, "bad") {
+				t.Fatalf("a failed group must not contribute results: %q", hit.ChunkID)
+			}
+		}
+	}
+}
+
+// TestRetrieveFromStores_AllGroupsFail covers the other end of the degrade
+// rule: when every group fails there is nothing to return, so the caller must
+// get a typed unavailable error rather than a silent empty result (which would
+// read as "the corpus has nothing").
+func TestRetrieveFromStores_AllGroupsFail(t *testing.T) {
+	t.Parallel()
+	buildBad := func() *fakeRetrieveEngineService {
+		return &fakeRetrieveEngineService{
+			engineType: types.PostgresRetrieverEngineType,
+			support:    []types.RetrieverType{types.VectorRetrieverType},
+			cannedErr:  stderrors.New("simulated retrieve failure"),
+		}
+	}
+	groups := []*storeGroup{
+		{Engine: buildBoundComposite(t, buildBad()), BaseParams: vectorParams("q"), TopK: 50, KBIDs: []string{"kb-a"}},
+		{Engine: buildBoundComposite(t, buildBad()), BaseParams: vectorParams("q"), TopK: 50, KBIDs: []string{"kb-b"}},
+	}
+	s := &knowledgeBaseService{}
 	_, err := s.retrieveFromStores(context.Background(), groups, retriever.EngineAwareNormalizer{})
 	require.Error(t, err)
 
-	// Generic infra failure → 2201 (Unavailable). Message MUST NOT echo
-	// the raw error or any store UUID.
 	app, ok := apperrors.IsAppError(err)
 	require.True(t, ok, "expected typed AppError, got %T", err)
 	assert.Equal(t, apperrors.ErrVectorStoreUnavailable, app.Code)
@@ -771,6 +801,39 @@ func TestRetrieveFromStores_PerGroupTimeout(t *testing.T) {
 
 	s := &knowledgeBaseService{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	res, err := s.retrieveFromStores(ctx, groups, retriever.EngineAwareNormalizer{})
+	// §17.1 "超时降级为精确 + BM25"：一组超时后，另一组的结果照常返回。
+	require.NoError(t, err)
+	require.NotEmpty(t, res, "the fast group still returns its hit")
+	var chunkIDs []string
+	for _, rr := range res {
+		for _, hit := range rr.Results {
+			chunkIDs = append(chunkIDs, hit.ChunkID)
+		}
+	}
+	assert.Contains(t, chunkIDs, "fast1")
+	assert.NotContains(t, chunkIDs, "slow1")
+}
+
+// TestRetrieveFromStores_AllGroupsTimeout is the fail-closed counterpart: with
+// every group timing out there is no partial result to degrade to.
+func TestRetrieveFromStores_AllGroupsTimeout(t *testing.T) {
+	t.Setenv("MULTI_STORE_RETRIEVE_TIMEOUT_SEC", "1")
+
+	buildSlow := func() *fakeRetrieveEngineService {
+		return &fakeRetrieveEngineService{
+			engineType: types.PostgresRetrieverEngineType,
+			support:    []types.RetrieverType{types.VectorRetrieverType},
+			sleep:      3 * time.Second,
+		}
+	}
+	groups := []*storeGroup{
+		{Engine: buildBoundComposite(t, buildSlow()), BaseParams: vectorParams("q"), TopK: 50, KBIDs: []string{"kb-slow-1"}},
+		{Engine: buildBoundComposite(t, buildSlow()), BaseParams: vectorParams("q"), TopK: 50, KBIDs: []string{"kb-slow-2"}},
+	}
+	s := &knowledgeBaseService{}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := s.retrieveFromStores(ctx, groups, retriever.EngineAwareNormalizer{})
 	require.Error(t, err)

@@ -9737,6 +9737,11 @@ export default {
     colReviewsDone: 'Approvals',
     colAnswers: 'Answers',
     colSubmitted: 'Submitted',
+    sectionObservability: 'Runtime health',
+    refusalRate: 'Refusal rate',
+    permissionBlocked: 'Blocked by permission',
+    avgLatency: 'Avg latency (ms)',
+    slowQueries: 'Slow queries (>2s)',
   },
   reviewWorkbench: {
     title: 'Review workbench',

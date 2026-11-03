@@ -9731,6 +9731,11 @@ export default {
     colReviewsDone: 'Согласований',
     colAnswers: 'Ответов',
     colSubmitted: 'Заявок',
+    sectionObservability: 'Состояние выполнения',
+    refusalRate: 'Доля отказов',
+    permissionBlocked: 'Заблокировано правами',
+    avgLatency: 'Средняя задержка (мс)',
+    slowQueries: 'Медленные запросы (>2с)',
   },
   reviewWorkbench: {
     title: 'Review workbench',
