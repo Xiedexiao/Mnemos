@@ -392,6 +392,7 @@ const navItems = computed(() => {
     { key: 'tenant', icon: 'user-circle', label: t('settings.tenantInfo') },
     { key: 'members', icon: 'usergroup', label: t('tenantMember.title') },
     { key: 'review-workbench', icon: 'assignment-checked', label: t('reviewWorkbench.navEntry') },
+    { key: 'governance-console', icon: 'secured', label: t('governanceConsole.navEntry') },
     ...integrationItems,
   ]
   // currentTenantRole 为空表示「membership 还没加载」—— 比起渲染整套
@@ -547,12 +548,21 @@ const redirectToReviewWorkbench = (section: string) => {
   return true
 }
 
+// 治理控制台同样是独立整页（/platform/governance），弹窗里只放入口。
+const redirectToGovernanceConsole = (section: string) => {
+  if (section !== 'governance-console') return false
+  uiStore.closeSettings()
+  void router.push('/platform/governance')
+  return true
+}
+
 // 监听初始导航设置
 watch(() => uiStore.settingsInitialSection, (section) => {
   if (section && visible.value) {
     const normalizedSection = normalizeSettingsSection(section)
     if (redirectToToolbox(normalizedSection, uiStore.settingsInitialSubSection)) return
     if (redirectToReviewWorkbench(normalizedSection)) return
+    if (redirectToGovernanceConsole(normalizedSection)) return
     if (deploymentCapabilities.loaded && !isSectionSupported(normalizedSection)) {
       MessagePlugin.warning(t('settings.capabilityUnavailable'))
       currentSection.value = navItems.value[0]?.key || 'general'
