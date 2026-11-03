@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"gorm.io/gorm"
@@ -54,7 +55,204 @@ func (s *operationsDashboardService) Get(
 	s.fillDelivery(ctx, tenantID, since, dashboard)
 	s.fillSearchQuality(ctx, tenantID, windowDays, dashboard)
 	s.fillHealth(ctx, tenantID, dashboard)
+	s.fillTrends(ctx, tenantID, since, windowDays, dashboard)
+	s.fillContributors(ctx, tenantID, since, dashboard)
+	s.fillCost(ctx, tenantID, since, dashboard)
 	return dashboard, nil
+}
+
+// fillTrends builds the per-day series (§16.1 趋势).
+//
+// 逐日分桶在 SQL 里做（date_trunc / DATE 截断），不把行拉进内存：看板默认
+// 30 天，但窗口可到 365 天，逐行聚合会随数据量线性变慢。
+func (s *operationsDashboardService) fillTrends(
+	ctx context.Context, tenantID uint64, since time.Time, windowDays int,
+	dashboard *types.OperationsDashboard,
+) {
+	type dayCount struct {
+		Day   string
+		Total int64
+	}
+	series := make(map[string]*types.DashboardTrendPoint, windowDays)
+	dashboard.Trends = []types.DashboardTrendPoint{}
+
+	ensure := func(day string) *types.DashboardTrendPoint {
+		point, ok := series[day]
+		if !ok {
+			point = &types.DashboardTrendPoint{Day: day}
+			series[day] = point
+		}
+		return point
+	}
+
+	// dayExpression 生成跨库一致的日期截断：Postgres 用 TO_CHAR，SQLite 用
+	// strftime。写死其中一种会让 Lite 模式的看板整块静默为空。
+	dayExpression := s.dayExpression()
+
+	var knowledgeRows []dayCount
+	if err := s.db.WithContext(ctx).
+		Model(&types.Knowledge{}).
+		Select(dayExpression+" AS day, COUNT(*) AS total").
+		Where("tenant_id = ? AND deleted_at IS NULL AND created_at >= ?", tenantID, since).
+		Group("day").Scan(&knowledgeRows).Error; err == nil {
+		for _, row := range knowledgeRows {
+			ensure(row.Day).KnowledgeAdded = row.Total
+		}
+	}
+
+	var reviewRows []dayCount
+	if err := s.db.WithContext(ctx).
+		Model(&types.ApprovalTask{}).
+		Select(dayExpression+" AS day, COUNT(*) AS total").
+		Where("tenant_id = ? AND created_at >= ?", tenantID, since).
+		Group("day").Scan(&reviewRows).Error; err == nil {
+		for _, row := range reviewRows {
+			ensure(row.Day).ReviewsSubmitted = row.Total
+		}
+	}
+
+	var queryRows []dayCount
+	if err := s.db.WithContext(ctx).
+		Model(&types.SearchLog{}).
+		Select(dayExpression+" AS day, COUNT(*) AS total").
+		Where("tenant_id = ? AND created_at >= ?", tenantID, since).
+		Group("day").Scan(&queryRows).Error; err == nil {
+		for _, row := range queryRows {
+			ensure(row.Day).Queries = row.Total
+		}
+	}
+
+	days := make([]string, 0, len(series))
+	for day := range series {
+		days = append(days, day)
+	}
+	sort.Strings(days)
+	for _, day := range days {
+		dashboard.Trends = append(dashboard.Trends, *series[day])
+	}
+}
+
+// dayExpression returns the dialect-appropriate date-truncation expression for
+// created_at. Both forms yield YYYY-MM-DD text so the scan target stays a string.
+func (s *operationsDashboardService) dayExpression() string {
+	if s.db != nil && s.db.Dialector != nil && s.db.Dialector.Name() == "sqlite" {
+		return "strftime('%Y-%m-%d', created_at)"
+	}
+	return "TO_CHAR(created_at, 'YYYY-MM-DD')"
+}
+
+// fillContributors builds the §16.2 contribution leaderboard.
+//
+// 只统计可验证的行为（做出的审批决定、提交的审批、社区问答），不统计"被
+// 浏览数"这类可以刷的量：§16.2 明确要求"避免只比数量"。
+func (s *operationsDashboardService) fillContributors(
+	ctx context.Context, tenantID uint64, since time.Time, dashboard *types.OperationsDashboard,
+) {
+	contributors := map[string]*types.DashboardContributor{}
+	ensure := func(userID string) *types.DashboardContributor {
+		row, ok := contributors[userID]
+		if !ok {
+			row = &types.DashboardContributor{UserID: userID}
+			contributors[userID] = row
+		}
+		return row
+	}
+
+	type userCount struct {
+		UserID string
+		Total  int64
+	}
+
+	var decided []userCount
+	if err := s.db.WithContext(ctx).
+		Model(&types.ApprovalTask{}).
+		Select("decided_by AS user_id, COUNT(*) AS total").
+		Where("tenant_id = ? AND decided_by <> '' AND decision_at >= ?", tenantID, since).
+		Group("decided_by").Scan(&decided).Error; err == nil {
+		for _, row := range decided {
+			ensure(row.UserID).ReviewsCompleted = row.Total
+		}
+	}
+
+	var submitted []userCount
+	if err := s.db.WithContext(ctx).
+		Model(&types.ApprovalTask{}).
+		Select("requested_by AS user_id, COUNT(*) AS total").
+		Where("tenant_id = ? AND created_at >= ?", tenantID, since).
+		Group("requested_by").Scan(&submitted).Error; err == nil {
+		for _, row := range submitted {
+			ensure(row.UserID).Submitted = row.Total
+		}
+	}
+
+	var answers []userCount
+	if err := s.db.WithContext(ctx).
+		Model(&types.CommunityAnswer{}).
+		Select("answered_by AS user_id, COUNT(*) AS total").
+		Where("tenant_id = ? AND created_at >= ?", tenantID, since).
+		Group("answered_by").Scan(&answers).Error; err == nil {
+		for _, row := range answers {
+			ensure(row.UserID).Answers = row.Total
+		}
+	}
+
+	var questions []userCount
+	if err := s.db.WithContext(ctx).
+		Model(&types.CommunityQuestion{}).
+		Select("asked_by AS user_id, COUNT(*) AS total").
+		Where("tenant_id = ? AND created_at >= ?", tenantID, since).
+		Group("asked_by").Scan(&questions).Error; err == nil {
+		for _, row := range questions {
+			ensure(row.UserID).Questions = row.Total
+		}
+	}
+
+	list := make([]types.DashboardContributor, 0, len(contributors))
+	for _, row := range contributors {
+		// 权重：审批与回答都比"提交/提问"更重——它们代表真实产出。
+		row.Score = row.ReviewsCompleted*3 + row.Answers*2 + row.Submitted
+		list = append(list, *row)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].Score != list[j].Score {
+			return list[i].Score > list[j].Score
+		}
+		return list[i].UserID < list[j].UserID
+	})
+	if len(list) > 20 {
+		list = list[:20]
+	}
+	dashboard.Contributors = list
+}
+
+// fillCost builds the §16.1 "成本" block from the usage ledger.
+func (s *operationsDashboardService) fillCost(
+	ctx context.Context, tenantID uint64, since time.Time, dashboard *types.OperationsDashboard,
+) {
+	type usageRow struct {
+		ModelID          string
+		PromptTokens     int64
+		CompletionTokens int64
+		CallCount        int64
+	}
+	var rows []usageRow
+	if err := s.db.WithContext(ctx).
+		Model(&types.ModelUsageDaily{}).
+		Select("model_id, SUM(prompt_tokens) AS prompt_tokens, "+
+			"SUM(completion_tokens) AS completion_tokens, SUM(call_count) AS call_count").
+		Where("tenant_id = ? AND day >= ?", tenantID, since).
+		Group("model_id").
+		Scan(&rows).Error; err != nil {
+		return
+	}
+	dashboard.Cost.ByModel = make(map[string]int64, len(rows))
+	for _, row := range rows {
+		dashboard.Cost.PromptTokens += row.PromptTokens
+		dashboard.Cost.CompletionTokens += row.CompletionTokens
+		dashboard.Cost.CallCount += row.CallCount
+		dashboard.Cost.ByModel[row.ModelID] = row.PromptTokens + row.CompletionTokens
+	}
+	dashboard.Cost.TotalTokens = dashboard.Cost.PromptTokens + dashboard.Cost.CompletionTokens
 }
 
 // fillOverview counts knowledge entries and their lifecycle distribution.
@@ -136,6 +334,8 @@ func (s *operationsDashboardService) fillGovernance(
 	dashboard.Governance.PendingFieldMigrations = countWhere(&types.KnowledgeFieldMigration{},
 		"status = ?", string(types.FieldMigrationPending))
 	dashboard.Governance.ACLCeilingViolations = countWhere(&types.ACLCeilingViolation{}, "")
+	dashboard.Governance.PendingChangeSignals = countWhere(&types.ChangeSignal{},
+		"status = ?", string(types.ChangeSignalPending))
 }
 
 // fillDelivery measures approval throughput (§19.2).

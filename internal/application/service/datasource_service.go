@@ -38,6 +38,9 @@ type DataSourceService struct {
 	// lifecycle demotes (rather than hard-deletes) content the source removed
 	// (V3.0 §3.4 删除同步：源文档删除 → 知识库进入"待确认下架").
 	lifecycle interfaces.KnowledgeLifecycleService
+	// signals reports connector-health problems into the §7.3 catalogue so a
+	// silently failing source surfaces as a governance item. Optional.
+	signals interfaces.ChangeSignalService
 }
 
 // NewDataSourceService creates a new data source service
@@ -53,6 +56,7 @@ func NewDataSourceService(
 	tagService interfaces.KnowledgeTagService,
 	audit interfaces.AuditLogService,
 	lifecycle interfaces.KnowledgeLifecycleService,
+	signals interfaces.ChangeSignalService,
 ) interfaces.DataSourceService {
 	return &DataSourceService{
 		dsRepo:            dsRepo,
@@ -65,6 +69,7 @@ func NewDataSourceService(
 		tenantRepo:        tenantRepo,
 		tagService:        tagService,
 		lifecycle:         lifecycle,
+		signals:           signals,
 		audit:             audit,
 	}
 }
@@ -852,6 +857,27 @@ func (s *DataSourceService) ProcessSync(ctx context.Context, task *asynq.Task) e
 		}
 	}
 	s.updateSyncRunResult(ctx, ds, syncLog, result, resultJSON, syncStatus, syncErrorMessage, wasPaused)
+
+	// 连接器健康信号（§7.3 "连续无变化、权限同步失败、解析失败率异常视为可能
+	// 静默失效"）：同步失败或部分失败时上报，让治理面看到"这个源可能已经不
+	// 工作了"，而不是等用户发现内容陈旧。
+	if s.signals != nil && syncStatus != types.SyncLogStatusSuccess {
+		confidence := "mid"
+		if syncStatus == types.SyncLogStatusFailed {
+			confidence = "high"
+		}
+		_, signalErr := s.signals.Collect(ctx, &types.ChangeSignal{
+			TenantID:        ds.TenantID,
+			SignalType:      string(types.ChangeSignalConnectorHealth),
+			SourceID:        ds.ID,
+			KnowledgeBaseID: ds.KnowledgeBaseID,
+			Summary:         fmt.Sprintf("数据源 %s 同步%s：%s", ds.Name, syncStatus, truncateChangeText(syncErrorMessage, 200)),
+			Confidence:      confidence,
+		})
+		if signalErr != nil {
+			logger.Warnf(ctx, "failed to collect connector health signal for ds=%s: %v", ds.ID, signalErr)
+		}
+	}
 
 	logger.Infof(ctx, "data source sync completed: ds=%s created=%d updated=%d deleted=%d",
 		payload.DataSourceID, syncLog.ItemsCreated, syncLog.ItemsUpdated, syncLog.ItemsDeleted)

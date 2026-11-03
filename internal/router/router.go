@@ -87,6 +87,8 @@ type RouterParams struct {
 	OperationsDashboardHandler   *handler.OperationsDashboardHandler
 	CommunityHandler             *handler.CommunityHandler
 	LearningCertificateHandler   *handler.LearningCertificateHandler
+	ChangeSignalHandler          *handler.ChangeSignalHandler
+	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
 	ShareLinkHandler             *handler.ShareLinkHandler
@@ -353,6 +355,8 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterOperationsDashboardRoutes(v1, params.OperationsDashboardHandler, rbacGuards)
 		RegisterCommunityRoutes(v1, params.CommunityHandler, rbacGuards)
 		RegisterLearningCertificateRoutes(v1, params.LearningCertificateHandler, rbacGuards)
+		RegisterChangeSignalRoutes(v1, params.ChangeSignalHandler, rbacGuards)
+		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)
 		RegisterChangeRequestRoutes(v1, rbacGuards, params.ChangeRequestHandler)

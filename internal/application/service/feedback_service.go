@@ -47,7 +47,11 @@ type feedbackService struct {
 	feedbackRepo interfaces.FeedbackRepository
 	taskRepo     interfaces.QualityTaskRepository
 	audit        interfaces.AuditLogService
-	now          func() time.Time
+	// signals feeds the §7.3 change-signal catalogue so a cluster of "useless"
+	// ratings can become a change request instead of only a quality task.
+	// Optional: nil skips it.
+	signals interfaces.ChangeSignalService
+	now     func() time.Time
 }
 
 // NewFeedbackService constructs the production feedback service. taskRepo
@@ -57,6 +61,7 @@ func NewFeedbackService(
 	feedbackRepo interfaces.FeedbackRepository,
 	taskRepo interfaces.QualityTaskRepository,
 	audit interfaces.AuditLogService,
+	signals interfaces.ChangeSignalService,
 ) interfaces.FeedbackService {
 	return &feedbackService{
 		feedbackRepo: feedbackRepo,
@@ -147,13 +152,13 @@ func (s *feedbackService) ReportKnowledge(
 	}
 
 	task := &types.QualityTask{
-		ID:         uuid.NewString(),
-		TenantID:   tenantID,
-		TaskType:   taskType,
-		SourceType: types.QualityTaskSourceKnowledge,
-		SourceID:   knowledgeID,
+		ID:          uuid.NewString(),
+		TenantID:    tenantID,
+		TaskType:    taskType,
+		SourceType:  types.QualityTaskSourceKnowledge,
+		SourceID:    knowledgeID,
 		KnowledgeID: knowledgeID,
-		ChunkID:    chunkID,
+		ChunkID:     chunkID,
 		Detail: mustDetailsJSON(map[string]interface{}{
 			"comment":     comment,
 			"reporter_id": userID,
@@ -233,18 +238,18 @@ func (s *feedbackService) sweepUselessThreshold(
 			continue
 		}
 		task := &types.QualityTask{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			TaskType:   types.QualityTaskTypeUselessThreshold,
-			SourceType: types.QualityTaskSourceMessage,
-			SourceID:   messageID,
+			ID:          uuid.NewString(),
+			TenantID:    tenantID,
+			TaskType:    types.QualityTaskTypeUselessThreshold,
+			SourceType:  types.QualityTaskSourceMessage,
+			SourceID:    messageID,
 			KnowledgeID: knowledgeID,
 			Detail: mustDetailsJSON(map[string]interface{}{
-				"useless_count":    count,
-				"threshold":        uselessFeedbackThreshold,
-				"window_days":      int(uselessFeedbackWindow / (24 * time.Hour)),
-				"triggered_by":     messageID,
-				"latest_rater_id":  userID,
+				"useless_count":   count,
+				"threshold":       uselessFeedbackThreshold,
+				"window_days":     int(uselessFeedbackWindow / (24 * time.Hour)),
+				"triggered_by":    messageID,
+				"latest_rater_id": userID,
 			}),
 			Status: types.QualityTaskStatusOpen,
 		}
@@ -259,6 +264,26 @@ func (s *feedbackService) sweepUselessThreshold(
 		// Actor is empty on system-generated tasks (the sweep is the
 		// actor), matching the system-audit convention.
 		s.logQualityTaskCreated(ctx, task, "")
+
+		// 反馈聚集同时进变更信号（§7.3 用户反馈信号）：质量任务是"内部分派"，
+		// 变更信号是"这份知识该改了"，两者用途不同，不该互相替代。
+		if s.signals != nil {
+			_, signalErr := s.signals.Collect(ctx, &types.ChangeSignal{
+				TenantID:    tenantID,
+				SignalType:  string(types.ChangeSignalUserFeedback),
+				SourceID:    messageID,
+				KnowledgeID: knowledgeID,
+				Summary: fmt.Sprintf("知识 %s 在 %d 天内收到 %d 次\"没用\"评价",
+					knowledgeID, int(uselessFeedbackWindow/(24*time.Hour)), count),
+				Confidence: "mid",
+			})
+			if signalErr != nil {
+				logger.WarnWithFields(ctx, logger.Fields{
+					"error":        signalErr.Error(),
+					"knowledge_id": knowledgeID,
+				}, "feedback: change signal collection failed")
+			}
+		}
 	}
 }
 

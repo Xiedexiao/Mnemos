@@ -266,6 +266,46 @@
         />
       </t-tab-panel>
 
+      <!-- ================= 变更信号（§7.3） ================= -->
+      <t-tab-panel value="signals" :label="t('governanceConsole.tabSignals')">
+        <t-table
+          row-key="id"
+          :data="signals"
+          :columns="signalColumns"
+          size="medium"
+          hover
+          :loading="loading"
+          :empty="t('governanceConsole.emptySignals')"
+        >
+          <template #summary="{ row }">
+            <div class="governance-subject">
+              <span class="governance-subject__title">{{ row.summary }}</span>
+              <span class="governance-subject__meta">
+                {{ signalTypeLabel(row.signal_type) }} · {{ row.source_id }}
+              </span>
+            </div>
+          </template>
+          <template #confidence="{ row }">
+            <t-tag size="small" variant="light"
+              :theme="row.confidence === 'high' ? 'danger' : row.confidence === 'mid' ? 'warning' : 'default'">
+              {{ row.confidence }}
+            </t-tag>
+          </template>
+          <template #op="{ row }">
+            <div class="governance-actions">
+              <t-button theme="primary" variant="text" size="small"
+                :loading="busyId === row.id" @click="runSignal(row, 'convert')">
+                {{ t('governanceConsole.signalConvert') }}
+              </t-button>
+              <t-button theme="danger" variant="text" size="small"
+                :loading="busyId === row.id" @click="runSignal(row, 'dismiss')">
+                {{ t('governanceConsole.signalDismiss') }}
+              </t-button>
+            </div>
+          </template>
+        </t-table>
+      </t-tab-panel>
+
       <!-- ================= 变更单（§7.2 闭环） ================= -->
       <t-tab-panel value="changeRequests" :label="t('governanceConsole.tabChangeRequests')">
         <p class="governance-console__hint">{{ t('governanceConsole.crGateHint') }}</p>
@@ -406,6 +446,10 @@ import {
   submitChangeRequest,
   verifyChangeRequest,
   type ChangeRequest,
+  convertChangeSignal,
+  dismissChangeSignal,
+  listChangeSignals,
+  type ChangeSignal,
   type GovernanceApprovalTask,
   type KnowledgeGap,
   type KnowledgeTemplate,
@@ -437,7 +481,8 @@ type TabValue =
   | 'permissions'
   | 'searchQuality'
   | 'gaps'
-  | 'changeRequests';
+  | 'changeRequests'
+  | 'signals';
 
 const activeTab = ref<TabValue>('approvals');
 const loading = ref(false);
@@ -484,6 +529,9 @@ const gaps = ref<KnowledgeGap[]>([]);
 
 // ---- 变更单 ----
 const changeRequests = ref<ChangeRequest[]>([]);
+
+// ---- 变更信号 ----
+const signals = ref<ChangeSignal[]>([]);
 
 // ---------------------------------------------------------------------------
 // 展示助手
@@ -659,6 +707,19 @@ const frequentColumns = computed(() => [
   { colKey: 'occurrences', title: t('governanceConsole.columnOccurrences'), width: 110 },
 ]);
 
+// signalTypeLabel resolves the §7.3 signal class label.
+const signalTypeLabel = (value: string) => {
+  const key = `governanceConsole.signalType_${value}`;
+  const label = t(key);
+  return label === key ? value : label;
+};
+
+const signalColumns = computed(() => [
+  { colKey: 'summary', title: t('governanceConsole.columnSubject'), ellipsis: true, minWidth: 300 },
+  { colKey: 'confidence', title: t('governanceConsole.columnConfidence'), width: 110 },
+  { colKey: 'op', title: t('governanceConsole.columnOp'), width: 180 },
+]);
+
 const changeRequestColumns = computed(() => [
   { colKey: 'cr', title: t('governanceConsole.columnCrTitle'), ellipsis: true, minWidth: 240 },
   { colKey: 'change_type', title: t('governanceConsole.columnChangeType'), width: 140 },
@@ -743,6 +804,34 @@ const loadSearchQuality = () =>
     zeroResultQueries.value = zeroRes?.data || [];
   });
 
+const loadSignals = () =>
+  withLoading(async () => {
+    const res = await listChangeSignals();
+    signals.value = res?.data || [];
+  });
+
+// runSignal converts a signal into a CR draft or dismisses it; converting
+// creates a change request, so the change-request tab is refreshed too.
+const runSignal = async (row: ChangeSignal, action: 'convert' | 'dismiss') => {
+  busyId.value = row.id;
+  try {
+    if (action === 'convert') {
+      await convertChangeSignal(row.id);
+    } else {
+      await dismissChangeSignal(row.id);
+    }
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadSignals();
+    if (action === 'convert') {
+      await loadChangeRequests();
+    }
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
 const loadChangeRequests = () =>
   withLoading(async () => {
     const res = await listChangeRequests();
@@ -772,6 +861,8 @@ const reloadActiveTab = () => {
       return loadGaps();
     case 'changeRequests':
       return loadChangeRequests();
+    case 'signals':
+      return loadSignals();
     default:
       return Promise.resolve();
   }

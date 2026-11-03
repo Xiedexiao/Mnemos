@@ -1142,6 +1142,7 @@ export interface OperationsDashboard {
     open_knowledge_gaps: number
     pending_field_migrations: number
     acl_ceiling_violations: number
+    pending_change_signals: number
   }
   delivery: {
     approved_last_30_days: number
@@ -1156,6 +1157,27 @@ export interface OperationsDashboard {
     zero_result_rate: number
     permission_filtered_total: number
     average_duration_ms: number
+  }
+  trends: Array<{
+    day: string
+    knowledge_added: number
+    reviews_submitted: number
+    queries: number
+  }>
+  contributors: Array<{
+    user_id: string
+    reviews_completed: number
+    submitted: number
+    answers: number
+    questions: number
+    score: number
+  }>
+  cost: {
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+    call_count: number
+    by_model: Record<string, number>
   }
   health?: Record<string, unknown>
   window_days: number
@@ -1309,6 +1331,110 @@ export function listLearningCertificates() {
 export function certifyLearningPath(pathId: string, validMonths = 12) {
   return post<CertificationResponse>(
     `/api/v1/learning-paths/${encodeURIComponent(pathId)}/certify?valid_months=${validMonths}`,
+    {},
+  )
+}
+
+// ============================================================================
+// §7.3 change signals
+// ============================================================================
+
+// CHANGE_SIGNAL_TYPES mirrors the backend enum.
+export const CHANGE_SIGNAL_TYPES = [
+  'internal_event',
+  'source_system',
+  'external_subscription',
+  'dependency',
+  'user_feedback',
+  'conflict',
+  'connector_health',
+] as const
+
+export type ChangeSignalType = (typeof CHANGE_SIGNAL_TYPES)[number]
+
+// ChangeSignal is one collected update signal.
+export interface ChangeSignal {
+  id: string
+  signal_type: string
+  source_id: string
+  knowledge_id?: string
+  summary: string
+  confidence: 'high' | 'mid' | 'low' | string
+  default_action: string
+  status: 'pending' | 'converted' | 'dismissed' | string
+  change_request_id?: string
+  created_at?: string
+}
+
+interface ChangeSignalListResponse {
+  success: boolean
+  data: ChangeSignal[]
+}
+
+interface ChangeSignalResponse {
+  success: boolean
+  data: ChangeSignal
+}
+
+// GET /api/v1/change-signals — the untriaged signal queue.
+export function listChangeSignals(status = 'pending', signalType = '') {
+  const params = new URLSearchParams({ status })
+  if (signalType) params.set('signal_type', signalType)
+  return get<ChangeSignalListResponse>(`/api/v1/change-signals?${params.toString()}`)
+}
+
+// POST /api/v1/change-signals/:id/convert — turn a signal into a CR draft.
+export function convertChangeSignal(id: string) {
+  return post<ChangeSignalResponse>(
+    `/api/v1/change-signals/${encodeURIComponent(id)}/convert`,
+    {},
+  )
+}
+
+// POST /api/v1/change-signals/:id/dismiss — mark a false positive.
+export function dismissChangeSignal(id: string) {
+  return post<ChangeSignalResponse>(
+    `/api/v1/change-signals/${encodeURIComponent(id)}/dismiss`,
+    {},
+  )
+}
+
+// ============================================================================
+// §15.5 learning tasks
+// ============================================================================
+
+// LearningTask is one assigned study item.
+export interface LearningTask {
+  id: string
+  knowledge_id: string
+  path_id?: string
+  title: string
+  source: 'sop_change' | 'review_cycle' | 'certification' | 'manual' | string
+  status: 'open' | 'done' | 'waived' | string
+  due_at?: string | null
+  completed_at?: string | null
+}
+
+interface LearningTaskListResponse {
+  success: boolean
+  data: LearningTask[]
+}
+
+interface LearningTaskResponse {
+  success: boolean
+  data: LearningTask
+}
+
+// GET /api/v1/learning-tasks — the caller's study queue.
+export function listLearningTasks(status = '') {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return get<LearningTaskListResponse>(`/api/v1/learning-tasks${query}`)
+}
+
+// POST /api/v1/learning-tasks/:id/complete — mark done (assignee only).
+export function completeLearningTask(id: string) {
+  return post<LearningTaskResponse>(
+    `/api/v1/learning-tasks/${encodeURIComponent(id)}/complete`,
     {},
   )
 }

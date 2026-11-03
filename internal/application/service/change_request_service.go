@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/application/repository"
+	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	"github.com/google/uuid"
@@ -86,7 +87,10 @@ type changeRequestService struct {
 	// Optional: nil disables downstream expansion (only the change items
 	// themselves become tasks).
 	relations interfaces.KnowledgeRelationService
-	now       func() time.Time
+	// learning assigns study work when a change touches training material
+	// (§15.5 SOP 变更 → 学习任务, §7.6 培训受影响). Optional.
+	learning interfaces.LearningTaskService
+	now      func() time.Time
 }
 
 // NewChangeRequestService constructs the production change request service.
@@ -98,6 +102,7 @@ func NewChangeRequestService(
 	governance interfaces.GovernanceApprovalService,
 	versions interfaces.KnowledgeVersionRepository,
 	relations interfaces.KnowledgeRelationService,
+	learning interfaces.LearningTaskService,
 ) interfaces.ChangeRequestService {
 	return &changeRequestService{
 		crs:        crs,
@@ -107,6 +112,7 @@ func NewChangeRequestService(
 		governance: governance,
 		versions:   versions,
 		relations:  relations,
+		learning:   learning,
 		now:        time.Now,
 	}
 }
@@ -735,6 +741,11 @@ func (s *changeRequestService) Publish(ctx context.Context, crID string) (*types
 		return s.Get(ctx, cr.ID)
 	}
 
+	// 培训联动（§15.5 / §7.6）：变更发布后，把受影响的知识派给影响任务的
+	// 责任人作为学习任务。只看 open 的影响任务——已 done/waived 的说明有人
+	// 判断过无需改动，不该再给它们派"重新学习"。
+	s.assignLearningAfterPublish(ctx, tenantID, cr)
+
 	cr.Status = string(types.ChangeRequestStatusVerifying)
 	cr.UpdatedAt = s.now()
 	if err := s.crs.Update(ctx, cr); err != nil {
@@ -746,6 +757,42 @@ func (s *changeRequestService) Publish(ctx context.Context, crID string) (*types
 		"items":     len(items),
 	})
 	return s.Get(ctx, cr.ID)
+}
+
+// assignLearningAfterPublish creates learning work for the people responsible
+// for the impacted knowledge (§15.5 SOP 变更联动).
+//
+// 失败只记日志：学习任务派发是发布后的连带动作，不能因为派任务失败就把
+// 已经生效的变更回滚。
+func (s *changeRequestService) assignLearningAfterPublish(
+	ctx context.Context, tenantID uint64, cr *types.ChangeRequest,
+) {
+	if s.learning == nil || cr == nil {
+		return
+	}
+	tasks, err := s.crs.ListTasksByCR(ctx, []string{cr.ID})
+	if err != nil {
+		return
+	}
+	for _, task := range tasks {
+		if task == nil || task.TargetType != string(types.ImpactTargetKnowledge) {
+			continue
+		}
+		if types.ImpactTaskStatus(task.Status) != types.ImpactTaskStatusOpen {
+			continue
+		}
+		assignee := strings.TrimSpace(task.AssigneeID)
+		if assignee == "" {
+			// 未指派的影响任务没有人可以学：留给治理面认领后再派。
+			continue
+		}
+		if _, assignErr := s.learning.AssignForKnowledge(ctx, tenantID, task.TargetID,
+			[]string{assignee}, types.LearningTaskSourceSOPChange, nil); assignErr != nil {
+			logger.Warnf(ctx,
+				"failed to assign learning task for knowledge %s (cr=%s): %v",
+				task.TargetID, cr.CRNumber, assignErr)
+		}
+	}
 }
 
 // changeRequestLifecycleAction maps a change type onto the lifecycle action its

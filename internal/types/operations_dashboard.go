@@ -40,6 +40,8 @@ type DashboardGovernance struct {
 	PendingFieldMigrations int64 `json:"pending_field_migrations"`
 	// ACLCeilingViolations is child grants that exceeded their parent.
 	ACLCeilingViolations int64 `json:"acl_ceiling_violations"`
+	// PendingChangeSignals is the untriaged §7.3 signal queue.
+	PendingChangeSignals int64 `json:"pending_change_signals"`
 }
 
 // DashboardDelivery is the "审核效率" block (§19.2 治理验收指标).
@@ -72,6 +74,48 @@ type DashboardSearchQuality struct {
 	AverageDurationMs float64 `json:"average_duration_ms"`
 }
 
+// DashboardTrendPoint is one day of the §16.1 "趋势" block.
+type DashboardTrendPoint struct {
+	// Day in YYYY-MM-DD (UTC).
+	Day string `json:"day"`
+	// KnowledgeAdded counts entries created that day.
+	KnowledgeAdded int64 `json:"knowledge_added"`
+	// ReviewsSubmitted counts approval tasks submitted that day.
+	ReviewsSubmitted int64 `json:"reviews_submitted"`
+	// Queries counts searches that day.
+	Queries int64 `json:"queries"`
+}
+
+// DashboardContributor is one row of the §16.2 contribution leaderboard.
+type DashboardContributor struct {
+	// UserID being ranked.
+	UserID string `json:"user_id"`
+	// ReviewsCompleted counts approval decisions made.
+	ReviewsCompleted int64 `json:"reviews_completed"`
+	// Submitted counts approval tasks the user filed.
+	Submitted int64 `json:"submitted"`
+	// Answers counts community answers written.
+	Answers int64 `json:"answers"`
+	// Questions counts community questions asked.
+	Questions int64 `json:"questions"`
+	// Score is the weighted sum used for ordering.
+	Score int64 `json:"score"`
+}
+
+// DashboardCost is the §16.1 "成本" block.
+type DashboardCost struct {
+	// PromptTokens in the window.
+	PromptTokens int64 `json:"prompt_tokens"`
+	// CompletionTokens in the window.
+	CompletionTokens int64 `json:"completion_tokens"`
+	// TotalTokens is the sum.
+	TotalTokens int64 `json:"total_tokens"`
+	// CallCount is the number of model invocations recorded.
+	CallCount int64 `json:"call_count"`
+	// ByModel breaks the tokens down per model id.
+	ByModel map[string]int64 `json:"by_model"`
+}
+
 // OperationsDashboard is the composed §16.1 payload.
 type OperationsDashboard struct {
 	// Overview is the headline counts.
@@ -82,6 +126,12 @@ type OperationsDashboard struct {
 	Delivery DashboardDelivery `json:"delivery"`
 	// SearchQuality is the retrieval health block.
 	SearchQuality DashboardSearchQuality `json:"search_quality"`
+	// Trends is the per-day trend series (§16.1 趋势).
+	Trends []DashboardTrendPoint `json:"trends"`
+	// Contributors is the contribution leaderboard (§16.2).
+	Contributors []DashboardContributor `json:"contributors"`
+	// Cost is the model spend block (§16.1 成本).
+	Cost DashboardCost `json:"cost"`
 	// Health is the latest tenant-scope health snapshot, when one exists.
 	Health *KnowledgeHealthSnapshot `json:"health,omitempty"`
 	// WindowDays is the look-back window the time-based numbers cover.

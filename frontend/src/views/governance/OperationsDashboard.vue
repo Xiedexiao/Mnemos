@@ -113,6 +113,55 @@
           </div>
         </div>
       </section>
+
+      <!-- 趋势（§16.1） -->
+      <section class="ops-dashboard__section">
+        <h3 class="ops-dashboard__section-title">{{ t('opsDashboard.sectionTrends') }}</h3>
+        <t-table
+          row-key="day"
+          :data="data?.trends || []"
+          :columns="trendColumns"
+          size="small"
+          :loading="loading"
+          :empty="t('opsDashboard.emptyTrends')"
+        />
+      </section>
+
+      <!-- 贡献排行（§16.2） -->
+      <section class="ops-dashboard__section">
+        <h3 class="ops-dashboard__section-title">{{ t('opsDashboard.sectionContributors') }}</h3>
+        <t-table
+          row-key="user_id"
+          :data="data?.contributors || []"
+          :columns="contributorColumns"
+          size="small"
+          :loading="loading"
+          :empty="t('opsDashboard.emptyContributors')"
+        />
+      </section>
+
+      <!-- 成本（§16.1） -->
+      <section class="ops-dashboard__section">
+        <h3 class="ops-dashboard__section-title">{{ t('opsDashboard.sectionCost') }}</h3>
+        <div class="ops-dashboard__metrics">
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.promptTokens') }}</span>
+            <span class="ops-dashboard__value">{{ data?.cost.prompt_tokens ?? 0 }}</span>
+          </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.completionTokens') }}</span>
+            <span class="ops-dashboard__value">{{ data?.cost.completion_tokens ?? 0 }}</span>
+          </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.totalTokens') }}</span>
+            <span class="ops-dashboard__value">{{ data?.cost.total_tokens ?? 0 }}</span>
+          </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.calls') }}</span>
+            <span class="ops-dashboard__value">{{ data?.cost.call_count ?? 0 }}</span>
+          </div>
+        </div>
+      </section>
     </template>
   </div>
 </template>
@@ -154,8 +203,24 @@ const governanceMetrics = computed(() => {
     { key: 'open_knowledge_gaps', label: t('opsDashboard.gaps'), value: governance?.open_knowledge_gaps ?? 0 },
     { key: 'pending_field_migrations', label: t('opsDashboard.migrations'), value: governance?.pending_field_migrations ?? 0 },
     { key: 'acl_ceiling_violations', label: t('opsDashboard.aclViolations'), value: governance?.acl_ceiling_violations ?? 0 },
+    { key: 'pending_change_signals', label: t('opsDashboard.signals'), value: governance?.pending_change_signals ?? 0 },
   ];
 });
+
+const trendColumns = computed(() => [
+  { colKey: 'day', title: t('opsDashboard.colDay'), width: 130 },
+  { colKey: 'knowledge_added', title: t('opsDashboard.colAdded'), width: 130 },
+  { colKey: 'reviews_submitted', title: t('opsDashboard.colReviews'), width: 130 },
+  { colKey: 'queries', title: t('opsDashboard.colQueries'), width: 130 },
+]);
+
+const contributorColumns = computed(() => [
+  { colKey: 'user_id', title: t('opsDashboard.colUser'), ellipsis: true, minWidth: 200 },
+  { colKey: 'score', title: t('opsDashboard.colScore'), width: 100 },
+  { colKey: 'reviews_completed', title: t('opsDashboard.colReviewsDone'), width: 130 },
+  { colKey: 'answers', title: t('opsDashboard.colAnswers'), width: 110 },
+  { colKey: 'submitted', title: t('opsDashboard.colSubmitted'), width: 110 },
+]);
 
 const load = async () => {
   loading.value = true;

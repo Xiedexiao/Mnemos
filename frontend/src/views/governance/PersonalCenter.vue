@@ -68,6 +68,25 @@
         />
       </t-tab-panel>
 
+      <t-tab-panel value="tasks" :label="t('personalCenter.tabTasks')">
+        <t-table
+          row-key="id"
+          :data="learningTasks"
+          :columns="taskColumns"
+          size="small"
+          :loading="loading"
+          :empty="t('personalCenter.emptyTasks')"
+        >
+          <template #op="{ row }">
+            <t-button v-if="row.status === 'open'" theme="primary" variant="text" size="small"
+              :loading="busyId === row.id" @click="finishTask(row)">
+              {{ t('personalCenter.markDone') }}
+            </t-button>
+            <span v-else>{{ row.status }}</span>
+          </template>
+        </t-table>
+      </t-tab-panel>
+
       <t-tab-panel value="certificates" :label="t('personalCenter.tabCertificates')">
         <t-table
           row-key="id"
@@ -94,9 +113,12 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { MessagePlugin } from 'tdesign-vue-next';
 import {
+  completeLearningTask,
   getPersonalCenter,
   listLearningCertificates,
+  listLearningTasks,
   type LearningCertificate,
+  type LearningTask,
   type PersonalCenter,
 } from '@/api/governance-console';
 
@@ -112,8 +134,10 @@ const { t } = useI18n();
 
 const center = ref<PersonalCenter | null>(null);
 const certificates = ref<LearningCertificate[]>([]);
+const learningTasks = ref<LearningTask[]>([]);
+const busyId = ref<string | null>(null);
 const loading = ref(false);
-const activeTab = ref<'reviews' | 'favorites' | 'knowledge' | 'certificates'>('reviews');
+const activeTab = ref<'reviews' | 'favorites' | 'knowledge' | 'tasks' | 'certificates'>('reviews');
 
 const statusTheme = (status: string): 'default' | 'success' | 'warning' | 'danger' => {
   switch (status) {
@@ -153,16 +177,40 @@ const certificateColumns = computed(() => [
   { colKey: 'issued_at', title: t('personalCenter.colIssued'), width: 180 },
 ]);
 
+const taskColumns = computed(() => [
+  { colKey: 'title', title: t('personalCenter.colTitle'), ellipsis: true, minWidth: 220 },
+  { colKey: 'source', title: t('personalCenter.colSource'), width: 130 },
+  { colKey: 'due_at', title: t('personalCenter.colDue'), width: 150 },
+  { colKey: 'op', title: t('personalCenter.colStatus'), width: 120 },
+]);
+
+// finishTask marks one study item done; the server enforces that only the
+// assignee may complete it.
+const finishTask = async (row: LearningTask) => {
+  busyId.value = row.id;
+  try {
+    await completeLearningTask(row.id);
+    const response = await listLearningTasks();
+    learningTasks.value = response?.data || [];
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
+  } finally {
+    busyId.value = null;
+  }
+};
+
 const load = async () => {
   loading.value = true;
   try {
-    const [centerResponse, certificateResponse] = await Promise.all([
+    const [centerResponse, certificateResponse, taskResponse] = await Promise.all([
       getPersonalCenter(),
-      // 认证是辅助信息：取不到时页面其余部分仍然可用。
+      // 认证与学习任务是辅助信息：取不到时页面其余部分仍然可用。
       listLearningCertificates().catch(() => ({ data: [] as LearningCertificate[] })),
+      listLearningTasks().catch(() => ({ data: [] as LearningTask[] })),
     ]);
     center.value = centerResponse?.data || null;
     certificates.value = (certificateResponse as any)?.data || [];
+    learningTasks.value = (taskResponse as any)?.data || [];
   } catch (error: any) {
     MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
   } finally {
