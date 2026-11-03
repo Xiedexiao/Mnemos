@@ -104,6 +104,93 @@
           </template>
         </t-table>
       </t-tab-panel>
+
+      <t-tab-panel value="rewards" :label="t('personalCenter.tabRewards')">
+        <div class="personal-center__metrics">
+          <div class="personal-center__metric">
+            <span class="personal-center__label">{{ t('personalCenter.pointsBalance') }}</span>
+            <span class="personal-center__value">{{ points?.balance ?? 0 }}</span>
+          </div>
+          <div class="personal-center__metric">
+            <span class="personal-center__label">{{ t('personalCenter.pointsLevel') }}</span>
+            <span class="personal-center__value">{{ levelLabel(points?.level || 'bronze') }}</span>
+          </div>
+        </div>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.pointsLedger') }}</h4>
+        <t-table
+          row-key="id"
+          :data="points?.recent || []"
+          :columns="ledgerColumns"
+          size="small"
+          :empty="t('personalCenter.emptyLedger')"
+        >
+          <template #action="{ row }">{{ actionLabel(row.action) }}</template>
+          <template #points="{ row }">
+            <span :class="{ 'is-negative': row.points < 0 }">
+              {{ row.points > 0 ? `+${row.points}` : row.points }}
+            </span>
+          </template>
+          <template #created_at="{ row }">{{ formatTime(row.created_at) }}</template>
+        </t-table>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.catalogTitle') }}</h4>
+        <t-table
+          row-key="id"
+          :data="catalog"
+          :columns="catalogColumns"
+          size="small"
+          :empty="t('personalCenter.emptyCatalog')"
+        >
+          <template #stock="{ row }">
+            {{ row.stock < 0 ? t('personalCenter.unlimited') : row.stock }}
+          </template>
+          <template #op="{ row }">
+            <t-button
+              theme="primary"
+              variant="text"
+              size="small"
+              :disabled="!row.enabled || row.stock === 0"
+              :loading="busyId === row.id"
+              @click="redeem(row)"
+            >
+              {{ t('personalCenter.redeem') }}
+            </t-button>
+          </template>
+        </t-table>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.myRedemptions') }}</h4>
+        <t-table
+          row-key="id"
+          :data="redemptions"
+          :columns="redemptionColumns"
+          size="small"
+          :empty="t('personalCenter.emptyRedemptions')"
+        >
+          <template #status="{ row }">
+            <t-tag size="small" variant="light" :theme="redemptionTheme(row.status)">
+              {{ t(`personalCenter.redemption_${row.status}`) }}
+            </t-tag>
+          </template>
+          <template #op="{ row }">
+            <t-button v-if="row.status === 'pending'" theme="danger" variant="text" size="small"
+              :loading="busyId === row.id" @click="cancelRow(row)">
+              {{ t('personalCenter.cancelRedemption') }}
+            </t-button>
+          </template>
+        </t-table>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.starsTitle') }}</h4>
+        <t-table
+          row-key="id"
+          :data="stars"
+          :columns="starColumns"
+          size="small"
+          :empty="t('personalCenter.emptyStars')"
+        >
+          <template #rank="{ row }">#{{ row.rank }}</template>
+        </t-table>
+      </t-tab-panel>
     </t-tabs>
   </div>
 </template>
@@ -113,13 +200,23 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { MessagePlugin } from 'tdesign-vue-next';
 import {
+  cancelRedemption,
   completeLearningTask,
+  getMyPoints,
   getPersonalCenter,
+  listKnowledgeStars,
   listLearningCertificates,
   listLearningTasks,
+  listMyRedemptions,
+  listRewardCatalog,
+  redeemReward,
+  type KnowledgeStarAward,
   type LearningCertificate,
   type LearningTask,
   type PersonalCenter,
+  type PointsSummary,
+  type RewardCatalogItem,
+  type RewardRedemption,
 } from '@/api/governance-console';
 
 /**
@@ -137,7 +234,15 @@ const certificates = ref<LearningCertificate[]>([]);
 const learningTasks = ref<LearningTask[]>([]);
 const busyId = ref<string | null>(null);
 const loading = ref(false);
-const activeTab = ref<'reviews' | 'favorites' | 'knowledge' | 'tasks' | 'certificates'>('reviews');
+const activeTab = ref<
+  'reviews' | 'favorites' | 'knowledge' | 'tasks' | 'certificates' | 'rewards'
+>('reviews');
+
+// ---- 积分与激励（§15.4） ----
+const points = ref<PointsSummary | null>(null);
+const catalog = ref<RewardCatalogItem[]>([]);
+const redemptions = ref<RewardRedemption[]>([]);
+const stars = ref<KnowledgeStarAward[]>([]);
 
 const statusTheme = (status: string): 'default' | 'success' | 'warning' | 'danger' => {
   switch (status) {
@@ -168,6 +273,34 @@ const knowledgeColumns = computed(() => [
   { colKey: 'title', title: t('personalCenter.colTitle'), ellipsis: true, minWidth: 220 },
   { colKey: 'lifecycle_status', title: t('personalCenter.colStatus'), width: 130 },
   { colKey: 'updated_at', title: t('personalCenter.colUpdated'), width: 180 },
+]);
+
+const ledgerColumns = computed(() => [
+  { colKey: 'action', title: t('personalCenter.colAction'), width: 160 },
+  { colKey: 'points', title: t('personalCenter.colPoints'), width: 100 },
+  { colKey: 'created_at', title: t('personalCenter.colUpdated'), width: 180 },
+]);
+
+const catalogColumns = computed(() => [
+  { colKey: 'name', title: t('personalCenter.colTitle'), ellipsis: true, minWidth: 200 },
+  { colKey: 'cost_points', title: t('personalCenter.colPoints'), width: 100 },
+  { colKey: 'stock', title: t('personalCenter.colStock'), width: 110 },
+  { colKey: 'op', title: t('personalCenter.colStatus'), width: 120 },
+]);
+
+const redemptionColumns = computed(() => [
+  { colKey: 'item_name', title: t('personalCenter.colTitle'), ellipsis: true, minWidth: 180 },
+  { colKey: 'points_cost', title: t('personalCenter.colPoints'), width: 100 },
+  { colKey: 'status', title: t('personalCenter.colStatus'), width: 120 },
+  { colKey: 'op', title: t('personalCenter.colAction'), width: 120 },
+]);
+
+const starColumns = computed(() => [
+  { colKey: 'period', title: t('personalCenter.colPeriod'), width: 130 },
+  { colKey: 'rank', title: t('personalCenter.colRank'), width: 90 },
+  { colKey: 'user_id', title: t('personalCenter.colWinner'), ellipsis: true, minWidth: 160 },
+  { colKey: 'score', title: t('personalCenter.colPoints'), width: 90 },
+  { colKey: 'reason', title: t('personalCenter.colReason'), ellipsis: true, minWidth: 180 },
 ]);
 
 const certificateColumns = computed(() => [
@@ -202,20 +335,95 @@ const finishTask = async (row: LearningTask) => {
 const load = async () => {
   loading.value = true;
   try {
-    const [centerResponse, certificateResponse, taskResponse] = await Promise.all([
+    const [centerResponse, certificateResponse, taskResponse, pointsResponse,
+      catalogResponse, redemptionResponse, starResponse] = await Promise.all([
       getPersonalCenter(),
       // 认证与学习任务是辅助信息：取不到时页面其余部分仍然可用。
       listLearningCertificates().catch(() => ({ data: [] as LearningCertificate[] })),
       listLearningTasks().catch(() => ({ data: [] as LearningTask[] })),
+      getMyPoints().catch(() => null),
+      listRewardCatalog().catch(() => ({ data: [] as RewardCatalogItem[] })),
+      listMyRedemptions().catch(() => ({ data: [] as RewardRedemption[] })),
+      listKnowledgeStars().catch(() => ({ data: [] as KnowledgeStarAward[] })),
     ]);
     center.value = centerResponse?.data || null;
     certificates.value = (certificateResponse as any)?.data || [];
     learningTasks.value = (taskResponse as any)?.data || [];
+    points.value = (pointsResponse as any)?.data || null;
+    catalog.value = (catalogResponse as any)?.data || [];
+    redemptions.value = (redemptionResponse as any)?.data || [];
+    stars.value = (starResponse as any)?.data || [];
   } catch (error: any) {
     MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
   } finally {
     loading.value = false;
   }
+};
+
+// redeem spends points on one catalog item. The server does the balance and
+// stock checks inside a transaction; the UI only refreshes after success.
+const redeem = async (row: RewardCatalogItem) => {
+  busyId.value = row.id;
+  try {
+    await redeemReward(row.id);
+    MessagePlugin.success(t('personalCenter.redeemed'));
+    const [pointsResponse, redemptionResponse, catalogResponse] = await Promise.all([
+      getMyPoints(),
+      listMyRedemptions(),
+      listRewardCatalog(),
+    ]);
+    points.value = (pointsResponse as any)?.data || points.value;
+    redemptions.value = (redemptionResponse as any)?.data || redemptions.value;
+    catalog.value = (catalogResponse as any)?.data || catalog.value;
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const cancelRow = async (row: RewardRedemption) => {
+  busyId.value = row.id;
+  try {
+    await cancelRedemption(row.id);
+    MessagePlugin.success(t('personalCenter.canceled'));
+    const [pointsResponse, redemptionResponse, catalogResponse] = await Promise.all([
+      getMyPoints(),
+      listMyRedemptions(),
+      listRewardCatalog(),
+    ]);
+    points.value = (pointsResponse as any)?.data || points.value;
+    redemptions.value = (redemptionResponse as any)?.data || redemptions.value;
+    catalog.value = (catalogResponse as any)?.data || catalog.value;
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const levelLabel = (level: string) => t(`personalCenter.level_${level}`);
+const actionLabel = (action: string) => t(`personalCenter.pointsAction_${action}`);
+
+const redemptionTheme = (status: string): 'default' | 'success' | 'warning' | 'danger' => {
+  switch (status) {
+    case 'fulfilled':
+      return 'success';
+    case 'pending':
+      return 'warning';
+    case 'rejected':
+      return 'danger';
+    default:
+      return 'default';
+  }
+};
+
+const formatTime = (value?: string | null) => {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 onMounted(load);
@@ -272,6 +480,17 @@ onMounted(load);
 .personal-center__value {
   font-size: 22px;
   font-weight: 600;
+}
+
+.personal-center__subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 20px 0 8px;
+  color: var(--td-text-color-secondary);
+}
+
+.is-negative {
+  color: var(--td-error-color);
 }
 
 .is-hidden {

@@ -37,6 +37,10 @@ const (
 	PointsActionDailyLogin PointsAction = "daily_login"
 	// PointsActionPathCompleted 学完一条学习路径（100% 时由路径服务触发）。
 	PointsActionPathCompleted PointsAction = "path_completed"
+	// PointsActionRedeemed 积分兑换扣减（负数入账，SourceType=redemption）。
+	PointsActionRedeemed PointsAction = "points_redeemed"
+	// PointsActionRefunded 兑换被拒/取消后的退回（正数入账）。
+	PointsActionRefunded PointsAction = "points_refunded"
 )
 
 // Valid reports whether the action is part of the v1 vocabulary.
@@ -44,7 +48,7 @@ func (a PointsAction) Valid() bool {
 	switch a {
 	case PointsActionKnowledgeCreated, PointsActionViewGiven, PointsActionLikeGiven,
 		PointsActionReviewDone, PointsActionAnswerAdopted, PointsActionDailyLogin,
-		PointsActionPathCompleted:
+		PointsActionPathCompleted, PointsActionRedeemed, PointsActionRefunded:
 		return true
 	default:
 		return false
@@ -54,8 +58,8 @@ func (a PointsAction) Valid() bool {
 // String renders the action for logs.
 func (a PointsAction) String() string { return string(a) }
 
-// PointLevel 是积分等级。阈值见 PointLevelForBalance；v1 只升不降
-// （余额只增，无扣分），等级在每次入账时按最新余额重算。
+// PointLevel 是积分等级。阈值见 PointLevelForBalance；等级在每次入账
+// （含兑换扣减）时按最新余额重算，所以兑换可能让等级回落。
 type PointLevel string
 
 const (
@@ -120,7 +124,8 @@ type UserPointsLedger struct {
 	UserID string `json:"user_id" gorm:"type:varchar(36);not null"`
 	// Action is the award category (PointsAction vocabulary).
 	Action string `json:"action" gorm:"type:varchar(32);not null"`
-	// Points credited for this single event (always > 0 in v1).
+	// Points credited for this single event: positive for awards and refunds,
+	// negative for redemptions (兑换扣减).
 	Points int `json:"points" gorm:"not null"`
 	// SourceType qualifies the award origin (e.g. "knowledge", "learning_path",
 	// "day" for daily login). Empty means the event has no stable source.

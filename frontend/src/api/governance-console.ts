@@ -1592,3 +1592,120 @@ export function listExternalEntries(feedId = '', limit = 50) {
     `/api/v1/external-subscriptions/entries?${params.toString()}`,
   )
 }
+
+// ============================================================================
+// §15.4 points, redemption and knowledge stars
+// ============================================================================
+
+export interface PointsLedgerEntry {
+  id: string
+  action: string
+  points: number
+  source_type: string
+  source_id: string
+  created_at: string
+}
+
+export interface PointsSummary {
+  user_id: string
+  balance: number
+  level: 'bronze' | 'silver' | 'gold' | 'diamond' | 'expert' | string
+  recent: PointsLedgerEntry[]
+}
+
+export interface RewardCatalogItem {
+  id: string
+  name: string
+  description: string
+  cost_points: number
+  /** -1 means unlimited. */
+  stock: number
+  enabled: boolean
+}
+
+export interface RewardRedemption {
+  id: string
+  user_id?: string
+  item_id: string
+  item_name: string
+  points_cost: number
+  status: 'pending' | 'fulfilled' | 'rejected' | 'canceled' | string
+  note: string
+  handled_by?: string
+  handled_at?: string | null
+  created_at: string
+}
+
+export interface KnowledgeStarAward {
+  id: string
+  period_type: 'month' | 'quarter' | string
+  period: string
+  user_id: string
+  rank: number
+  score: number
+  reason: string
+  published: boolean
+  awarded_at: string
+}
+
+interface PointsSummaryResponse {
+  success: boolean
+  data: PointsSummary
+}
+
+interface RewardCatalogResponse {
+  success: boolean
+  data: RewardCatalogItem[]
+}
+
+interface RewardRedemptionResponse {
+  success: boolean
+  data: RewardRedemption
+}
+
+interface RewardRedemptionListResponse {
+  success: boolean
+  data: RewardRedemption[]
+}
+
+interface KnowledgeStarListResponse {
+  success: boolean
+  data: KnowledgeStarAward[]
+}
+
+// GET /api/v1/me/points
+export function getMyPoints(recentLimit = 20) {
+  return get<PointsSummaryResponse>(`/api/v1/me/points?recent_limit=${recentLimit}`)
+}
+
+// GET /api/v1/rewards/catalog
+export function listRewardCatalog(all = false) {
+  return get<RewardCatalogResponse>(`/api/v1/rewards/catalog${all ? '?all=true' : ''}`)
+}
+
+// POST /api/v1/rewards/catalog/:id/redeem
+export function redeemReward(itemId: string, note = '') {
+  return post<RewardRedemptionResponse>(
+    `/api/v1/rewards/catalog/${encodeURIComponent(itemId)}/redeem`,
+    { note },
+  )
+}
+
+// GET /api/v1/rewards/redemptions
+export function listMyRedemptions(status = '') {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return get<RewardRedemptionListResponse>(`/api/v1/rewards/redemptions${query}`)
+}
+
+// POST /api/v1/rewards/redemptions/:id/cancel
+export function cancelRedemption(id: string) {
+  return post<RewardRedemptionResponse>(
+    `/api/v1/rewards/redemptions/${encodeURIComponent(id)}/cancel`,
+    {},
+  )
+}
+
+// GET /api/v1/knowledge-stars — the published public board.
+export function listKnowledgeStars(limit = 20) {
+  return get<KnowledgeStarListResponse>(`/api/v1/knowledge-stars?limit=${limit}`)
+}

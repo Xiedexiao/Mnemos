@@ -89,6 +89,7 @@ type RouterParams struct {
 	LearningCertificateHandler   *handler.LearningCertificateHandler
 	ChangeSignalHandler          *handler.ChangeSignalHandler
 	ExternalSubscriptionHandler  *handler.ExternalSubscriptionHandler
+	RewardHandler                *handler.RewardHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
@@ -358,6 +359,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterLearningCertificateRoutes(v1, params.LearningCertificateHandler, rbacGuards)
 		RegisterChangeSignalRoutes(v1, params.ChangeSignalHandler, rbacGuards)
 		RegisterExternalSubscriptionRoutes(v1, params.ExternalSubscriptionHandler, rbacGuards)
+		RegisterRewardRoutes(v1, params.RewardHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)
