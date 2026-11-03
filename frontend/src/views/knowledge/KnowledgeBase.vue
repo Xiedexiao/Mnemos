@@ -2939,7 +2939,8 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
       <!-- DocContent drawer (shared by documents tab and wiki source refs) -->
       <DocContent ref="docContentRef" :visible="isCardDetails" :details="details" :canEditKB="canEdit"
         :canDownloadKB="canDownloadKnowledge" :kbId="kbId"
-        @closeDoc="closeDoc" @getDoc="getDoc" @summaryStateChange="syncDocumentSummaryState">
+        @closeDoc="closeDoc" @getDoc="getDoc" @summaryStateChange="syncDocumentSummaryState"
+        @openRelatedKnowledge="openSourceDoc">
       </DocContent>
     </div>
   </template>

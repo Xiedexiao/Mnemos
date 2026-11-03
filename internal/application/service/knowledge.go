@@ -95,6 +95,9 @@ type knowledgeService struct {
 	// search never points at a document that no longer exists (§12.7).
 	// Optional: nil skips the cleanup.
 	symbolIndex interfaces.SymbolIndexService
+	// relations is cleaned up when a document is deleted so no edge points at a
+	// row that no longer exists (§4.5).
+	relations interfaces.KnowledgeRelationService
 }
 
 const (
@@ -135,6 +138,7 @@ func NewKnowledgeService(
 	recycleBin interfaces.RecycleBinService,
 	aclRepo interfaces.KnowledgeACLRepository,
 	symbolIndex interfaces.SymbolIndexService,
+	relations interfaces.KnowledgeRelationService,
 ) (interfaces.KnowledgeService, error) {
 	return &knowledgeService{
 		config:          config,
@@ -167,6 +171,7 @@ func NewKnowledgeService(
 		recycleBin:      recycleBin,
 		aclRepo:         aclRepo,
 		symbolIndex:     symbolIndex,
+		relations:       relations,
 	}, nil
 }
 

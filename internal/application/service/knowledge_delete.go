@@ -618,6 +618,15 @@ func (s *knowledgeService) executeKnowledgeDelete(plan *knowledgeDeletePlan, sin
 				logger.Warnf(ctx, "Failed to delete symbol index for knowledge %s: %v", knowledgeID, err)
 			}
 		}
+		// 关联边必须随文档一起清理（§4.5）：残留边会让阅读页显示一个指向
+		// 已删除文档的链接。
+		if s.relations != nil {
+			if removed, err := s.relations.OnKnowledgeDeleted(ctx, tenantInfo.ID, knowledgeID); err != nil {
+				logger.Warnf(ctx, "Failed to delete knowledge relations for %s: %v", knowledgeID, err)
+			} else if removed > 0 {
+				logger.Infof(ctx, "removed %d relation(s) for deleted knowledge %s", removed, knowledgeID)
+			}
+		}
 	}
 	// 6. Delete the knowledge rows FIRST, then drop their physical files. See
 	// Deferring file removal until the rows are

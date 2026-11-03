@@ -28,6 +28,7 @@ import AssistantActionsButton from '@/components/assistant/AssistantActionsButto
 import DocumentPreview from '@/components/document-preview.vue';
 import DocumentFileIcon from '@/views/knowledge/components/DocumentFileIcon.vue';
 import KnowledgeGovernanceBadges from '@/components/knowledge/KnowledgeGovernanceBadges.vue';
+import KnowledgeRelationsPanel from '@/components/knowledge/KnowledgeRelationsPanel.vue';
 import KnowledgeProcessingTimeline from '@/components/knowledge-processing-timeline.vue';
 import { resolveKnowledgeDownloadFileName } from '@/views/knowledge/knowledgeDownloadFileName';
 import { isKnownPreviewableExt, resolveFilePreviewExt } from '@/utils/filePreview';
@@ -244,7 +245,7 @@ mermaid.initialize({
   }
 });
 const props = defineProps(["visible", "details", "knowledgeType", "sourceInfo", "canEditKB", "canDownloadKB", "parse_status", "kbId"]);
-const emit = defineEmits(["closeDoc", "getDoc", "questionDeleted", "summaryStateChange"]);
+const emit = defineEmits(["closeDoc", "getDoc", "questionDeleted", "summaryStateChange", "openRelatedKnowledge"]);
 const assistant = useAssistantStore();
 const readingAssistantActions = computed(() => {
   const source = JSON.stringify({ knowledge_base_id: props.kbId, knowledge_id: props.details?.id });
@@ -1769,6 +1770,13 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
             </a>
           </div>
         </section>
+
+        <!-- 知识关联（§4.5）：依据/替代/补充/冲突/前置/责任 + 反向引用。 -->
+        <KnowledgeRelationsPanel
+          v-if="details.id"
+          :knowledge-id="details.id"
+          :read-only="details.lifecycle_status === 'archived' || details.lifecycle_status === 'delisted'"
+          @open="(id) => emit('openRelatedKnowledge', id)" />
 
         <section v-if="showSummarySection" class="setting-drawer__section summary-section">
           <div class="section-title-actions">

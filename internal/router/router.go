@@ -82,6 +82,7 @@ type RouterParams struct {
 	OfficialAnswerHandler        *handler.OfficialAnswerHandler
 	FolderACLHandler             *handler.FolderACLHandler
 	GovernanceApprovalHandler    *handler.GovernanceApprovalHandler
+	KnowledgeRelationHandler     *handler.KnowledgeRelationHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
 	ShareLinkHandler             *handler.ShareLinkHandler
@@ -343,6 +344,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterOfficialAnswerRoutes(v1, params.OfficialAnswerHandler, rbacGuards)
 		RegisterFolderACLRoutes(v1, params.FolderACLHandler, rbacGuards)
 		RegisterGovernanceApprovalRoutes(v1, params.GovernanceApprovalHandler, rbacGuards)
+		RegisterKnowledgeRelationRoutes(v1, params.KnowledgeRelationHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)
 		RegisterChangeRequestRoutes(v1, rbacGuards, params.ChangeRequestHandler)

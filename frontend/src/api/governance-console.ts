@@ -965,3 +965,109 @@ export function updateImpactTask(
     payload,
   )
 }
+
+// ============================================================================
+// §4.5 knowledge relations
+// ============================================================================
+
+// KNOWLEDGE_RELATION_TYPES mirrors the backend KnowledgeRelationType enum.
+export const KNOWLEDGE_RELATION_TYPES = [
+  'based_on',
+  'replaces',
+  'supplements',
+  'conflicts',
+  'prerequisite',
+  'responsible',
+  'related',
+] as const
+
+export type KnowledgeRelationType = (typeof KNOWLEDGE_RELATION_TYPES)[number]
+
+// KnowledgeRelation is one stored directed edge.
+export interface KnowledgeRelation {
+  id: string
+  from_knowledge_id: string
+  to_knowledge_id: string
+  relation_type: string
+  direction: 'forward' | 'reverse' | string
+  origin: 'manual' | 'ai_suggested' | 'migration' | string
+  note?: string
+  created_by?: string
+}
+
+// KnowledgeRelationView is one edge as the reading page renders it.
+// peerId/relationType are camelCase because this module normalises the wire
+// shape once, so components never branch on snake_case.
+export interface KnowledgeRelationView {
+  relation?: KnowledgeRelation
+  peerId: string
+  relationType: string
+  outbound: boolean
+  origin: string
+  note?: string
+}
+
+interface KnowledgeRelationListResponse {
+  success: boolean
+  data: Array<{
+    relation?: KnowledgeRelation
+    peer_id: string
+    relation_type: string
+    outbound: boolean
+    origin: string
+    note?: string
+  }>
+}
+
+// GET /api/v1/knowledge/:id/relations — links and backlinks of one document.
+export async function listKnowledgeRelations(knowledgeId: string) {
+  const response = await get<KnowledgeRelationListResponse>(
+    `/api/v1/knowledge/${encodeURIComponent(knowledgeId)}/relations`,
+  )
+  // The backend serialises snake_case; the panel reads camelCase.
+  const rows = (response?.data || []).map((row) => ({
+    relation: row.relation,
+    peerId: row.peer_id,
+    relationType: row.relation_type,
+    outbound: row.outbound,
+    origin: row.origin,
+    note: row.note,
+  }));
+  return { ...response, data: rows } as {
+    success: boolean
+    data: KnowledgeRelationView[]
+  };
+}
+
+// POST /api/v1/knowledge/:id/relations — create a typed edge.
+export function linkKnowledgeRelation(
+  knowledgeId: string,
+  payload: { to_knowledge_id: string; relation_type: KnowledgeRelationType; note?: string },
+) {
+  return post(
+    `/api/v1/knowledge/${encodeURIComponent(knowledgeId)}/relations`,
+    payload,
+  );
+}
+
+// DELETE /api/v1/knowledge/:id/relations — remove an edge in both directions.
+export function unlinkKnowledgeRelation(
+  knowledgeId: string,
+  peerId: string,
+  relationType: string,
+) {
+  const params = new URLSearchParams({
+    to_knowledge_id: peerId,
+    relation_type: relationType,
+  });
+  return del(
+    `/api/v1/knowledge/${encodeURIComponent(knowledgeId)}/relations?${params.toString()}`,
+  );
+}
+
+// GET /api/v1/knowledge/:id/relations/delete-impact — links a delete would cut.
+export function getRelationDeleteImpact(knowledgeId: string) {
+  return get<{ success: boolean; data: { link_count: number } }>(
+    `/api/v1/knowledge/${encodeURIComponent(knowledgeId)}/relations/delete-impact`,
+  );
+}
