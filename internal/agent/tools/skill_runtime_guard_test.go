@@ -53,6 +53,14 @@ func TestSkillPythonPackageRecoveryInstallsWithoutPip(t *testing.T) {
 					t.Skip("uv is required")
 				}
 			}
+			if variant.name == "ensurepip" {
+				// Some distributions ship python3 without the ensurepip
+				// module (Debian/Ubuntu split it out). The fallback command is
+				// correct; this host simply cannot exercise it.
+				if err := exec.Command("python3", "-m", "ensurepip", "--version").Run(); err != nil {
+					t.Skip("this python3 has no ensurepip module")
+				}
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
 			dir := t.TempDir()
