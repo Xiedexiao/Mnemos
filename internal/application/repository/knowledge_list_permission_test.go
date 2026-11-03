@@ -18,7 +18,6 @@ import (
 func setupKnowledgeListPermissionTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db := setupKnowledgeTagTestDB(t)
-	require.NoError(t, db.Exec(`ALTER TABLE knowledges ADD COLUMN classification TEXT`).Error)
 	return db
 }
 

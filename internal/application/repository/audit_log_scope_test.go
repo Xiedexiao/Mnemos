@@ -24,13 +24,16 @@ func TestAuditLogRepositoryListFiltersKnowledgeBaseScope(t *testing.T) {
 		{TenantID: 7, Action: types.AuditActionKnowledgeCreated, ScopeType: "knowledge_base", ScopeID: "kb-b"},
 		{TenantID: 8, Action: types.AuditActionKBUpdated, ScopeType: "knowledge_base", ScopeID: "kb-a"},
 	}
+	repo := NewAuditLogRepository(db)
 	for _, row := range rows {
-		if err := db.Create(row).Error; err != nil {
+		// Insert through the repository: Create computes prev_hash/row_hash.
+		// A direct db.Create leaves row_hash empty and the unique index
+		// rejects the second row.
+		if err := repo.Create(context.Background(), row); err != nil {
 			t.Fatalf("insert audit log: %v", err)
 		}
 	}
 
-	repo := NewAuditLogRepository(db)
 	got, err := repo.List(context.Background(), 7, &interfaces.AuditLogQuery{
 		ScopeType: "knowledge_base",
 		ScopeID:   "kb-a",

@@ -18,7 +18,6 @@ import (
 // 版本，并且这条测试现在确实在 SQLite 上跑通了聚合路径。
 func TestSearchLogOverviewOnSQLite(t *testing.T) {
 	db := setupKnowledgeTagTestDB(t)
-	require.NoError(t, db.Exec(`ALTER TABLE knowledges ADD COLUMN classification TEXT`).Error)
 	require.NoError(t, db.Exec(`
 		CREATE TABLE IF NOT EXISTS search_logs (
 			id VARCHAR(36) PRIMARY KEY,
@@ -70,7 +69,6 @@ func TestSearchLogOverviewOnSQLite(t *testing.T) {
 // TestFrequentQueriesOnSQLite covers the hot-query aggregation path.
 func TestFrequentQueriesOnSQLite(t *testing.T) {
 	db := setupKnowledgeTagTestDB(t)
-	require.NoError(t, db.Exec(`ALTER TABLE knowledges ADD COLUMN classification TEXT`).Error)
 	require.NoError(t, db.Exec(`
 		CREATE TABLE IF NOT EXISTS search_logs (
 			id VARCHAR(36) PRIMARY KEY,
