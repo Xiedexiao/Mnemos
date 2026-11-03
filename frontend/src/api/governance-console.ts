@@ -1178,6 +1178,26 @@ export interface OperationsDashboard {
     total_tokens: number
     call_count: number
     by_model: Record<string, number>
+    by_scene: Record<string, number>
+    allocations: Array<{
+      knowledge_base_id: string
+      knowledge_base_name: string
+      scene: string
+      prompt_tokens: number
+      completion_tokens: number
+      total_tokens: number
+      call_count: number
+    }>
+    storage_by_space: Array<{
+      knowledge_base_id: string
+      knowledge_base_name: string
+      storage_bytes: number
+      knowledge_count: number
+      chunk_count: number
+    }>
+    unallocated_tokens: number
+    total_storage_bytes: number
+    total_chunks: number
   }
   observability: {
     zero_result_queries: number

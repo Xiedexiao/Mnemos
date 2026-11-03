@@ -266,12 +266,21 @@ func (s *operationsDashboardService) fillContributors(
 	dashboard.Contributors = list
 }
 
-// fillCost builds the §16.1 "成本" block from the usage ledger.
+// fillCost builds the §16.1 "成本" block from the usage ledger plus the
+// storage/index footprint.
+//
+// 三类数字口径不同，不能相加：
+//   - token 与调用次数来自模型台账（按场景与空间分摊）；
+//   - 存储是知识原文的 storage_size 之和；
+//   - 索引以 chunk 数作代理指标——平台没有向量索引的字节数，也没有单价
+//     目录，所以这里只报可测量的量，不编造金额。
 func (s *operationsDashboardService) fillCost(
 	ctx context.Context, tenantID uint64, since time.Time, dashboard *types.OperationsDashboard,
 ) {
 	type usageRow struct {
 		ModelID          string
+		Scene            string
+		KnowledgeBaseID  string
 		PromptTokens     int64
 		CompletionTokens int64
 		CallCount        int64
@@ -279,21 +288,160 @@ func (s *operationsDashboardService) fillCost(
 	var rows []usageRow
 	if err := s.db.WithContext(ctx).
 		Model(&types.ModelUsageDaily{}).
-		Select("model_id, SUM(prompt_tokens) AS prompt_tokens, "+
+		Select("model_id, scene, knowledge_base_id, "+
+			"SUM(prompt_tokens) AS prompt_tokens, "+
 			"SUM(completion_tokens) AS completion_tokens, SUM(call_count) AS call_count").
 		Where("tenant_id = ? AND day >= ?", tenantID, since).
-		Group("model_id").
+		Group("model_id, scene, knowledge_base_id").
 		Scan(&rows).Error; err != nil {
 		return
 	}
+
 	dashboard.Cost.ByModel = make(map[string]int64, len(rows))
+	dashboard.Cost.ByScene = make(map[string]int64)
+	type allocationKey struct{ knowledgeBaseID, scene string }
+	allocationIndex := make(map[allocationKey]int, len(rows))
 	for _, row := range rows {
+		scene := row.Scene
+		if scene == "" {
+			// 000172 之前的行没有场景维度；它们全部来自问答链路。
+			scene = types.ModelUsageSceneChat
+		}
+		total := row.PromptTokens + row.CompletionTokens
 		dashboard.Cost.PromptTokens += row.PromptTokens
 		dashboard.Cost.CompletionTokens += row.CompletionTokens
 		dashboard.Cost.CallCount += row.CallCount
-		dashboard.Cost.ByModel[row.ModelID] = row.PromptTokens + row.CompletionTokens
+		dashboard.Cost.ByModel[row.ModelID] += total
+		dashboard.Cost.ByScene[scene] += total
+		if row.KnowledgeBaseID == "" {
+			dashboard.Cost.UnallocatedTokens += total
+		}
+		key := allocationKey{knowledgeBaseID: row.KnowledgeBaseID, scene: scene}
+		index, ok := allocationIndex[key]
+		if !ok {
+			index = len(dashboard.Cost.Allocations)
+			allocationIndex[key] = index
+			dashboard.Cost.Allocations = append(dashboard.Cost.Allocations,
+				types.DashboardCostAllocation{
+					KnowledgeBaseID: row.KnowledgeBaseID,
+					Scene:           scene,
+				})
+		}
+		allocation := &dashboard.Cost.Allocations[index]
+		allocation.PromptTokens += row.PromptTokens
+		allocation.CompletionTokens += row.CompletionTokens
+		allocation.TotalTokens += total
+		allocation.CallCount += row.CallCount
 	}
 	dashboard.Cost.TotalTokens = dashboard.Cost.PromptTokens + dashboard.Cost.CompletionTokens
+
+	s.fillCostFootprint(ctx, tenantID, dashboard)
+}
+
+// fillCostFootprint adds storage bytes and index chunk counts per space, then
+// resolves the knowledge-base names used by both cost views.
+func (s *operationsDashboardService) fillCostFootprint(
+	ctx context.Context, tenantID uint64, dashboard *types.OperationsDashboard,
+) {
+	type storageRow struct {
+		KnowledgeBaseID string
+		KnowledgeCount  int64
+		StorageBytes    int64
+	}
+	var storage []storageRow
+	if err := s.db.WithContext(ctx).
+		Model(&types.Knowledge{}).
+		Select("knowledge_base_id, COUNT(*) AS knowledge_count, "+
+			"COALESCE(SUM(storage_size), 0) AS storage_bytes").
+		Where("tenant_id = ? AND deleted_at IS NULL", tenantID).
+		Group("knowledge_base_id").
+		Scan(&storage).Error; err != nil {
+		return
+	}
+	type chunkRow struct {
+		KnowledgeBaseID string
+		ChunkCount      int64
+	}
+	var chunks []chunkRow
+	if err := s.db.WithContext(ctx).
+		Model(&types.Chunk{}).
+		Select("knowledge_base_id, COUNT(*) AS chunk_count").
+		Where("tenant_id = ?", tenantID).
+		Group("knowledge_base_id").
+		Scan(&chunks).Error; err != nil {
+		return
+	}
+	chunkByKB := make(map[string]int64, len(chunks))
+	for _, row := range chunks {
+		chunkByKB[row.KnowledgeBaseID] = row.ChunkCount
+	}
+
+	spaces := make([]types.DashboardCostSpace, 0, len(storage))
+	names := make([]string, 0, len(storage)+len(dashboard.Cost.Allocations))
+	for _, row := range storage {
+		space := types.DashboardCostSpace{
+			KnowledgeBaseID: row.KnowledgeBaseID,
+			KnowledgeCount:  row.KnowledgeCount,
+			StorageBytes:    row.StorageBytes,
+			ChunkCount:      chunkByKB[row.KnowledgeBaseID],
+		}
+		dashboard.Cost.TotalStorageBytes += row.StorageBytes
+		dashboard.Cost.TotalChunks += space.ChunkCount
+		spaces = append(spaces, space)
+		names = append(names, row.KnowledgeBaseID)
+	}
+	for _, allocation := range dashboard.Cost.Allocations {
+		if allocation.KnowledgeBaseID != "" {
+			names = append(names, allocation.KnowledgeBaseID)
+		}
+	}
+	nameByID := s.knowledgeBaseNames(ctx, tenantID, names)
+	for index := range spaces {
+		spaces[index].KnowledgeBaseName = nameByID[spaces[index].KnowledgeBaseID]
+	}
+	for index := range dashboard.Cost.Allocations {
+		dashboard.Cost.Allocations[index].KnowledgeBaseName =
+			nameByID[dashboard.Cost.Allocations[index].KnowledgeBaseID]
+	}
+	dashboard.Cost.StorageBySpace = spaces
+}
+
+// knowledgeBaseNames resolves display names for a set of ids.
+func (s *operationsDashboardService) knowledgeBaseNames(
+	ctx context.Context, tenantID uint64, ids []string,
+) map[string]string {
+	unique := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	names := make(map[string]string, len(unique))
+	if len(unique) == 0 {
+		return names
+	}
+	type nameRow struct {
+		ID   string
+		Name string
+	}
+	var rows []nameRow
+	if err := s.db.WithContext(ctx).
+		Model(&types.KnowledgeBase{}).
+		Select("id, name").
+		Where("tenant_id = ? AND id IN ?", tenantID, unique).
+		Scan(&rows).Error; err != nil {
+		return names
+	}
+	for _, row := range rows {
+		names[row.ID] = row.Name
+	}
+	return names
 }
 
 // fillOverview counts knowledge entries and their lifecycle distribution.

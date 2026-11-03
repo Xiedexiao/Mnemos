@@ -1,6 +1,7 @@
 package types
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -168,20 +169,60 @@ func (v *PromptVersion) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
+// 模型用量场景（KnowAxis V3.0 §16.1 "按空间/场景分摊"）。
+//
+// 场景是成本分摊的第二维：同一天同一个模型的 token，有的花在问答，有的
+// 花在摘要或抽取，混在一起只能看到总量，看不到钱花在哪。
+const (
+	// ModelUsageSceneChat is answer generation (streaming and non-streaming;
+	// the transport is not a cost scenario).
+	ModelUsageSceneChat = "chat"
+	// ModelUsageSceneSummary is summarization / profile generation.
+	ModelUsageSceneSummary = "summary"
+	// ModelUsageSceneExtraction is structured extraction (ontology, facts).
+	ModelUsageSceneExtraction = "extraction"
+	// ModelUsageSceneEmbedding is embedding computation.
+	ModelUsageSceneEmbedding = "embedding"
+	// ModelUsageSceneRerank is reranking.
+	ModelUsageSceneRerank = "rerank"
+	// ModelUsageSceneReview is AI pre-review / quality checks.
+	ModelUsageSceneReview = "review"
+	// ModelUsageSceneOther is an explicitly unattributed scene.
+	ModelUsageSceneOther = "other"
+)
+
+// NormalizeModelUsageScene trims and validates a scene; empty becomes "other".
+// Unknown values are accepted as-is (a new call site must not lose its usage),
+// but the report groups by the literal value so a typo remains visible.
+func NormalizeModelUsageScene(raw string) string {
+	scene := strings.TrimSpace(strings.ToLower(raw))
+	if scene == "" {
+		return ModelUsageSceneOther
+	}
+	return scene
+}
+
 // ModelUsageDaily accumulates one tenant's token spend and call count for one
-// model on one day (KnowAxis V3.0 §16.5 成本记录 v1). RecordUsage upserts
-// against UNIQUE(tenant_id, day, model_id) by adding to the counters, so the
-// row is the running total, not a per-call log.
+// model, one scenario and one knowledge base on one day (KnowAxis V3.0
+// §16.5 成本记录, §16.1 按空间/场景分摊). RecordUsage upserts against
+// UNIQUE(tenant_id, day, model_id, scene, knowledge_base_id) by adding to the
+// counters, so the row is the running total, not a per-call log.
 type ModelUsageDaily struct {
 	// ID of the row.
 	ID string `json:"id" gorm:"type:varchar(36);primaryKey"`
 	// TenantID whose calls are counted.
-	TenantID uint64 `json:"tenant_id" gorm:"not null"`
+	TenantID uint64 `json:"tenant_id" gorm:"not null;uniqueIndex:uq_model_usage_daily_tenant_day_model_scene_space,priority:1"`
 	// Day is the UTC calendar day (DATE column).
-	Day time.Time `json:"day" gorm:"type:date;not null"`
+	Day time.Time `json:"day" gorm:"type:date;not null;uniqueIndex:uq_model_usage_daily_tenant_day_model_scene_space,priority:2"`
 	// ModelID is the models table ID the calls landed on. No FK: usage
 	// history survives model deletion (成本对账不受模型下线影响).
-	ModelID string `json:"model_id" gorm:"type:varchar(64);not null"`
+	ModelID string `json:"model_id" gorm:"type:varchar(64);not null;uniqueIndex:uq_model_usage_daily_tenant_day_model_scene_space,priority:3"`
+	// Scene is the cost scenario (chat/summary/embedding/...).
+	Scene string `json:"scene" gorm:"type:varchar(32);not null;default:'other';uniqueIndex:uq_model_usage_daily_tenant_day_model_scene_space,priority:4"`
+	// KnowledgeBaseID is the space the call is attributed to. Empty means the
+	// allocation is unknown (a multi-space or non-space call); those tokens are
+	// reported as unallocated rather than guessed onto one space.
+	KnowledgeBaseID string `json:"knowledge_base_id" gorm:"type:varchar(36);not null;default:'';uniqueIndex:uq_model_usage_daily_tenant_day_model_scene_space,priority:5"`
 	// PromptTokens accumulated prompt (input) token count.
 	PromptTokens int64 `json:"prompt_tokens" gorm:"not null;default:0"`
 	// CompletionTokens accumulated completion (output) token count.

@@ -187,7 +187,50 @@
             <span class="ops-dashboard__label">{{ t('opsDashboard.calls') }}</span>
             <span class="ops-dashboard__value">{{ data?.cost.call_count ?? 0 }}</span>
           </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.unallocatedTokens') }}</span>
+            <span class="ops-dashboard__value">{{ data?.cost.unallocated_tokens ?? 0 }}</span>
+          </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.totalStorage') }}</span>
+            <span class="ops-dashboard__value">{{ formatBytes(data?.cost.total_storage_bytes ?? 0) }}</span>
+          </div>
+          <div class="ops-dashboard__metric">
+            <span class="ops-dashboard__label">{{ t('opsDashboard.totalChunks') }}</span>
+            <span class="ops-dashboard__value">{{ data?.cost.total_chunks ?? 0 }}</span>
+          </div>
         </div>
+
+        <!-- 按空间/场景分摊（§16.1）：token 台账带维度后才能回答"花在哪"。 -->
+        <h4 class="ops-dashboard__subtitle">{{ t('opsDashboard.allocTitle') }}</h4>
+        <t-table
+          row-key="knowledge_base_id_scene"
+          :data="costAllocations"
+          :columns="allocationColumns"
+          size="small"
+          :empty="t('opsDashboard.noAllocations')"
+        >
+          <template #space="{ row }">
+            {{ row.knowledge_base_name || row.knowledge_base_id || t('opsDashboard.unallocated') }}
+          </template>
+          <template #scene="{ row }">{{ sceneLabel(row.scene) }}</template>
+          <template #tokens="{ row }">{{ row.total_tokens }}</template>
+          <template #calls="{ row }">{{ row.call_count }}</template>
+        </t-table>
+
+        <h4 class="ops-dashboard__subtitle">{{ t('opsDashboard.storageTitle') }}</h4>
+        <t-table
+          row-key="knowledge_base_id"
+          :data="data?.cost.storage_by_space || []"
+          :columns="storageColumns"
+          size="small"
+          :empty="t('opsDashboard.noAllocations')"
+        >
+          <template #space="{ row }">{{ row.knowledge_base_name || row.knowledge_base_id }}</template>
+          <template #knowledge="{ row }">{{ row.knowledge_count }}</template>
+          <template #storage="{ row }">{{ formatBytes(row.storage_bytes) }}</template>
+          <template #chunks="{ row }">{{ row.chunk_count }}</template>
+        </t-table>
       </section>
     </template>
   </div>
@@ -206,9 +249,49 @@ import { getOperationsDashboard, type OperationsDashboard } from '@/api/governan
  * 12 条待审"与"工作台里正好 12 条"永远一致。
  */
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const data = ref<OperationsDashboard | null>(null);
+
+// 每行要有稳定 key：未分摊桶的知识库 ID 为空，场景仍然不同。
+const costAllocations = computed(() =>
+  (data.value?.cost.allocations || []).map((row) => ({
+    ...row,
+    knowledge_base_id_scene: `${row.knowledge_base_id || 'unallocated'}:${row.scene}`,
+  })),
+);
+
+const allocationColumns = computed(() => [
+  { colKey: 'space', title: t('opsDashboard.columnSpace'), ellipsis: true, minWidth: 180 },
+  { colKey: 'scene', title: t('opsDashboard.columnScene'), width: 140 },
+  { colKey: 'tokens', title: t('opsDashboard.columnTokens'), width: 120 },
+  { colKey: 'calls', title: t('opsDashboard.columnCalls'), width: 100 },
+]);
+
+const storageColumns = computed(() => [
+  { colKey: 'space', title: t('opsDashboard.columnSpace'), ellipsis: true, minWidth: 180 },
+  { colKey: 'knowledge', title: t('opsDashboard.columnKnowledge'), width: 120 },
+  { colKey: 'storage', title: t('opsDashboard.columnStorage'), width: 140 },
+  { colKey: 'chunks', title: t('opsDashboard.columnChunks'), width: 120 },
+]);
+
+const formatBytes = (value: number) => {
+  if (!value || value <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+};
+
+// 场景标签走 i18n，未知场景原样显示（新场景上线时不至于变成空白）。
+const sceneLabel = (scene: string) => {
+  const key = `opsDashboard.scene_${scene}`;
+  return te(key) ? t(key) : scene;
+};
 const loading = ref(false);
 const forbidden = ref(false);
 const windowDays = ref(30);
@@ -315,6 +398,13 @@ onMounted(load);
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 12px;
+}
+
+.ops-dashboard__subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 18px 0 8px;
+  color: var(--td-text-color-secondary);
 }
 
 .ops-dashboard__metrics {

@@ -270,11 +270,9 @@ func (p *PluginChatCompletionStream) OnEvent(ctx context.Context,
 					closeThinking()
 					// 用量台账（§16.5）：流式是问答主路径，这里不记的话成本
 					// 看板只会统计到非流式调用。一次流只在 Done 上记一次。
-					if response.Done && p.gateway != nil {
-						if tenantID, ok := types.TenantIDFromContext(ctx); ok && tenantID != 0 {
-							_ = p.gateway.RecordUsage(ctx, tenantID, chatManage.ChatModelID,
-								int64(response.Usage.PromptTokens), int64(response.Usage.CompletionTokens))
-						}
+					if response.Done {
+						recordChatUsage(ctx, p.gateway, chatManage,
+							response.Usage.PromptTokens, response.Usage.CompletionTokens)
 					}
 					// 答案正文先于附言输出；附言（§13.5 的可答但需提示场景）
 					// 在 Done 之前追加，这样持久化的消息正文本身就带提示，

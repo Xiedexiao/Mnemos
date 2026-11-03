@@ -377,12 +377,23 @@ func (s *modelGatewayService) LatestVersion(
 // Usage
 // ---------------------------------------------------------------------------
 
-// RecordUsage adds one model call's tokens to the UTC-day accumulator.
+// RecordUsage adds one chat call's tokens to the UTC-day accumulator.
 // Negative counters are clamped to 0; the call is still counted (call_count
 // +1) even when the provider reports no usage. Callers may ignore the
 // returned error (记录失败不应阻断业务调用), the service never panics.
 func (s *modelGatewayService) RecordUsage(
 	ctx context.Context, tenantID uint64, modelID string, promptTokens, completionTokens int64,
+) error {
+	return s.RecordUsageDetailed(ctx, tenantID, modelID,
+		types.ModelUsageSceneChat, "", promptTokens, completionTokens)
+}
+
+// RecordUsageDetailed adds one model call's tokens with its §16.1 allocation
+// dimensions. Keeping scene and space in the accumulator is what lets the
+// cost board answer "which space and which scenario spent this".
+func (s *modelGatewayService) RecordUsageDetailed(
+	ctx context.Context, tenantID uint64, modelID, scene, knowledgeBaseID string,
+	promptTokens, completionTokens int64,
 ) error {
 	modelID = strings.TrimSpace(modelID)
 	if modelID == "" {
@@ -394,7 +405,8 @@ func (s *modelGatewayService) RecordUsage(
 	if completionTokens < 0 {
 		completionTokens = 0
 	}
-	err := s.repo.UpsertUsage(ctx, truncModelGatewayDay(s.now()), tenantID, modelID, promptTokens, completionTokens)
+	err := s.repo.UpsertUsage(ctx, truncModelGatewayDay(s.now()), tenantID, modelID,
+		scene, knowledgeBaseID, promptTokens, completionTokens)
 	if err != nil {
 		// 用量记录失败只记日志：成本遥测永远不能反噬调用链。
 		logger.Warnf(ctx, "model gateway: record usage failed (tenant=%d model=%s): %v", tenantID, modelID, err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
@@ -173,25 +174,32 @@ func (r *modelGatewayRepository) ListPromptVersions(
 	return versions, err
 }
 
-// UpsertUsage adds one call's tokens to the (tenant, day, model) accumulator.
-// The insert supplies fresh counters; on conflict the stored row's counters
-// grow by the inserted amounts (EXCLUDED.*) while id/created semantics of the
-// original row are kept. The conflict target is the migration's
-// UNIQUE(tenant_id, day, model_id).
+// UpsertUsage adds one call's tokens to the (tenant, day, model, scene,
+// knowledge base) accumulator. The insert supplies fresh counters; on
+// conflict the stored row's counters grow by the inserted amounts
+// (EXCLUDED.*) while id/created semantics of the original row are kept. The
+// conflict target is the migration's UNIQUE(tenant_id, day, model_id, scene,
+// knowledge_base_id) — without scene/space in the key, allocation would
+// collapse back into one total.
 func (r *modelGatewayRepository) UpsertUsage(
-	ctx context.Context, day time.Time, tenantID uint64, modelID string,
+	ctx context.Context, day time.Time, tenantID uint64, modelID, scene, knowledgeBaseID string,
 	promptTokens, completionTokens int64,
 ) error {
 	row := &types.ModelUsageDaily{
 		TenantID:         tenantID,
 		Day:              day,
 		ModelID:          modelID,
+		Scene:            types.NormalizeModelUsageScene(scene),
+		KnowledgeBaseID:  strings.TrimSpace(knowledgeBaseID),
 		PromptTokens:     promptTokens,
 		CompletionTokens: completionTokens,
 		CallCount:        1,
 	}
 	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "tenant_id"}, {Name: "day"}, {Name: "model_id"}},
+		Columns: []clause.Column{
+			{Name: "tenant_id"}, {Name: "day"}, {Name: "model_id"},
+			{Name: "scene"}, {Name: "knowledge_base_id"},
+		},
 		DoUpdates: clause.Assignments(map[string]interface{}{
 			"prompt_tokens":     gorm.Expr("model_usage_daily.prompt_tokens + EXCLUDED.prompt_tokens"),
 			"completion_tokens": gorm.Expr("model_usage_daily.completion_tokens + EXCLUDED.completion_tokens"),

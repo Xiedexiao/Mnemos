@@ -60,11 +60,12 @@ type ModelGatewayRepository interface {
 		ctx context.Context, tenantID uint64, templateKey string,
 	) ([]*types.PromptVersion, error)
 
-	// UpsertUsage adds one call's tokens to the (tenant, day, model)
-	// accumulator row, creating it on first touch. The conflict target is
-	// uq_model_usage_daily_tenant_day_model (migration 000149).
+	// UpsertUsage adds one call's tokens to the (tenant, day, model, scene,
+	// knowledge base) accumulator row, creating it on first touch. The
+	// conflict target is uq_model_usage_daily_tenant_day_model_scene_space
+	// (migration 000172).
 	UpsertUsage(
-		ctx context.Context, day time.Time, tenantID uint64, modelID string,
+		ctx context.Context, day time.Time, tenantID uint64, modelID, scene, knowledgeBaseID string,
 		promptTokens, completionTokens int64,
 	) error
 	// ListUsage returns the accumulator rows for one tenant since (and
@@ -125,11 +126,21 @@ type ModelGatewayService interface {
 	// "fall back to the YAML built-in" path.
 	LatestVersion(ctx context.Context, tenantID uint64, templateKey string) (*types.PromptVersion, error)
 
-	// RecordUsage adds one model call's tokens to the day accumulator
-	// (UTC day). Never fails the business call: callers may ignore the
-	// error (log-only), which is why it returns error instead of panicking
-	// on bad input — negative counters are clamped to 0.
+	// RecordUsage adds one chat call's tokens to the day accumulator
+	// (UTC day), attributed to the chat scene. Kept for callers that do not
+	// know a space; new call sites should use RecordUsageDetailed.
+	// Never fails the business call: callers may ignore the error (log-only),
+	// which is why it returns error instead of panicking on bad input —
+	// negative counters are clamped to 0.
 	RecordUsage(ctx context.Context, tenantID uint64, modelID string, promptTokens, completionTokens int64) error
+	// RecordUsageDetailed adds one model call's tokens with the §16.1
+	// allocation dimensions: scenario and knowledge base. An empty
+	// knowledgeBaseID means "not attributable to one space" and is reported
+	// as unallocated rather than guessed.
+	RecordUsageDetailed(
+		ctx context.Context, tenantID uint64, modelID, scene, knowledgeBaseID string,
+		promptTokens, completionTokens int64,
+	) error
 	// UsageSummary aggregates the last `days` days (UTC, inclusive of
 	// today) by day and model, day ascending. days is clamped to [1, 366].
 	UsageSummary(ctx context.Context, tenantID uint64, days int) ([]*types.ModelUsageSummaryRow, error)

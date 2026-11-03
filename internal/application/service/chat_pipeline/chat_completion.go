@@ -130,12 +130,8 @@ func (p *PluginChatCompletion) OnEvent(
 
 	// 用量台账（§16.5）：成本看板、预算告警与按空间分摊都依赖它。此前
 	// RecordUsage 没有任何调用方，台账恒为空。记录失败只告警，不阻断生成。
-	if p.gateway != nil {
-		if tenantID, ok := types.TenantIDFromContext(ctx); ok && tenantID != 0 {
-			_ = p.gateway.RecordUsage(ctx, tenantID, chatManage.ChatModelID,
-				int64(chatResponse.Usage.PromptTokens), int64(chatResponse.Usage.CompletionTokens))
-		}
-	}
+	recordChatUsage(ctx, p.gateway, chatManage,
+		chatResponse.Usage.PromptTokens, chatResponse.Usage.CompletionTokens)
 
 	pipelineInfo(ctx, "Completion", "output", map[string]interface{}{
 		"answer_preview":    chatResponse.Content,

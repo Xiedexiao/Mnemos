@@ -102,6 +102,42 @@ type DashboardContributor struct {
 	Score int64 `json:"score"`
 }
 
+// DashboardCostAllocation is one (space, scenario) cost bucket (§16.1
+// "按空间/场景分摊").
+type DashboardCostAllocation struct {
+	// KnowledgeBaseID is the space the spend is attributed to; empty means
+	// unallocated (multi-space or non-space calls).
+	KnowledgeBaseID string `json:"knowledge_base_id"`
+	// KnowledgeBaseName is resolved for display; empty for unallocated.
+	KnowledgeBaseName string `json:"knowledge_base_name"`
+	// Scene is the cost scenario (chat/summary/embedding/...).
+	Scene string `json:"scene"`
+	// PromptTokens / CompletionTokens / TotalTokens in the window.
+	PromptTokens     int64 `json:"prompt_tokens"`
+	CompletionTokens int64 `json:"completion_tokens"`
+	TotalTokens      int64 `json:"total_tokens"`
+	// CallCount is the number of model invocations in this bucket.
+	CallCount int64 `json:"call_count"`
+}
+
+// DashboardCostSpace is the storage/index footprint of one space (§16.1
+// "存储、索引成本"). It is measured in bytes and chunk counts, not currency:
+// the platform has no per-model price catalog, so inventing a money figure
+// would be wrong.
+type DashboardCostSpace struct {
+	// KnowledgeBaseID is the space.
+	KnowledgeBaseID string `json:"knowledge_base_id"`
+	// KnowledgeBaseName is resolved for display.
+	KnowledgeBaseName string `json:"knowledge_base_name"`
+	// StorageBytes is the sum of storage_size across the space's knowledge.
+	StorageBytes int64 `json:"storage_bytes"`
+	// KnowledgeCount is how many knowledge entries the space holds.
+	KnowledgeCount int64 `json:"knowledge_count"`
+	// ChunkCount is the vector/keyword index footprint proxy: every chunk is
+	// one indexed unit, so index cost grows with it.
+	ChunkCount int64 `json:"chunk_count"`
+}
+
 // DashboardCost is the §16.1 "成本" block.
 type DashboardCost struct {
 	// PromptTokens in the window.
@@ -114,6 +150,20 @@ type DashboardCost struct {
 	CallCount int64 `json:"call_count"`
 	// ByModel breaks the tokens down per model id.
 	ByModel map[string]int64 `json:"by_model"`
+	// ByScene breaks the tokens down per scenario (§16.1 按场景).
+	ByScene map[string]int64 `json:"by_scene"`
+	// Allocations breaks the spend down per (space, scenario) bucket.
+	Allocations []DashboardCostAllocation `json:"allocations"`
+	// StorageBySpace is the storage/index footprint per space.
+	StorageBySpace []DashboardCostSpace `json:"storage_by_space"`
+	// UnallocatedTokens is spend that cannot be attributed to one space. It
+	// is reported explicitly so the per-space rows never silently fail to add
+	// up to the total.
+	UnallocatedTokens int64 `json:"unallocated_tokens"`
+	// TotalStorageBytes is the tenant-wide storage footprint.
+	TotalStorageBytes int64 `json:"total_storage_bytes"`
+	// TotalChunks is the tenant-wide index footprint.
+	TotalChunks int64 `json:"total_chunks"`
 }
 
 // DashboardObservability is the §17.2 "可观测" block: the runtime signals an
