@@ -170,6 +170,20 @@ func applyKnowledgeListFilter(query *gorm.DB, filter types.KnowledgeListFilter) 
 			filter.TagIDs,
 		)
 	}
+	if len(filter.LifecycleStatuses) > 0 {
+		// 空字符串按 valid 处理，与读取时的解析口径一致（存量行没有状态）。
+		statuses := make([]string, 0, len(filter.LifecycleStatuses))
+		for _, status := range filter.LifecycleStatuses {
+			trimmed := strings.TrimSpace(status)
+			if trimmed == "" {
+				trimmed = string(types.KnowledgeLifecycleValid)
+			}
+			statuses = append(statuses, trimmed)
+		}
+		query = query.Where(
+			"COALESCE(NULLIF(lifecycle_status, ''), 'valid') IN ?", statuses,
+		)
+	}
 	if filter.Keyword != "" {
 		// Case-insensitive (LOWER … LIKE LOWER) so keyword search matches
 		// regardless of the stored casing — consistent with the sibling

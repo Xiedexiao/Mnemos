@@ -131,6 +131,44 @@ type KnowledgeListFilter struct {
 	// reader without an explicit allow does not even learn that a secret entry
 	// exists. Empty means "no ceiling" (caller already decided).
 	MaxClassification KnowledgeClassification
+	// LifecycleStatuses restricts the listing to these lifecycle states.
+	// Empty means "no restriction" (the normal list shows everything the
+	// caller may open, regardless of state).
+	//
+	// 这是归档库（§7.8）需要的维度：归档内容默认不参与检索，但必须能按需
+	// 查询。没有这个字段时调用方只能拉全量再在内存里筛，分页与计数都会错。
+	LifecycleStatuses []string
+}
+
+// ParseLifecycleStatusList parses a comma-separated lifecycle status filter.
+//
+// 只接受白名单里的状态：写错的状态名会让查询静默返回空列表，调用方会以为
+// "归档库里没东西"。空输入返回 nil（不过滤）。
+func ParseLifecycleStatusList(raw string) ([]string, error) {
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '，' || r == ' '
+	})
+	if len(parts) == 0 {
+		return nil, nil
+	}
+	out := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		status := KnowledgeLifecycleStatus(trimmed)
+		if !status.Valid() {
+			return nil, fmt.Errorf("unknown lifecycle status %q", trimmed)
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+	}
+	return out, nil
 }
 
 // KnowledgeListSortField 是知识文件列表允许使用的排序字段。
@@ -262,7 +300,7 @@ type Knowledge struct {
 	// LastReviewedAt / LastReviewedBy record the latest "confirmed valid"
 	// review action, shown on the reading page as the verification badge.
 	LastReviewedAt *time.Time `json:"last_reviewed_at"`
-	LastReviewedBy string `json:"last_reviewed_by" gorm:"type:varchar(36);not null;default:''"`
+	LastReviewedBy string     `json:"last_reviewed_by" gorm:"type:varchar(36);not null;default:''"`
 	// ReplacedByID points at the newer knowledge that replaced this entry.
 	ReplacedByID string `json:"replaced_by_id" gorm:"type:varchar(36);not null;default:''"`
 	// CurrentVersion is the latest published version number.

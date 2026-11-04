@@ -1182,6 +1182,7 @@ func buildSpanTree(knowledgeID string, attempt int, rows []types.KnowledgeProces
 // @Param        folder_recursive query     bool    false  "为 true 时同时返回子文件夹内的文档"  extensions(x-agent)
 // @Param        sort_by      query     string  false  "排序字段" Enums(created_at,updated_at,file_name) default(created_at)  extensions(x-agent)
 // @Param        sort_order   query     string  false  "排序方向"  Enums(asc, desc)  default(desc)  extensions(x-agent)
+// @Param        lifecycle_status query string  false  "生命周期状态筛选，逗号分隔（归档库用 archived；归档内容默认不参与检索但可按需查询）"
 // @Success      200        {object}  handler.PageResponse{data=[]types.Knowledge}  "知识列表"
 // @Failure      400        {object}  errors.AppError                               "请求参数错误"
 // @Failure      403        {object}  errors.AppError                               "无权访问知识库"
@@ -1225,6 +1226,14 @@ func (h *KnowledgeHandler) ListKnowledge(c *gin.Context) {
 		SortOrder: types.KnowledgeListSortOrder(
 			c.DefaultQuery("sort_order", string(types.KnowledgeListSortDescending)),
 		),
+	}
+	// 归档库（§7.8）：lifecycle_status 允许显式指定，归档内容默认不参与
+	// 检索但必须能按需查到。状态名写错直接 400，避免静默返回空列表。
+	if statuses, statusErr := types.ParseLifecycleStatusList(c.Query("lifecycle_status")); statusErr != nil {
+		c.Error(errors.NewBadRequestError(statusErr.Error()))
+		return
+	} else {
+		filter.LifecycleStatuses = statuses
 	}
 	if !filter.SortBy.Valid() {
 		_ = c.Error(errors.NewBadRequestError("invalid sort_by: must be updated_at, created_at, or file_name"))

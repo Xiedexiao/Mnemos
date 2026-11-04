@@ -13114,6 +13114,12 @@ const docTemplate = `{
                         "description": "排序方向",
                         "name": "sort_order",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "生命周期状态筛选，逗号分隔（归档库用 archived；归档内容默认不参与检索但可按需查询）",
+                        "name": "lifecycle_status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -38328,37 +38334,10 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "parse_quality.computed",
                 "candidate.created",
                 "candidate.confirmed",
                 "candidate.published",
                 "candidate.rejected",
-                "aipre.completed",
-                "aipre.failed",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -38421,6 +38400,14 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
                 "review.submitted",
                 "review.approved",
                 "review.rejected",
@@ -38437,40 +38424,32 @@ const docTemplate = `{
                 "ontology.property_deleted",
                 "ontology.relation_created",
                 "ontology.relation_updated",
-                "ontology.relation_deleted"
+                "ontology.relation_deleted",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
+                "aipre.completed",
+                "aipre.failed",
+                "parse_quality.computed"
             ],
             "x-enum-varnames": [
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "ParseQualityAuditActionComputed",
                 "AuditActionCandidateCreated",
                 "AuditActionCandidateConfirmed",
                 "AuditActionCandidatePublished",
                 "AuditActionCandidateRejected",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -38533,6 +38512,14 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
                 "AuditActionReviewSubmitted",
                 "AuditActionReviewApproved",
                 "AuditActionReviewRejected",
@@ -38549,7 +38536,26 @@ const docTemplate = `{
                 "OntologyActionPropertyDeleted",
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted"
+                "OntologyActionRelationDeleted",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "ParseQualityAuditActionComputed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -55985,6 +55991,13 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "domain": {
+                    "type": "string"
+                },
+                "governance_level": {
+                    "description": "GovernanceLevel is the §8.2 L0–L4 maturity; the domain floor raises it\nand the level can never be lowered afterwards.",
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 }
@@ -55994,6 +56007,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "description": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "governance_level": {
                     "type": "string"
                 },
                 "name": {

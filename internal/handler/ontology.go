@@ -24,12 +24,18 @@ func NewOntologyHandler(service interfaces.OntologyService) *OntologyHandler {
 type ontologySchemaRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	// GovernanceLevel is the §8.2 L0–L4 maturity; the domain floor raises it
+	// and the level can never be lowered afterwards.
+	GovernanceLevel string `json:"governance_level"`
+	Domain          string `json:"domain"`
 }
 
 // ontologySchemaUpdateRequest is the body of PUT /ontology/schemas/:id.
 type ontologySchemaUpdateRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
+	Name            *string `json:"name"`
+	Description     *string `json:"description"`
+	GovernanceLevel *string `json:"governance_level"`
+	Domain          *string `json:"domain"`
 }
 
 // ontologyTypeRequest is the body of POST /ontology/schemas/:id/types.
@@ -101,10 +107,12 @@ func (h *OntologyHandler) CreateOntologySchema(c *gin.Context) {
 	}
 	caller := types.CallerFromContext(ctx)
 	schema, err := h.service.CreateSchema(ctx, &types.OntologySchema{
-		TenantID:    caller.TenantID,
-		Name:        req.Name,
-		Description: req.Description,
-		CreatedBy:   caller.UserID,
+		TenantID:        caller.TenantID,
+		Name:            req.Name,
+		Description:     req.Description,
+		GovernanceLevel: req.GovernanceLevel,
+		Domain:          req.Domain,
+		CreatedBy:       caller.UserID,
 	}, caller.UserID)
 	if err != nil {
 		c.Error(err)
@@ -173,7 +181,12 @@ func (h *OntologyHandler) UpdateOntologySchema(c *gin.Context) {
 	}
 	caller := types.CallerFromContext(ctx)
 	schema, err := h.service.UpdateSchema(ctx, caller.TenantID, c.Param("id"),
-		&types.OntologySchemaUpdate{Name: req.Name, Description: req.Description}, caller.UserID)
+		&types.OntologySchemaUpdate{
+			Name:            req.Name,
+			Description:     req.Description,
+			GovernanceLevel: req.GovernanceLevel,
+			Domain:          req.Domain,
+		}, caller.UserID)
 	if err != nil {
 		c.Error(err)
 		return

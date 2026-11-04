@@ -1,6 +1,7 @@
 package types
 
 import (
+	"strings"
 	"time"
 )
 
@@ -131,13 +132,124 @@ type OntologySchema struct {
 	Description string               `json:"description" gorm:"type:text;not null;default:''"`
 	Version     int                  `json:"version" gorm:"not null;default:1"`
 	Status      OntologySchemaStatus `json:"status" gorm:"type:varchar(16);not null;default:'draft'"`
-	CreatedBy   string               `json:"created_by" gorm:"type:varchar(36);not null;default:''"`
-	CreatedAt   time.Time            `json:"created_at"`
-	UpdatedAt   time.Time            `json:"updated_at"`
+	// GovernanceLevel is the §8.2 L0–L4 maturity of this structure. It is
+	// stored per schema, not per type: the level describes how much the whole
+	// structure can be trusted, so two types in one schema cannot disagree.
+	GovernanceLevel string `json:"governance_level" gorm:"type:varchar(4);not null;default:'L0'"`
+	// Domain scopes the level floor (price/contract → L2, drawing/HR → L3).
+	Domain    string    `json:"domain" gorm:"type:varchar(32);not null;default:''"`
+	CreatedBy string    `json:"created_by" gorm:"type:varchar(36);not null;default:''"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // TableName pins the GORM table name.
 func (OntologySchema) TableName() string { return "ontology_schemas" }
+
+// OntologyGovernanceLevel 是本体的治理分级（KnowAxis V3.0 §8.2 L0–L4）。
+//
+// 级别描述"以这套本体产出的知识能被信任到什么程度"，决定三类强制动作：
+//   - 是否必须双人审核（L2 以上）；
+//   - 结构变更是否需要迁移预演（L3 以上）；
+//   - 变更是否需要黄金集回归（L4）。
+//
+// 级别存在 schema 上而不是类型上：治理强度描述的是"整套结构"的成熟度，
+// 同一套结构里不同类型不该有不同的审核门槛。
+type OntologyGovernanceLevel string
+
+const (
+	// OntologyGovernanceL0 草案：允许自由试验，产出的知识不进入正式问答。
+	OntologyGovernanceL0 OntologyGovernanceLevel = "L0"
+	// OntologyGovernanceL1 内部试用：单审即可发布，产出知识标记为试点。
+	OntologyGovernanceL1 OntologyGovernanceLevel = "L1"
+	// OntologyGovernanceL2 受控：双人审核；价格/合同类抽取必须在此级或以上。
+	OntologyGovernanceL2 OntologyGovernanceLevel = "L2"
+	// OntologyGovernanceL3 生产：双审 + 结构变更需迁移预演（图纸/HR 类）。
+	OntologyGovernanceL3 OntologyGovernanceLevel = "L3"
+	// OntologyGovernanceL4 关键：双审 + 迁移预演 + 黄金集回归门禁。
+	OntologyGovernanceL4 OntologyGovernanceLevel = "L4"
+)
+
+// allOntologyGovernanceLevels is the ordering ladder.
+var allOntologyGovernanceLevels = []OntologyGovernanceLevel{
+	OntologyGovernanceL0, OntologyGovernanceL1, OntologyGovernanceL2,
+	OntologyGovernanceL3, OntologyGovernanceL4,
+}
+
+// Valid reports whether the level is known.
+func (l OntologyGovernanceLevel) Valid() bool {
+	for _, candidate := range allOntologyGovernanceLevels {
+		if candidate == l {
+			return true
+		}
+	}
+	return false
+}
+
+// Rank returns the numeric position (L0 = 0).
+func (l OntologyGovernanceLevel) Rank() int {
+	for index, candidate := range allOntologyGovernanceLevels {
+		if candidate == l {
+			return index
+		}
+	}
+	return 0
+}
+
+// ParseOntologyGovernanceLevel normalizes the stored value; unknown or empty
+// falls back to L0 (the least trusted level — fail-closed for governance).
+func ParseOntologyGovernanceLevel(raw string) OntologyGovernanceLevel {
+	level := OntologyGovernanceLevel(strings.ToUpper(strings.TrimSpace(raw)))
+	if level.Valid() {
+		return level
+	}
+	return OntologyGovernanceL0
+}
+
+// RequiresDualApproval reports whether content published under this level must
+// pass two approvers (§8.2).
+func (l OntologyGovernanceLevel) RequiresDualApproval() bool {
+	return l.Rank() >= OntologyGovernanceL2.Rank()
+}
+
+// RequiresMigrationRehearsal reports whether a structural change needs a
+// migration rehearsal (§8.3).
+func (l OntologyGovernanceLevel) RequiresMigrationRehearsal() bool {
+	return l.Rank() >= OntologyGovernanceL3.Rank()
+}
+
+// RequiresGoldenRegression reports whether a change needs a golden-set gate.
+func (l OntologyGovernanceLevel) RequiresGoldenRegression() bool {
+	return l.Rank() >= OntologyGovernanceL4.Rank()
+}
+
+// MinOntologyGovernanceLevelForDomain returns the floor a business domain may
+// not go below (§8.2: 价格/合同/图纸/HR 属于强治理域).
+//
+// 返回 L0 表示该领域没有额外下限。下限是**只能抬高不能降低**的：把价格类
+// 本体降到 L1 会让它的产出数字直接进入问答，而这正是设计要阻止的事。
+func MinOntologyGovernanceLevelForDomain(domain string) OntologyGovernanceLevel {
+	switch strings.ToLower(strings.TrimSpace(domain)) {
+	case "price", "pricing", "contract", "contracts", "legal":
+		return OntologyGovernanceL2
+	case "drawing", "drawings", "plm", "hr", "payroll":
+		return OntologyGovernanceL3
+	default:
+		return OntologyGovernanceL0
+	}
+}
+
+// EffectiveOntologyGovernanceLevel raises a requested level to the domain
+// floor. It never lowers: a caller asking for L4 on a price ontology keeps L4.
+func EffectiveOntologyGovernanceLevel(
+	requested OntologyGovernanceLevel, domain string,
+) OntologyGovernanceLevel {
+	floor := MinOntologyGovernanceLevelForDomain(domain)
+	if requested.Rank() >= floor.Rank() {
+		return requested
+	}
+	return floor
+}
 
 // OntologyType 本体类型（实体/事件/概念的机器名词汇表，如 Device/SOP/ErrorCode）。
 // Name 是 schema 内唯一的机器名；DisplayName 对齐 SKOS prefLabel；Aliases 对齐
@@ -207,6 +319,10 @@ type OntologySchemaDetail struct {
 type OntologySchemaUpdate struct {
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
+	// GovernanceLevel raises (never lowers) the §8.2 level.
+	GovernanceLevel *string `json:"governance_level,omitempty"`
+	// Domain narrows the level floor.
+	Domain *string `json:"domain,omitempty"`
 }
 
 // OntologyTypeUpdate replaces the mutable fields of a type.

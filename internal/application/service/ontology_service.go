@@ -52,6 +52,10 @@ func (s *ontologyService) CreateSchema(
 	if schema.Version <= 0 {
 		schema.Version = 1
 	}
+	// 治理分级（§8.2）：请求值被提升到领域下限（价格/合同 ≥ L2，图纸/HR ≥ L3），
+	// 但绝不被降低——下限是"只能抬高"的约束。
+	requested := types.ParseOntologyGovernanceLevel(schema.GovernanceLevel)
+	schema.GovernanceLevel = string(types.EffectiveOntologyGovernanceLevel(requested, schema.Domain))
 	if schema.ID == "" {
 		schema.ID = uuid.NewString()
 	}
@@ -94,6 +98,25 @@ func (s *ontologyService) UpdateSchema(
 	}
 	if input.Description != nil {
 		schema.Description = *input.Description
+	}
+	if input.Domain != nil {
+		schema.Domain = strings.TrimSpace(*input.Domain)
+	}
+	if input.GovernanceLevel != nil {
+		requested := types.ParseOntologyGovernanceLevel(*input.GovernanceLevel)
+		effective := types.EffectiveOntologyGovernanceLevel(requested, schema.Domain)
+		// 降级需要显式拒绝：一次"手滑改回 L1"会让强治理域的产出直接进入
+		// 问答，而这正是 §8.2 要阻止的。
+		current := types.ParseOntologyGovernanceLevel(schema.GovernanceLevel)
+		if effective.Rank() < current.Rank() {
+			return nil, apperrors.NewBadRequestError(
+				"ontology governance level cannot be lowered (current " + string(current) + ")")
+		}
+		schema.GovernanceLevel = string(effective)
+	} else {
+		// 领域变化可能抬高下限，随手改领域也要重算。
+		current := types.ParseOntologyGovernanceLevel(schema.GovernanceLevel)
+		schema.GovernanceLevel = string(types.EffectiveOntologyGovernanceLevel(current, schema.Domain))
 	}
 	if err := s.repo.UpdateSchema(ctx, schema); err != nil {
 		return nil, err
