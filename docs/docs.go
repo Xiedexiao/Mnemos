@@ -17420,6 +17420,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/knowledge/{id}/reading-toc": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "从分块结果推导文档目录（KnowAxis V3.0 §15.2）。识别 Markdown 标题与中文编号标题；与正文同级受权限约束。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "阅读"
+                ],
+                "summary": "阅读页目录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge/{id}/recommendations": {
             "get": {
                 "security": [
@@ -27537,6 +27575,122 @@ const docTemplate = `{
                         "description": "任务不存在",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/reading/continue": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "最近的阅读位置（KnowAxis V3.0 §15.2）。无权访问的文档保留占位但不显示标题。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "阅读"
+                ],
+                "summary": "继续阅读",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "条数（默认 20）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/reading/progress": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "读取本人在某一篇文档中的阅读位置；没有记录时返回 null（前端从顶部开始）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "阅读"
+                ],
+                "summary": "读取阅读进度",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识ID",
+                        "name": "knowledge_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "记录本人在一篇文档中的阅读位置（KnowAxis V3.0 §15.2）。读到 95% 以上视为读完。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "阅读"
+                ],
+                "summary": "保存阅读进度",
+                "parameters": [
+                    {
+                        "description": "进度",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.readingProgressRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -39378,26 +39532,6 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -39411,6 +39545,9 @@ const docTemplate = `{
                 "ontology.relation_created",
                 "ontology.relation_updated",
                 "ontology.relation_deleted",
+                "share.created",
+                "share.revoked",
+                "share.visited",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -39473,43 +39610,40 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
                 "parse_quality.computed",
-                "aipre.completed",
-                "aipre.failed",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
                 "ontology.schema_proposal_created",
                 "ontology.schema_proposal_checked",
                 "ontology.schema_proposal_approved",
                 "ontology.schema_proposal_rejected",
                 "ontology.schema_proposal_applied",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected"
+                "aipre.completed",
+                "aipre.failed"
             ],
             "x-enum-varnames": [
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -39523,6 +39657,9 @@ const docTemplate = `{
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
                 "OntologyActionRelationDeleted",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -39585,21 +39722,38 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
                 "ParseQualityAuditActionComputed",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
                 "OntologyActionSchemaProposalCreated",
                 "OntologyActionSchemaProposalChecked",
                 "OntologyActionSchemaProposalApproved",
                 "OntologyActionSchemaProposalRejected",
                 "OntologyActionSchemaProposalApplied",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected"
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -57515,6 +57669,23 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "internal_handler.readingProgressRequest": {
+            "type": "object",
+            "properties": {
+                "chunk_count": {
+                    "type": "integer"
+                },
+                "chunk_id": {
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "type": "string"
+                },
+                "percent": {
+                    "type": "number"
                 }
             }
         },

@@ -1639,26 +1639,6 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
-    - share.created
-    - share.revoked
-    - share.visited
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - cr.created
-    - cr.item_added
-    - cr.item_removed
-    - cr.analyzed
-    - cr.submitted
-    - cr.scheduled
-    - cr.publish_started
-    - cr.publish_finished
-    - cr.closed
-    - cr.rolled_back
-    - cr.impact_task_updated
-    - cr.verified
-    - cr.notified
     - ontology.schema_created
     - ontology.schema_updated
     - ontology.schema_published
@@ -1672,6 +1652,9 @@ definitions:
     - ontology.relation_created
     - ontology.relation_updated
     - ontology.relation_deleted
+    - share.created
+    - share.revoked
+    - share.visited
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1734,43 +1717,40 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
     - parse_quality.computed
-    - aipre.completed
-    - aipre.failed
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
+    - cr.created
+    - cr.item_added
+    - cr.item_removed
+    - cr.analyzed
+    - cr.submitted
+    - cr.scheduled
+    - cr.publish_started
+    - cr.publish_finished
+    - cr.closed
+    - cr.rolled_back
+    - cr.impact_task_updated
+    - cr.verified
+    - cr.notified
     - ontology.schema_proposal_created
     - ontology.schema_proposal_checked
     - ontology.schema_proposal_approved
     - ontology.schema_proposal_rejected
     - ontology.schema_proposal_applied
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
+    - aipre.completed
+    - aipre.failed
     type: string
     x-enum-varnames:
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - AuditActionCRCreated
-    - AuditActionCRItemAdded
-    - AuditActionCRItemRemoved
-    - AuditActionCRAnalyzed
-    - AuditActionCRSubmitted
-    - AuditActionCRScheduled
-    - AuditActionCRPublishStarted
-    - AuditActionCRPublishFinished
-    - AuditActionCRClosed
-    - AuditActionCRRolledBack
-    - AuditActionCRImpactTaskUpdated
-    - AuditActionCRVerified
-    - AuditActionCRNotified
     - OntologyActionSchemaCreated
     - OntologyActionSchemaUpdated
     - OntologyActionSchemaPublished
@@ -1784,6 +1764,9 @@ definitions:
     - OntologyActionRelationCreated
     - OntologyActionRelationUpdated
     - OntologyActionRelationDeleted
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1846,21 +1829,38 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
     - ParseQualityAuditActionComputed
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
+    - AuditActionCRCreated
+    - AuditActionCRItemAdded
+    - AuditActionCRItemRemoved
+    - AuditActionCRAnalyzed
+    - AuditActionCRSubmitted
+    - AuditActionCRScheduled
+    - AuditActionCRPublishStarted
+    - AuditActionCRPublishFinished
+    - AuditActionCRClosed
+    - AuditActionCRRolledBack
+    - AuditActionCRImpactTaskUpdated
+    - AuditActionCRVerified
+    - AuditActionCRNotified
     - OntologyActionSchemaProposalCreated
     - OntologyActionSchemaProposalChecked
     - OntologyActionSchemaProposalApproved
     - OntologyActionSchemaProposalRejected
     - OntologyActionSchemaProposalApplied
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -15665,6 +15665,17 @@ definitions:
           type: string
         type: array
     type: object
+  internal_handler.readingProgressRequest:
+    properties:
+      chunk_count:
+        type: integer
+      chunk_id:
+        type: string
+      knowledge_id:
+        type: string
+      percent:
+        type: number
+    type: object
   internal_handler.recordViewRequest:
     properties:
       knowledge_id:
@@ -27368,6 +27379,29 @@ paths:
       summary: 预览知识文件
       tags:
       - 知识管理
+  /knowledge/{id}/reading-toc:
+    get:
+      description: 从分块结果推导文档目录（KnowAxis V3.0 §15.2）。识别 Markdown 标题与中文编号标题；与正文同级受权限约束。
+      parameters:
+      - description: 知识ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 阅读页目录
+      tags:
+      - 阅读
   /knowledge/{id}/recommendations:
     get:
       description: 返回一篇知识的推荐看板（KnowAxis V3.0 §15.3）：相关知识、猜你想学、最新动态与热门知识。每一条都已经过生命周期、密级与文档
@@ -34231,6 +34265,76 @@ paths:
       summary: 处理质量任务
       tags:
       - 反馈与质量任务
+  /reading/continue:
+    get:
+      description: 最近的阅读位置（KnowAxis V3.0 §15.2）。无权访问的文档保留占位但不显示标题。
+      parameters:
+      - description: 条数（默认 20）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 继续阅读
+      tags:
+      - 阅读
+  /reading/progress:
+    get:
+      description: 读取本人在某一篇文档中的阅读位置；没有记录时返回 null（前端从顶部开始）。
+      parameters:
+      - description: 知识ID
+        in: query
+        name: knowledge_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 读取阅读进度
+      tags:
+      - 阅读
+    put:
+      consumes:
+      - application/json
+      description: 记录本人在一篇文档中的阅读位置（KnowAxis V3.0 §15.2）。读到 95% 以上视为读完。
+      parameters:
+      - description: 进度
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.readingProgressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 保存阅读进度
+      tags:
+      - 阅读
   /recycle-bin:
     get:
       description: 列出本工作区的回收站条目（新→旧）；entity_type 可选过滤（v1 仅 knowledge）；restored_at

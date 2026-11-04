@@ -99,6 +99,7 @@ type RouterParams struct {
 	OrgDepartmentHandler         *handler.OrgDepartmentHandler
 	SCIMHandler                  *handler.SCIMHandler
 	WebhookHandler               *handler.WebhookHandler
+	ReadingHandler               *handler.ReadingHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
@@ -378,6 +379,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterOrgDepartmentRoutes(v1, params.OrgDepartmentHandler, rbacGuards)
 		RegisterSCIMRoutes(v1, params.SCIMHandler, rbacGuards)
 		RegisterWebhookRoutes(v1, params.WebhookHandler, rbacGuards)
+		RegisterReadingRoutes(v1, params.ReadingHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)
