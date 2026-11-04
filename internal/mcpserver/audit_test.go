@@ -43,9 +43,16 @@ func (r *recordingAudit) entriesSnapshot() []*types.AuditLog {
 	return append([]*types.AuditLog(nil), r.entries...)
 }
 
-// endpointContext carries an authenticated MCP endpoint.
+// endpointContext carries an authenticated MCP endpoint plus the synthetic
+// caller the auth middleware installs (§16.2): a delegated identity is resolved
+// against that caller's tenant, so the context must look like a real request.
 func endpointContext(endpoint *types.MCPEndpoint) context.Context {
-	return context.WithValue(context.Background(), types.MCPEndpointContextKey, endpoint)
+	ctx := context.WithValue(context.Background(), types.MCPEndpointContextKey, endpoint)
+	return types.WithCaller(ctx, types.Caller{
+		TenantID: endpoint.TenantID,
+		UserID:   "mcp-" + endpoint.ID,
+		Role:     types.TenantRoleViewer,
+	})
 }
 
 // callWithArgs builds an MCP tool call with the given arguments.
@@ -97,8 +104,14 @@ func TestDelegationFromArgumentsRejectsInvalidBlocks(t *testing.T) {
 // TestAuditToolCallRecordsSuccess covers the ledger write.
 func TestAuditToolCallRecordsSuccess(t *testing.T) {
 	audit := &recordingAudit{}
-	server := &Server{}
-	server.WithAudit(audit)
+	// A delegated call needs a verifiable identity (§16.2): an unverifiable
+	// one is refused, so the fixture supplies the lookups.
+	server := delegationServer(
+		map[string]*types.User{"u-1": {ID: "u-1", TenantID: 7, IsActive: true}},
+		map[string]*types.TenantMember{
+			"u-1": {UserID: "u-1", TenantID: 7, Role: types.TenantRoleViewer},
+		},
+	).WithAudit(audit)
 	handler := server.auditToolCall("search_knowledge", okHandler)
 
 	result, err := handler(endpointContext(&types.MCPEndpoint{

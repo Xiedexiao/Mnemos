@@ -60,6 +60,11 @@ type Server struct {
 	// audit records one row per tool call (§16.2 受控委派). Nil disables
 	// auditing only — a call still succeeds when the audit store is down.
 	audit interfaces.AuditLogService
+	// userService / memberService verify a delegated identity. Both nil means
+	// delegation cannot be verified, and a call that declares one is refused
+	// rather than run under an unverified principal.
+	userService   interfaces.UserService
+	memberService interfaces.TenantMemberService
 
 	limiter   *ratelimit.Limiter
 	lastTouch sync.Map // endpoint id -> time.Time of the last last_used_at write
@@ -132,6 +137,17 @@ func NewServer(
 // 成功，只是不留痕。
 func (s *Server) WithAudit(audit interfaces.AuditLogService) *Server {
 	s.audit = audit
+	return s
+}
+
+// WithDelegationServices supplies the lookups used to verify a delegated
+// identity (§16.2). Without them a call that declares a delegation is refused:
+// an unverified principal must not silently fall back to the endpoint identity.
+func (s *Server) WithDelegationServices(
+	users interfaces.UserService, members interfaces.TenantMemberService,
+) *Server {
+	s.userService = users
+	s.memberService = members
 	return s
 }
 

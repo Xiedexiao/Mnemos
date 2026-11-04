@@ -52,6 +52,18 @@ func (s *Server) auditToolCall(
 			ctx = types.WithAgentDelegation(ctx, delegation)
 		}
 		startedAt := time.Now()
+		// 委派必须在**工具执行之前**换成真实主体：否则工具已经按 endpoint
+		// 的合成身份取完了数，事后再记一条"代表某人"的审计只是装饰。
+		delegatedCtx, delegationErr := s.applyDelegation(ctx, toolName, delegation)
+		if delegationErr != nil {
+			// 无法验证的委派直接拒绝：静默退化成合成身份会让调用方以为
+			// 自己代表某个用户，实际却是另一个身份在取数。
+			result := mcp.NewToolResultError(delegationErr.Error())
+			s.recordToolAudit(ctx, toolName, delegation, result, delegationErr,
+				time.Since(startedAt))
+			return result, nil
+		}
+		ctx = delegatedCtx
 		result, err := next(ctx, request)
 		s.recordToolAudit(ctx, toolName, delegation, result, err, time.Since(startedAt))
 		return result, err
