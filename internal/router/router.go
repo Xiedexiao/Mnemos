@@ -112,6 +112,7 @@ type RouterParams struct {
 	QueryRewriteHandler          *handler.QueryRewriteHandler
 	SavedViewHandler             *handler.SavedViewHandler
 	AnswerConversionHandler      *handler.AnswerConversionHandler
+	TokenBudgetHandler           *handler.TokenBudgetHandler
 	QualityMetricsHandler        *handler.QualityMetricsHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
@@ -408,6 +409,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterQueryRewriteRoutes(v1, params.QueryRewriteHandler, rbacGuards)
 		RegisterSavedViewRoutes(v1, params.SavedViewHandler, rbacGuards)
 		RegisterAnswerConversionRoutes(v1, params.AnswerConversionHandler, rbacGuards)
+		RegisterTokenBudgetRoutes(v1, params.TokenBudgetHandler, rbacGuards)
 		RegisterQualityMetricsRoutes(v1, params.QualityMetricsHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)

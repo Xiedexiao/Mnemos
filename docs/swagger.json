@@ -23413,6 +23413,114 @@
                 }
             }
         },
+        "/model-fallback-chains": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出各场景配置的模型降级链（KnowAxis V3.0 §16.5）。顺序即优先级：第一个是主力，其后依次是降级候选。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "成本控制"
+                ],
+                "summary": "模型降级链列表",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: [ModelFallbackChain]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按场景设置模型降级链（KnowAxis V3.0 §16.5）。链内重复与空 ID 会被去掉，超过 4 级会被截断——链越长，最坏情况延迟越长，那就不是降级而是重试风暴。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "成本控制"
+                ],
+                "summary": "设置模型降级链",
+                "parameters": [
+                    {
+                        "description": "{scene, model_ids, description}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.saveFallbackChainRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ModelFallbackChain}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/model-fallback-chains/{scene}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除某个场景的降级链，该场景回到\"只用主力模型，失败即失败\"。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "成本控制"
+                ],
+                "summary": "删除模型降级链",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "场景",
+                        "name": "scene",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/model-gateway/prompts": {
             "get": {
                 "security": [
@@ -36650,6 +36758,76 @@
                 }
             }
         },
+        "/token-budget": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回当前租户的 token 预算并评估本期用量（KnowAxis V3.0 §16.5）。未配置预算时返回一份\"没有上限\"的默认值而不是错误。达到阈值只告警、不阻断调用；告警按 80%/100%/120% 分档，且只在跨档时触发。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "成本控制"
+                ],
+                "summary": "Token 预算与用量",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: TokenBudgetAssessment}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "设置当前租户的 token 预算（KnowAxis V3.0 §16.5）。周期支持 daily/monthly，窗口按 UTC 计算，与用量记账同口径。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "成本控制"
+                ],
+                "summary": "设置 Token 预算",
+                "parameters": [
+                    {
+                        "description": "{period, limit_tokens, warn_percent}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.saveTokenBudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: TokenBudget}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/user/favorites": {
             "get": {
                 "description": "Lists this user's starred resources in the current workspace for a given type",
@@ -40464,11 +40642,27 @@
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "aipre.completed",
+                "aipre.failed",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
                 "rbac.member_left",
                 "rbac.access_denied",
+                "mcp.tool_called",
                 "rbac.invitation_sent",
                 "rbac.invitation_accepted",
                 "rbac.invitation_declined",
@@ -40526,9 +40720,6 @@
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
                 "ontology.schema_proposal_created",
                 "ontology.schema_proposal_checked",
                 "ontology.schema_proposal_approved",
@@ -40551,36 +40742,40 @@
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
                 "review.submitted",
                 "review.approved",
                 "review.rejected",
                 "review.receipt_issued",
                 "parse_quality.computed",
-                "aipre.completed",
-                "aipre.failed"
+                "share.created",
+                "share.revoked",
+                "share.visited"
             ],
             "x-enum-varnames": [
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
                 "AuditActionMemberLeft",
                 "AuditActionAccessDenied",
+                "AuditActionMCPToolCalled",
                 "AuditActionInvitationSent",
                 "AuditActionInvitationAccepted",
                 "AuditActionInvitationDeclined",
@@ -40638,9 +40833,6 @@
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
                 "OntologyActionSchemaProposalCreated",
                 "OntologyActionSchemaProposalChecked",
                 "OntologyActionSchemaProposalApproved",
@@ -40663,29 +40855,17 @@
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
                 "AuditActionReviewSubmitted",
                 "AuditActionReviewApproved",
                 "AuditActionReviewRejected",
                 "AuditActionReviewReceiptIssued",
                 "ParseQualityAuditActionComputed",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed"
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -59106,6 +59286,23 @@
                 }
             }
         },
+        "internal_handler.saveFallbackChainRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "model_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "scene": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.savePromptVersionRequest": {
             "type": "object",
             "required": [
@@ -59117,6 +59314,20 @@
                 },
                 "content": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_handler.saveTokenBudgetRequest": {
+            "type": "object",
+            "properties": {
+                "limit_tokens": {
+                    "type": "integer"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "warn_percent": {
+                    "type": "integer"
                 }
             }
         },
