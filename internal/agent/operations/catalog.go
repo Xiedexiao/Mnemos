@@ -348,6 +348,16 @@ var allowedRouteAreas = map[string]bool{
 	"sessions":  true,
 	"messages":  true,
 	"artifacts": true,
+	// §7.2 change requests, read-only: an agent may look up what a change
+	// request contains and what it will affect, so it can answer "what does
+	// CR-20261104-001 change". Scheduling, publishing and rolling back stay
+	// out — those are the accountable human's decisions, and the same rule
+	// that keeps conversation history out of the agent's reach applies.
+	"change-requests": true,
+	// The impact tasks a change request produced, read-only for the same
+	// reason: they are part of the request's blast radius, not a control
+	// surface.
+	"impact-tasks": true,
 }
 
 // readOnlyRouteAreas admit only operations that change nothing. Deleting,
@@ -355,10 +365,12 @@ var allowedRouteAreas = map[string]bool{
 // chat itself, and content the assistant reads (documents, past answers)
 // must never be able to talk it into erasing history.
 var readOnlyRouteAreas = map[string]bool{
-	"sessions":  true,
-	"messages":  true,
-	"artifacts": true,
-	"system":    true, // Only info and parser-engines are reachable; see parseRoute.
+	"sessions":        true,
+	"messages":        true,
+	"artifacts":       true,
+	"change-requests": true,
+	"impact-tasks":    true,
+	"system":          true, // Only info and parser-engines are reachable; see parseRoute.
 }
 
 // forbiddenRouteSegments are refused anywhere inside an allowed area:

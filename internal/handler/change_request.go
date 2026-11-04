@@ -156,11 +156,14 @@ func (h *ChangeRequestHandler) List(c *gin.Context) {
 // @Description  按单据 ID 返回变更单（聚合 items 与影响任务）。
 // @Tags         变更单
 // @Produce      json
-// @Param        id  path  string  true  "变更单ID"
-// @Success      200  {object}  map[string]interface{}  "{success, data: 变更单}"
+// @Param        id  path  string  true  "变更单ID"  extensions(x-agent=change_request_id)
+// @Success      200  {object}  handler.DataResponse{data=types.ChangeRequest}  "{success, data: 变更单}"
 // @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Failure      404  {object}  apperrors.AppError  "变更单不存在"
 // @Security     Bearer
+// @Security     ApiKeyAuth
+// @x-agent      {"id":"change_request.get","risk":"read"}
+// @x-agent-hint "Reads one change request with its affected items and impact tasks. Use the id from change_request.list."
 // @Router       /change-requests/{id} [get]
 func (h *ChangeRequestHandler) Get(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -46,6 +46,9 @@ func registerOperationAreas(v1 *gin.RouterGroup, g *rbacGuards) {
 	)
 	RegisterDataSourceRoutes(v1, &handler.DataSourceHandler{}, &handler.DataSourceCredentialsHandler{}, g)
 	RegisterAutomationRoutes(v1, &handler.AutomationHandler{}, g)
+	// Change requests are in the catalog read-only (§7.2): the agent may look
+	// at what a change will affect, never schedule or publish one.
+	RegisterChangeRequestRoutes(v1, g, &handler.ChangeRequestHandler{})
 }
 
 // TestBuiltinOperationsMatchRegisteredRoutes requires every operation to

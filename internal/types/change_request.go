@@ -313,31 +313,31 @@ type ChangeCloseCondition struct {
 // ChangeRequest 变更单主表。Items / ImpactTasks 是聚合字段（gorm:"-"），
 // 仅由服务层 List/Get 填充，方便一次返回完整单据。
 type ChangeRequest struct {
-	ID string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent"`
 	// TenantID 租户隔离。
 	TenantID uint64 `json:"tenant_id" gorm:"not null;uniqueIndex:uq_change_requests_tenant_number,priority:1"`
 	// CRNumber 单号，格式 CR-YYYYMMDD-序号（服务层生成，租户内唯一）。
-	CRNumber string `json:"cr_number" gorm:"type:varchar(32);not null;uniqueIndex:uq_change_requests_tenant_number,priority:2"`
+	CRNumber string `json:"cr_number" gorm:"type:varchar(32);not null;uniqueIndex:uq_change_requests_tenant_number,priority:2" extensions:"x-agent"`
 	// Title 变更标题。
-	Title string `json:"title" gorm:"type:varchar(255);not null"`
+	Title string `json:"title" gorm:"type:varchar(255);not null" extensions:"x-agent"`
 	// Reason 变更原因（regulation/process/product/correction/customer/other）。
-	Reason string `json:"reason" gorm:"type:varchar(32);not null"`
+	Reason string `json:"reason" gorm:"type:varchar(32);not null" extensions:"x-agent"`
 	// ChangeType 变更类型（text_fix/content_revision/param_change/replacement/delist/restructure）。
-	ChangeType string `json:"change_type" gorm:"type:varchar(24);not null"`
+	ChangeType string `json:"change_type" gorm:"type:varchar(24);not null" extensions:"x-agent"`
 	// Status 变更单状态机（draft…rolled_back）。
-	Status string `json:"status" gorm:"type:varchar(16);not null;default:'draft'"`
+	Status string `json:"status" gorm:"type:varchar(16);not null;default:'draft'" extensions:"x-agent"`
 	// RiskLevel 风险级（low/mid/high），路由影响任务 priority。
-	RiskLevel string `json:"risk_level" gorm:"type:varchar(16);not null;default:'low'"`
+	RiskLevel string `json:"risk_level" gorm:"type:varchar(16);not null;default:'low'" extensions:"x-agent"`
 	// Baseline 分析时刻的条目清单快照。
 	Baseline JSON `json:"baseline" gorm:"type:json;not null;default:'{}'"`
 	// EffectiveAt 生效时间（Schedule 设定；发布后条目按它对外生效）。
-	EffectiveAt *time.Time `json:"effective_at"`
+	EffectiveAt *time.Time `json:"effective_at" extensions:"x-agent"`
 	// AnnounceAt 公告时间（v1 记录性字段）。
 	AnnounceAt *time.Time `json:"announce_at"`
 	// ExpiresAt 失效时间（v1 记录性字段）。
 	ExpiresAt *time.Time `json:"expires_at"`
 	// RollbackPlan 回滚方案文本。
-	RollbackPlan string `json:"rollback_plan" gorm:"type:text;not null;default:''"`
+	RollbackPlan string `json:"rollback_plan" gorm:"type:text;not null;default:''" extensions:"x-agent,x-agent-max-runes=800"`
 	// CloseConditions 结构化关闭前置条件（v1 只读展示）。
 	CloseConditions JSON `json:"close_conditions" gorm:"type:json;not null;default:'[]'"`
 	// ApprovalTaskID 提交审批时创建的治理审批任务（§6.2 change_request）。
@@ -354,11 +354,11 @@ type ChangeRequest struct {
 	// ClosedAt 关闭时刻。
 	ClosedAt *time.Time `json:"closed_at"`
 
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at" extensions:"x-agent"`
+	UpdatedAt time.Time `json:"updated_at" extensions:"x-agent"`
 
 	// Items 变更条目（聚合，服务层填充）。
-	Items []*ChangeItem `json:"items,omitempty" gorm:"-"`
+	Items []*ChangeItem `json:"items,omitempty" gorm:"-" extensions:"x-agent"`
 	// ImpactTasks 影响任务（聚合，服务层填充）。
 	ImpactTasks []*ImpactTask `json:"impact_tasks,omitempty" gorm:"-"`
 }
@@ -372,9 +372,9 @@ type ChangeItem struct {
 	// CRID 所属变更单。
 	CRID string `json:"cr_id" gorm:"type:varchar(36);not null;uniqueIndex:uq_change_items_cr_knowledge,priority:1"`
 	// KnowledgeID 目标知识。
-	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;uniqueIndex:uq_change_items_cr_knowledge,priority:2"`
+	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;uniqueIndex:uq_change_items_cr_knowledge,priority:2" extensions:"x-agent=knowledge_id"`
 	// ItemStatus 应用状态（pending/applied/failed/skipped）。
-	ItemStatus string `json:"item_status" gorm:"type:varchar(16);not null;default:'pending'"`
+	ItemStatus string `json:"item_status" gorm:"type:varchar(16);not null;default:'pending'" extensions:"x-agent"`
 	// ReplacedByID 替代类变更里接替本条目的新知识（§7.2 replacement）。
 	// 为空时发布降级为 mark_stale，而不是让整批条目 failed。
 	ReplacedByID string `json:"replaced_by_id" gorm:"type:varchar(36);not null;default:''"`

@@ -3516,6 +3516,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
                     }
                 ],
                 "description": "按单据 ID 返回变更单（聚合 items 与影响任务）。",
@@ -3529,6 +3532,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "x-agent": "change_request_id",
                         "description": "变更单ID",
                         "name": "id",
                         "in": "path",
@@ -3539,8 +3543,19 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: 变更单}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ChangeRequest"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "401": {
@@ -3555,7 +3570,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "change_request.get",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Reads one change request with its affected items and impact tasks. Use the id from change_request.list."
             }
         },
         "/change-requests/{id}/analyze": {
@@ -40743,54 +40763,13 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "parse_quality.computed",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
-                "aipre.completed",
-                "aipre.failed",
                 "share.created",
                 "share.revoked",
                 "share.visited",
                 "feedback.recorded",
                 "quality_task.created",
                 "quality_task.updated",
+                "parse_quality.computed",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -40853,57 +40832,57 @@ const docTemplate = `{
                 "wiki.content_changed",
                 "faq.import_started",
                 "faq.import_completed",
-                "faq.import_failed"
+                "faq.import_failed",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
+                "aipre.completed",
+                "aipre.failed",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted"
             ],
             "x-enum-varnames": [
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "ParseQualityAuditActionComputed",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
                 "AuditActionShareLinkCreated",
                 "AuditActionShareLinkRevoked",
                 "AuditActionShareLinkVisited",
                 "AuditActionFeedbackRecorded",
                 "AuditActionQualityTaskCreated",
                 "AuditActionQualityTaskUpdated",
+                "ParseQualityAuditActionComputed",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -40966,7 +40945,48 @@ const docTemplate = `{
                 "AuditActionWikiContentChanged",
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
-                "AuditActionFAQImportFailed"
+                "AuditActionFAQImportFailed",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -41491,6 +41511,214 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Tencent_WeKnora_internal_types.ChangeItem": {
+            "type": "object",
+            "properties": {
+                "cr_id": {
+                    "description": "CRID 所属变更单。",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "item_status": {
+                    "description": "ItemStatus 应用状态（pending/applied/failed/skipped）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "knowledge_id": {
+                    "description": "KnowledgeID 目标知识。",
+                    "type": "string",
+                    "x-agent": "knowledge_id"
+                },
+                "replaced_by_id": {
+                    "description": "ReplacedByID 替代类变更里接替本条目的新知识（§7.2 replacement）。\n为空时发布降级为 mark_stale，而不是让整批条目 failed。",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ChangeRequest": {
+            "type": "object",
+            "properties": {
+                "announce_at": {
+                    "description": "AnnounceAt 公告时间（v1 记录性字段）。",
+                    "type": "string"
+                },
+                "approval_receipt_id": {
+                    "description": "ApprovalReceiptID 排期时绑定的审批回执：发布与审计都以它为凭据\n（§7.2：审批通过才能进入排期）。",
+                    "type": "string"
+                },
+                "approval_task_id": {
+                    "description": "ApprovalTaskID 提交审批时创建的治理审批任务（§6.2 change_request）。",
+                    "type": "string"
+                },
+                "baseline": {
+                    "description": "Baseline 分析时刻的条目清单快照。",
+                    "type": "object"
+                },
+                "change_type": {
+                    "description": "ChangeType 变更类型（text_fix/content_revision/param_change/replacement/delist/restructure）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "close_conditions": {
+                    "description": "CloseConditions 结构化关闭前置条件（v1 只读展示）。",
+                    "type": "object"
+                },
+                "closed_at": {
+                    "description": "ClosedAt 关闭时刻。",
+                    "type": "string"
+                },
+                "cr_number": {
+                    "description": "CRNumber 单号，格式 CR-YYYYMMDD-序号（服务层生成，租户内唯一）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "created_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "created_by": {
+                    "description": "CreatedBy 创建人（审批四眼校验等其它治理动作依赖它）。",
+                    "type": "string"
+                },
+                "effective_at": {
+                    "description": "EffectiveAt 生效时间（Schedule 设定；发布后条目按它对外生效）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "expires_at": {
+                    "description": "ExpiresAt 失效时间（v1 记录性字段）。",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "impact_tasks": {
+                    "description": "ImpactTasks 影响任务（聚合，服务层填充）。",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ImpactTask"
+                    }
+                },
+                "items": {
+                    "description": "Items 变更条目（聚合，服务层填充）。",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ChangeItem"
+                    },
+                    "x-agent": true
+                },
+                "notified_at": {
+                    "description": "NotifiedAt 影响通知送达时刻（关闭门禁条件④）。",
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Reason 变更原因（regulation/process/product/correction/customer/other）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "risk_level": {
+                    "description": "RiskLevel 风险级（low/mid/high），路由影响任务 priority。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "rollback_plan": {
+                    "description": "RollbackPlan 回滚方案文本。",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-max-runes": "800"
+                },
+                "status": {
+                    "description": "Status 变更单状态机（draft…rolled_back）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "description": "TenantID 租户隔离。",
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "Title 变更标题。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "updated_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "verification_result": {
+                    "description": "VerificationResult 验证结论（发布后由验证人填写，关闭门禁条件②）。",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ChatFallbackAttempt": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "Err is the failure reason (\"\" on success).",
+                    "type": "string"
+                },
+                "level": {
+                    "description": "Level is the 0-based chain position.",
+                    "type": "integer"
+                },
+                "model_id": {
+                    "description": "ModelID tried at this level.",
+                    "type": "string"
+                },
+                "phase": {
+                    "description": "Phase where it failed (\"\" when it succeeded).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ChatFallbackPhase"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ChatFallbackPhase": {
+            "type": "string",
+            "enum": [
+                "before_stream",
+                "stream_open",
+                "mid_stream"
+            ],
+            "x-enum-varnames": [
+                "ChatFallbackBeforeStream",
+                "ChatFallbackStreamOpen",
+                "ChatFallbackMidStream"
+            ]
+        },
+        "github_com_Tencent_WeKnora_internal_types.ChatFallbackTrace": {
+            "type": "object",
+            "properties": {
+                "attempts": {
+                    "description": "Attempts lists every model tried, with the phase it failed at.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ChatFallbackAttempt"
+                    }
+                },
+                "degraded": {
+                    "description": "Degraded is true when ServedBy differs from RequestedModelID.",
+                    "type": "boolean"
+                },
+                "requested_model_id": {
+                    "description": "RequestedModelID is the model the session asked for.",
+                    "type": "string"
+                },
+                "served_by": {
+                    "description": "ServedBy is the model that produced the answer.",
+                    "type": "string"
+                }
+            }
+        },
         "github_com_Tencent_WeKnora_internal_types.ChatHistoryConfig": {
             "type": "object",
             "properties": {
@@ -41543,6 +41771,14 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.ChatManage": {
             "type": "object",
             "properties": {
+                "chat_fallback_trace": {
+                    "description": "ChatFallbackTrace records which model actually served the answer\n(§16.5). Nil when the requested model served it — a degrade is an\nexception worth surfacing, not a field every reply carries.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ChatFallbackTrace"
+                        }
+                    ]
+                },
                 "chat_model_id": {
                     "description": "Chat model parameters",
                     "type": "string"
@@ -44180,6 +44416,52 @@ const docTemplate = `{
                     "description": "Model ID used when describing images. Empty uses the knowledge base's caption model.",
                     "type": "string",
                     "x-agent": "image_model_id"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.ImpactTask": {
+            "type": "object",
+            "properties": {
+                "assignee_id": {
+                    "description": "AssigneeID 指派人（v1 空串 = 未指派，走治理面认领）。",
+                    "type": "string"
+                },
+                "cr_id": {
+                    "description": "CRID 所属变更单。",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "note": {
+                    "description": "Note 说明/完成备注。",
+                    "type": "string"
+                },
+                "priority": {
+                    "description": "Priority 处理优先级（must_change/suggested/fyi）。",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status 任务状态（open/done/waived）；关闭门禁要求全非 open。",
+                    "type": "string"
+                },
+                "target_id": {
+                    "description": "TargetID 波及对象 ID（knowledge 类即知识 ID；其余类型为后续版本预留）。",
+                    "type": "string"
+                },
+                "target_type": {
+                    "description": "TargetType 波及对象类型（v1 只产 knowledge）。",
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "description": "TenantID 租户隔离。",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
