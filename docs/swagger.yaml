@@ -1639,23 +1639,8 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
-    - ontology.schema_created
-    - ontology.schema_updated
-    - ontology.schema_published
-    - ontology.schema_deleted
-    - ontology.type_created
-    - ontology.type_updated
-    - ontology.type_deleted
-    - ontology.property_created
-    - ontology.property_updated
-    - ontology.property_deleted
-    - ontology.relation_created
-    - ontology.relation_updated
-    - ontology.relation_deleted
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
+    - aipre.completed
+    - aipre.failed
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1669,24 +1654,32 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - aipre.completed
-    - aipre.failed
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
     - parse_quality.computed
-    - share.created
-    - share.revoked
-    - share.visited
     - ontology.schema_proposal_created
     - ontology.schema_proposal_checked
     - ontology.schema_proposal_approved
     - ontology.schema_proposal_rejected
     - ontology.schema_proposal_applied
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
+    - share.created
+    - share.revoked
+    - share.visited
+    - ontology.schema_created
+    - ontology.schema_updated
+    - ontology.schema_published
+    - ontology.schema_deleted
+    - ontology.type_created
+    - ontology.type_updated
+    - ontology.type_deleted
+    - ontology.property_created
+    - ontology.property_updated
+    - ontology.property_deleted
+    - ontology.relation_created
+    - ontology.relation_updated
+    - ontology.relation_deleted
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1749,25 +1742,17 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
     type: string
     x-enum-varnames:
-    - OntologyActionSchemaCreated
-    - OntologyActionSchemaUpdated
-    - OntologyActionSchemaPublished
-    - OntologyActionSchemaDeleted
-    - OntologyActionTypeCreated
-    - OntologyActionTypeUpdated
-    - OntologyActionTypeDeleted
-    - OntologyActionPropertyCreated
-    - OntologyActionPropertyUpdated
-    - OntologyActionPropertyDeleted
-    - OntologyActionRelationCreated
-    - OntologyActionRelationUpdated
-    - OntologyActionRelationDeleted
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1781,24 +1766,32 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
     - ParseQualityAuditActionComputed
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
     - OntologyActionSchemaProposalCreated
     - OntologyActionSchemaProposalChecked
     - OntologyActionSchemaProposalApproved
     - OntologyActionSchemaProposalRejected
     - OntologyActionSchemaProposalApplied
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
+    - OntologyActionSchemaCreated
+    - OntologyActionSchemaUpdated
+    - OntologyActionSchemaPublished
+    - OntologyActionSchemaDeleted
+    - OntologyActionTypeCreated
+    - OntologyActionTypeUpdated
+    - OntologyActionTypeDeleted
+    - OntologyActionPropertyCreated
+    - OntologyActionPropertyUpdated
+    - OntologyActionPropertyDeleted
+    - OntologyActionRelationCreated
+    - OntologyActionRelationUpdated
+    - OntologyActionRelationDeleted
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1861,6 +1854,13 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -25247,11 +25247,13 @@ paths:
         type: boolean
         x-agent: true
       - default: created_at
-        description: 排序字段
+        description: 排序字段；composite 为综合排序（相关度+热度+权威性+新鲜度，KnowAxis V3.0 §12.2），其响应额外带
+          ranking 字段回显每个维度的分数
         enum:
         - created_at
         - updated_at
         - file_name
+        - composite
         in: query
         name: sort_by
         type: string
@@ -25273,7 +25275,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: 知识列表
+          description: 知识列表；sort_by=composite 时 data 为 CompositeRankedRow（含 breakdown），并额外返回
+            ranking
           schema:
             allOf:
             - $ref: '#/definitions/internal_handler.PageResponse'

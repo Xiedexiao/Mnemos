@@ -714,6 +714,19 @@ func (s *knowledgeService) ListPagedKnowledgeByKnowledgeBaseID(ctx context.Conte
 	return types.NewPageResult(total, page, knowledges), nil
 }
 
+// CompositeRankKnowledgeList returns one page ordered by the §12.2 composite
+// score.
+//
+// 排序在仓储层完成（它需要热度聚合），这里只负责把"时间"注入进去以便
+// 新鲜度可复现，并把关键词规范成与检索一致的形式。
+func (s *knowledgeService) CompositeRankKnowledgeList(
+	ctx context.Context, tenantID uint64, kbID string, page *types.Pagination,
+	filter types.KnowledgeListFilter, keyword string,
+) (*types.CompositeRankResult, int64, error) {
+	return s.repo.CompositeRankPage(ctx, tenantID, kbID, page, filter,
+		strings.TrimSpace(keyword), time.Now())
+}
+
 // ListKnowledgeFolderTree returns the folder hierarchy of a knowledge base with
 // per-folder document counts, derived from the folder_path stored on each
 // knowledge entry.

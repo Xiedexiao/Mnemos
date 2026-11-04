@@ -90,6 +90,13 @@ type KnowledgeService interface {
 		page *types.Pagination,
 		filter types.KnowledgeListFilter,
 	) (*types.PageResult, error)
+	// CompositeRankKnowledgeList returns one page ordered by the §12.2
+	// composite score (relevance + hotness + authority + freshness), with the
+	// per-dimension breakdown for every row.
+	CompositeRankKnowledgeList(
+		ctx context.Context, tenantID uint64, kbID string, page *types.Pagination,
+		filter types.KnowledgeListFilter, keyword string,
+	) (*types.CompositeRankResult, int64, error)
 	// ListKnowledgeFolderTree returns the folder hierarchy derived from the
 	// folder_path of every knowledge entry in a knowledge base, with per-folder
 	// document counts. It powers the document sidebar tree.
@@ -265,6 +272,14 @@ type KnowledgeRepository interface {
 	ListPagedKnowledgeByKnowledgeBaseID(ctx context.Context,
 		tenantID uint64, kbID string, page *types.Pagination, filter types.KnowledgeListFilter,
 	) ([]*types.Knowledge, int64, error)
+	// CompositeRankPage returns one page ordered by the §12.2 composite score.
+	//
+	// 综合排序需要跨条目比较热度，而热度是聚合值，无法下推成 ORDER BY，
+	// 因此在有界候选窗口内打分后重排。返回的 ScoredCount 说明窗口大小。
+	CompositeRankPage(
+		ctx context.Context, tenantID uint64, kbID string, page *types.Pagination,
+		filter types.KnowledgeListFilter, keyword string, now time.Time,
+	) (*types.CompositeRankResult, int64, error)
 	UpdateKnowledge(ctx context.Context, knowledge *types.Knowledge) error
 	// UpdateKnowledgeForTransfer conditionally persists a transfer checkpoint
 	// and its storage delta in one transaction, without inserting missing rows.

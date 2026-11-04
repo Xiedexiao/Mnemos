@@ -181,12 +181,17 @@ const (
 	KnowledgeListSortByCreatedAt KnowledgeListSortField = "created_at"
 	// KnowledgeListSortByFileName 表示按展示文件名排序。
 	KnowledgeListSortByFileName KnowledgeListSortField = "file_name"
+	// KnowledgeListSortByComposite 表示按 §12.2 综合排序
+	// （相关度 + 热度 + 权威性 + 新鲜度）。这一档不产生 SQL ORDER BY：
+	// 它由服务层打分后重排，见 CompositeRankPage。
+	KnowledgeListSortByComposite KnowledgeListSortField = "composite"
 )
 
 // Valid 返回排序字段是否属于公开接口允许的白名单。
 func (field KnowledgeListSortField) Valid() bool {
 	switch field {
-	case KnowledgeListSortByUpdatedAt, KnowledgeListSortByCreatedAt, KnowledgeListSortByFileName:
+	case KnowledgeListSortByUpdatedAt, KnowledgeListSortByCreatedAt,
+		KnowledgeListSortByFileName, KnowledgeListSortByComposite:
 		return true
 	default:
 		return false

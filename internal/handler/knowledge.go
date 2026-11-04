@@ -1186,10 +1186,10 @@ func buildSpanTree(knowledgeID string, attempt int, rows []types.KnowledgeProces
 // @Param        end_time      query     string  false  "更新时间终点，RFC3339 格式"
 // @Param        folder_path      query     string  false  "文件夹路径筛选，空字符串表示知识库根目录；不传该参数则不按文件夹过滤"  extensions(x-agent)
 // @Param        folder_recursive query     bool    false  "为 true 时同时返回子文件夹内的文档"  extensions(x-agent)
-// @Param        sort_by      query     string  false  "排序字段" Enums(created_at,updated_at,file_name) default(created_at)  extensions(x-agent)
+// @Param        sort_by      query     string  false  "排序字段；composite 为综合排序（相关度+热度+权威性+新鲜度，KnowAxis V3.0 §12.2），其响应额外带 ranking 字段回显每个维度的分数" Enums(created_at,updated_at,file_name,composite) default(created_at)  extensions(x-agent)
 // @Param        sort_order   query     string  false  "排序方向"  Enums(asc, desc)  default(desc)  extensions(x-agent)
 // @Param        lifecycle_status query string  false  "生命周期状态筛选，逗号分隔（归档库用 archived；归档内容默认不参与检索但可按需查询）"
-// @Success      200        {object}  handler.PageResponse{data=[]types.Knowledge}  "知识列表"
+// @Success      200        {object}  handler.PageResponse{data=[]types.Knowledge}  "知识列表；sort_by=composite 时 data 为 CompositeRankedRow（含 breakdown），并额外返回 ranking"
 // @Failure      400        {object}  errors.AppError                               "请求参数错误"
 // @Failure      403        {object}  errors.AppError                               "无权访问知识库"
 // @Security     Bearer
@@ -1242,7 +1242,8 @@ func (h *KnowledgeHandler) ListKnowledge(c *gin.Context) {
 		filter.LifecycleStatuses = statuses
 	}
 	if !filter.SortBy.Valid() {
-		_ = c.Error(errors.NewBadRequestError("invalid sort_by: must be updated_at, created_at, or file_name"))
+		_ = c.Error(errors.NewBadRequestError(
+			"invalid sort_by: must be updated_at, created_at, file_name, or composite"))
 		return
 	}
 	if !filter.SortOrder.Valid() {
@@ -1301,6 +1302,29 @@ func (h *KnowledgeHandler) ListKnowledge(c *gin.Context) {
 		pagination.PageSize,
 		effectiveTenantID,
 	)
+
+	// 综合排序（§12.2）不走 SQL ORDER BY：它需要跨条目比较热度，而热度是
+	// 聚合值。走单独的方法，响应里额外带每个维度的分数，便于解释"为什么
+	// 这条排第一"。
+	if filter.SortBy == types.KnowledgeListSortByComposite {
+		ranked, scored, rankErr := h.kgService.CompositeRankKnowledgeList(
+			ctx, effectiveTenantID, kbID, &pagination, filter, filter.Keyword)
+		if rankErr != nil {
+			logger.ErrorWithFields(ctx, rankErr, nil)
+			c.Error(errors.NewInternalServerError(rankErr.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success":   true,
+			"data":      ranked.Rows,
+			"total":     scored,
+			"page":      pagination.GetPage(),
+			"page_size": pagination.GetPageSize(),
+			// 排序依据随响应回显：权重、关键词、实际打分条数。
+			"ranking": ranked,
+		})
+		return
+	}
 
 	// Retrieve paginated knowledge entries
 	result, err := h.kgService.ListPagedKnowledgeByKnowledgeBaseID(ctx, kbID, &pagination, filter)
