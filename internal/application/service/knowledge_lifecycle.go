@@ -42,7 +42,11 @@ type knowledgeLifecycleService struct {
 	// versions advances the authorization epoch on reclassification so
 	// snapshot caches miss (§2.4 升密即时生效). Optional: nil skips it.
 	versions interfaces.PermissionVersionService
-	now      func() time.Time
+	// goldenSets gates publish on the golden-set evaluation (§14.8). Optional:
+	// nil means the deployment has no quality gate configured, which is the
+	// correct reading for installs that never created a set.
+	goldenSets interfaces.GoldenSetService
+	now        func() time.Time
 }
 
 // NewKnowledgeLifecycleService constructs the lifecycle service.
@@ -53,6 +57,7 @@ func NewKnowledgeLifecycleService(
 	gamification interfaces.GamificationService,
 	receipts interfaces.ApprovalReceiptRepository,
 	versions interfaces.PermissionVersionService,
+	goldenSets interfaces.GoldenSetService,
 ) interfaces.KnowledgeLifecycleService {
 	return &knowledgeLifecycleService{
 		kgRepo:       kgRepo,
@@ -60,6 +65,7 @@ func NewKnowledgeLifecycleService(
 		audit:        audit,
 		gamification: gamification,
 		receipts:     receipts,
+		goldenSets:   goldenSets,
 		versions:     versions,
 		now:          time.Now,
 	}
@@ -139,6 +145,12 @@ func (s *knowledgeLifecycleService) Transition(
 		// 的回执，否则任何人都能绕过审批直接发布。low/internal 维持自助发布
 		// （上传即 valid 的存量流程不受影响）。
 		if err := s.requireReceiptForPublish(ctx, knowledge, input.ReceiptID); err != nil {
+			return nil, err
+		}
+		// 评测门禁（§14.8）：租户配了黄金问题集时，命中率不达标或出现越权
+		// 召回就不得发布。没配集合的部署不受影响（nil 即未配置），这与
+		// "没跑过评测"不同——后者由 CheckGate 自己失败闭合。
+		if err := s.requireGoldenGate(ctx, knowledge); err != nil {
 			return nil, err
 		}
 		// 生效日未来 → 待生效；否则立即有效。
@@ -456,4 +468,84 @@ func (s *knowledgeLifecycleService) ResolvedForDisplay(
 		k.ExpiresAt,
 		now,
 	)
+}
+
+// requireGoldenGate blocks publish when the space's golden-set evaluation is
+// failing (KnowAxis V3.0 §14.8 上线前跑黄金问题集，不达标不发布).
+//
+// 门禁绑定在**空间**上而不是每篇知识：黄金集评测的是检索质量，质量是
+// 空间级属性。同一空间里发布第二篇文档时跑的是同一份集合，不会因为
+// "这篇没被评测过"而放行。
+func (s *knowledgeLifecycleService) requireGoldenGate(
+	ctx context.Context, knowledge *types.Knowledge,
+) error {
+	if s.goldenSets == nil || knowledge == nil || knowledge.KnowledgeBaseID == "" {
+		return nil
+	}
+	tenantID := knowledge.TenantID
+	if tenantID == 0 {
+		tenantID, _ = types.TenantIDFromContext(ctx)
+	}
+	if tenantID == 0 {
+		return nil
+	}
+	sets, err := s.goldenSets.ListSets(ctx, tenantID, "")
+	if err != nil {
+		// 查询失败时**不**阻断发布：黄金集是质量门禁，不是安全门禁，用它
+		// 打掉全部发布会让一次数据库抖动变成全站停更。错误进日志即可。
+		logger.Warnf(ctx, "[lifecycle] golden set lookup failed for publish gate: %v", err)
+		return nil
+	}
+	for _, set := range sets {
+		if set == nil || set.KBID != knowledge.KnowledgeBaseID {
+			continue
+		}
+		pass, run, gateErr := s.goldenSets.CheckGate(ctx, tenantID, set.ID)
+		if gateErr != nil {
+			logger.Warnf(ctx, "[lifecycle] golden gate check failed for set %s: %v", set.ID, gateErr)
+			continue
+		}
+		if !pass {
+			reason := "golden set evaluation did not pass"
+			if run == nil {
+				reason = "golden set has no completed evaluation run"
+			}
+			s.logGoldenGateBlocked(ctx, tenantID, knowledge, set, run, reason)
+			return apperrors.NewForbiddenError(
+				"发布被评测门禁阻断：" + reason + "（黄金问题集 " + set.Name + "）")
+		}
+	}
+	return nil
+}
+
+// logGoldenGateBlocked records a refused publish; a blocked release is a
+// governance event and must be traceable.
+func (s *knowledgeLifecycleService) logGoldenGateBlocked(
+	ctx context.Context, tenantID uint64, knowledge *types.Knowledge,
+	set *types.GoldenSet, run *types.GoldenSetRun, reason string,
+) {
+	if s.audit == nil {
+		return
+	}
+	runIDValue := ""
+	if run != nil {
+		runIDValue = run.ID
+	}
+	_ = s.audit.Log(ctx, &types.AuditLog{
+		TenantID:    tenantID,
+		ActorUserID: "system",
+		Action:      types.AuditAction(auditActionLifecycleTransition),
+		ScopeType:   "knowledge",
+		ScopeID:     knowledge.KnowledgeBaseID,
+		TargetType:  "knowledge",
+		TargetID:    knowledge.ID,
+		Outcome:     "denied",
+		Details: lifecycleJSON(map[string]interface{}{
+			"action": "publish",
+			"gate":   "golden_set",
+			"set_id": set.ID,
+			"run_id": runIDValue,
+			"reason": reason,
+		}),
+	})
 }

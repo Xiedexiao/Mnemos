@@ -57,6 +57,10 @@ type goldenSetService struct {
 	audit       interfaces.AuditLogService
 	now         func() time.Time
 	gateTop5Hit float64 // 常量注入点：v1 固定 DefaultGateTop5Hit，v2 可从 config 覆盖
+	// gateRefusal / gateAnswer 是 §14.8 的可选门禁阈值：只有集合里存在
+	// 相应样本时才参与判定。
+	gateRefusal float64
+	gateAnswer  float64
 }
 
 // NewGoldenSetService constructs the golden set service. knowledgeBaseService
@@ -74,6 +78,8 @@ func NewGoldenSetService(
 		audit:       audit,
 		now:         time.Now,
 		gateTop5Hit: DefaultGateTop5Hit,
+		gateRefusal: types.RefusalCorrectnessThreshold,
+		gateAnswer:  types.AnswerSimilarityThreshold,
 	}
 }
 
@@ -539,6 +545,18 @@ func (s *goldenSetService) evaluateQuestions(
 		recallSum float64
 		ndcgSum   float64
 		mrrSum    float64
+
+		// §14 质量指标的分母与分子，按题累加。
+		refusalScorable int
+		refusalCorrect  int
+		expiredScorable int
+		expiredMisused  int
+		// 越权召回：命中的 chunk 总数，以及其中属于 secret/confidential 的数量。
+		retrievedTotal  int
+		retrievedHighly int
+		// 答案质量：有期望答案的题数与相似度之和。
+		answerScorable int
+		answerSum      float64
 	)
 	for _, question := range questions {
 		result := &types.GoldenQuestionResult{
@@ -547,6 +565,13 @@ func (s *goldenSetService) evaluateQuestions(
 		}
 		expected := distinctKnowledgeIDs(parseGoldenEvidence(question.ExpectedEvidence))
 		result.ExpectedKnowledgeIDs = expected
+
+		// 拒答正确率（§14.8）：freshness_expectation=expired_must_refuse 的题
+		// 必须没有可用证据；其余题必须至少有一条可用证据。判定放在检索前，
+		// 因为拒答是"检索结果为空/全是过期"的直接后果。
+		expectsRefusal := types.GoldenFreshnessExpectation(question.FreshnessExpectation) ==
+			types.GoldenFreshnessExpiredMustRefuse
+
 		if len(expected) == 0 {
 			// 没有期望证据的题无法判检索（纯答案质量题），跳过且不计分母。
 			result.Skipped = true
@@ -567,8 +592,33 @@ func (s *goldenSetService) evaluateQuestions(
 			result.Error = err.Error()
 			result.MissingKnowledgeIDs = expected
 			scorable++
+			// 检索失败不能被算作"正确拒答"，但也不能算作"错误拒答"：
+			// 无法判定，因此不计入拒答分母。
 			results = append(results, result)
 			continue
+		}
+
+		// 拒答判定：题目期望拒答时，检索必须给不出可用证据；其余题目
+		// 必须至少命中一条可用证据才算"没有误拒"。
+		refusalDecision := assessRefusal(searchResults)
+		if !result.Skipped {
+			refusalScorable++
+			refused := !refusalDecision.AllowsAnswer && !refusalDecision.Silent()
+			if expectsRefusal == refused {
+				refusalCorrect++
+			}
+			result.RefusalExpected = expectsRefusal
+			result.Refused = refused
+		}
+
+		// 答案质量（§14.8）：检索到的正文按分数顺序拼成"检索答案"，
+		// 与 expected_answer 做 token 级 F1。题目没写期望答案时跳过。
+		if reference := strings.TrimSpace(question.ExpectedAnswer); reference != "" {
+			assembled := goldenAssembledAnswer(searchResults)
+			similarity := types.AnswerSimilarity(reference, assembled)
+			result.AnswerSimilarity = &similarity
+			answerScorable++
+			answerSum += similarity
 		}
 
 		// 命中粒度是 knowledge_id：同文档多 chunk 命中先按首现去重，避免
@@ -581,6 +631,34 @@ func (s *goldenSetService) evaluateQuestions(
 			retrieved = append(retrieved, r.KnowledgeID)
 		}
 		retrieved = distinctStrings(retrieved)
+
+		// 越权召回与过期误用按 chunk 观测（同一文档可能被多路召回）。
+		// 注意：检索本身已按权限过滤，这里统计的是"过滤后的结果里仍然
+		// 出现高密级/过期内容"的比例，用来发现过滤失效而不是替代过滤。
+		expiredInThisQuestion := 0
+		for _, r := range searchResults {
+			if r == nil {
+				continue
+			}
+			retrievedTotal++
+			if types.ParseKnowledgeClassification(r.KnowledgeClassification).Rank() >=
+				types.KnowledgeClassificationSecret.Rank() {
+				retrievedHighly++
+			}
+			switch types.ParseKnowledgeLifecycleStatus(r.KnowledgeLifecycleStatus) {
+			case types.KnowledgeLifecycleExpired, types.KnowledgeLifecycleReplaced,
+				types.KnowledgeLifecycleArchived, types.KnowledgeLifecycleDelisted:
+				expiredInThisQuestion++
+			}
+		}
+		// 期望时效为 valid 的题：命中里出现过期内容即为"过期误用"。
+		if types.GoldenFreshnessExpectation(question.FreshnessExpectation) !=
+			types.GoldenFreshnessExpiredMustRefuse {
+			expiredScorable++
+			if expiredInThisQuestion > 0 {
+				expiredMisused++
+			}
+		}
 
 		firstHitRank, missing := scoreRetrieval(expected, retrieved)
 		result.FirstHitRank = firstHitRank
@@ -627,8 +705,68 @@ func (s *goldenSetService) evaluateQuestions(
 		metrics.NDCG = ndcgSum / float64(scorable)
 		metrics.MRR = mrrSum / float64(scorable)
 	}
-	metrics.Pass = metrics.Top5Hit >= s.gateTop5Hit
+	metrics.ScorableQuestions = scorable
+	metrics.ScorableRefusals = refusalScorable
+	metrics.ScorableAnswers = answerScorable
+	if refusalScorable > 0 {
+		value := float64(refusalCorrect) / float64(refusalScorable)
+		metrics.RefusalCorrectness = &value
+	}
+	if answerScorable > 0 {
+		value := answerSum / float64(answerScorable)
+		metrics.AnswerAccuracy = &value
+	}
+	if retrievedTotal > 0 {
+		metrics.OverPermissionRecall = float64(retrievedHighly) / float64(retrievedTotal)
+	}
+	if expiredScorable > 0 {
+		metrics.ExpiredMisuseRate = float64(expiredMisused) / float64(expiredScorable)
+	}
+	metrics.Pass = evaluateGate(metrics, s.gateTop5Hit, s.gateRefusal, s.gateAnswer)
 	return results, metrics, nil
+}
+
+// evaluateGate is the release verdict.
+//
+// 规则：检索命中率必须达阈值，且**越权召回必须为 0**。后两条是硬门禁：
+// 出现一次高密级内容被召回，无论其它指标多好都不能放行（§2.4 权限先行）。
+// 答案质量与拒答正确率是可选门禁：集合没有写期望答案/时效预期时，
+// 对应指标为 nil，不参与判定——用"没评测"冒充"通过"才是真正危险的做法，
+// 所以这两个门禁只在有样本时生效，并在报告里显式标出分母。
+func evaluateGate(
+	metrics *types.GoldenRunMetrics, top5Threshold, refusalThreshold, answerThreshold float64,
+) bool {
+	if metrics.Top5Hit < top5Threshold {
+		return false
+	}
+	if metrics.OverPermissionRecall > 0 {
+		return false
+	}
+	if metrics.RefusalCorrectness != nil && *metrics.RefusalCorrectness < refusalThreshold {
+		return false
+	}
+	if metrics.AnswerAccuracy != nil && *metrics.AnswerAccuracy < answerThreshold {
+		return false
+	}
+	return true
+}
+
+// goldenAssembledAnswer concatenates the retrieved passages in rank order.
+//
+// 这是"检索能支撑的答案"的上界，而不是模型生成的答案：评测不依赖模型
+// 可用性，也让结果可复现。真正验证生成质量应另跑端到端评测。
+func goldenAssembledAnswer(results []*types.SearchResult) string {
+	var builder strings.Builder
+	for _, result := range results {
+		if result == nil || strings.TrimSpace(result.Content) == "" {
+			continue
+		}
+		if builder.Len() > 0 {
+			builder.WriteString("\n")
+		}
+		builder.WriteString(result.Content)
+	}
+	return builder.String()
 }
 
 // scoreRetrieval finds the first hit's 1-based rank and the expected IDs

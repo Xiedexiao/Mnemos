@@ -40,8 +40,18 @@ import (
 // default URL (self-hosted runtimes) or a templated one (Azure), which the
 // SSRF guard rejects before any request is built. Those cases are re-pointed
 // at 127.0.0.1 by reachableBaseURL.
+//
+// It also whitelists the first-party vendor hosts whose *name* is part of what
+// these tests check: the OpenAI family switches to the Responses protocol by
+// endpoint, so replacing api.openai.com with loopback would silently change
+// the behaviour under test. The guard resolves those names during
+// validation, and on this host api.openai.com resolves to a Teredo address,
+// so the check fails before any request is built. Whitelisting keeps the test
+// hermetic: it never dials out, it only stops the pre-flight DNS check from
+// turning an offline/odd-DNS environment into a red build.
 func TestMain(m *testing.M) {
-	secutils.SetSSRFWhitelistFromRaw("127.0.0.1")
+	secutils.SetSSRFWhitelistFromRaw(
+		"127.0.0.1,localhost,api.openai.com,api.anthropic.com,generativelanguage.googleapis.com")
 	defer secutils.ResetSSRFWhitelistForTest()
 	os.Exit(m.Run())
 }

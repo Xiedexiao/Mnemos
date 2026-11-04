@@ -271,13 +271,29 @@ type GoldenRunMetrics struct {
 	NDCG float64 `json:"ndcg"`
 	// MRR is the average per-question reciprocal rank of the first hit.
 	MRR float64 `json:"mrr"`
-	// AnswerAccuracy is TODO(v2): 需要跑完整问答链路后对答案打分
-	// （对照 expected_answer，接 pipeline/LLM 判分）。nil = 未评测。
+	// AnswerAccuracy 是答案质量指标：对照 expected_answer 的 token 级
+	// F1（见 types.AnswerSimilarity）。nil = 本次没有可判分的题
+	// （所有题都没写期望答案），与"评测了但得 0 分"区分开。
 	AnswerAccuracy *float64 `json:"answer_accuracy"`
-	// RefusalCorrectness is TODO(v2): 对 freshness_expectation=
-	// expired_must_refuse 的题目验证"该拒答的是否拒答了"。nil = 未评测。
+	// RefusalCorrectness 是拒答正确率：freshness_expectation=
+	// expired_must_refuse 的题是否确实拒答，加上其余题是否没有误拒。
+	// 两者都是预期，因此只要存在可判分的题就有分母；nil 仅表示本次一条
+	// 都判不了（全部检索失败）。
 	RefusalCorrectness *float64 `json:"refusal_correctness"`
-	// Pass is the release-gate verdict: Top5Hit ≥ 0.9 (v1).
+	// OverPermissionRecall 是越权召回率：以 viewer 身份检索时，命中集合里
+	// 出现 secret/confidential 文档的比例。越高越危险，0 是唯一合格值。
+	OverPermissionRecall float64 `json:"over_permission_recall"`
+	// ExpiredMisuseRate 是过期误用率：期望时效为 valid 的题里，命中集合
+	// 包含过期/已替换文档的题数占比。
+	ExpiredMisuseRate float64 `json:"expired_misuse_rate"`
+	// ScorableQuestions / ScorableAnswers / ScorableRefusals break the
+	// denominators down so a reported rate can be audited.
+	ScorableQuestions int `json:"scorable_questions"`
+	ScorableAnswers   int `json:"scorable_answers"`
+	ScorableRefusals  int `json:"scorable_refusals"`
+	// Pass is the release-gate verdict: Top5Hit ≥ threshold, no
+	// over-permission recall, and — when the sets carry the expectations —
+	// the answer/refusal rates above their thresholds.
 	Pass bool `json:"pass"`
 	// Error carries the failure reason on status=failed runs.
 	Error string `json:"error,omitempty"`
@@ -301,6 +317,13 @@ type GoldenQuestionResult struct {
 	MRR float64 `json:"mrr"`
 	// NDCG@5 with binary relevance for this question.
 	NDCG float64 `json:"ndcg"`
+	// RefusalExpected reports whether the question must be refused.
+	RefusalExpected bool `json:"refusal_expected"`
+	// Refused reports whether the §13.5 matrix refused this question.
+	Refused bool `json:"refused"`
+	// AnswerSimilarity is the token-level F1 against expected_answer; nil when
+	// the question carries no reference answer.
+	AnswerSimilarity *float64 `json:"answer_similarity"`
 	// MissingKnowledgeIDs lists expected knowledge that did NOT appear in
 	// top-5 (缺口，供补语料/改召回).
 	MissingKnowledgeIDs []string `json:"missing_knowledge_ids"`
