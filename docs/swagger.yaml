@@ -1639,42 +1639,10 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
-    - aipre.completed
-    - aipre.failed
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
-    - ontology.schema_created
-    - ontology.schema_updated
-    - ontology.schema_published
-    - ontology.schema_deleted
-    - ontology.type_created
-    - ontology.type_updated
-    - ontology.type_deleted
-    - ontology.property_created
-    - ontology.property_updated
-    - ontology.property_deleted
-    - ontology.relation_created
-    - ontology.relation_updated
-    - ontology.relation_deleted
-    - cr.created
-    - cr.item_added
-    - cr.item_removed
-    - cr.analyzed
-    - cr.submitted
-    - cr.scheduled
-    - cr.publish_started
-    - cr.publish_finished
-    - cr.closed
-    - cr.rolled_back
-    - cr.impact_task_updated
-    - cr.verified
-    - cr.notified
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1737,56 +1705,56 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - share.created
+    - share.revoked
+    - share.visited
+    - cr.created
+    - cr.item_added
+    - cr.item_removed
+    - cr.analyzed
+    - cr.submitted
+    - cr.scheduled
+    - cr.publish_started
+    - cr.publish_finished
+    - cr.closed
+    - cr.rolled_back
+    - cr.impact_task_updated
+    - cr.verified
+    - cr.notified
+    - aipre.completed
+    - aipre.failed
+    - ontology.schema_created
+    - ontology.schema_updated
+    - ontology.schema_published
+    - ontology.schema_deleted
+    - ontology.type_created
+    - ontology.type_updated
+    - ontology.type_deleted
+    - ontology.property_created
+    - ontology.property_updated
+    - ontology.property_deleted
+    - ontology.relation_created
+    - ontology.relation_updated
+    - ontology.relation_deleted
     - candidate.created
     - candidate.confirmed
     - candidate.published
     - candidate.rejected
-    - share.created
-    - share.revoked
-    - share.visited
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
     - parse_quality.computed
     type: string
     x-enum-varnames:
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
-    - OntologyActionSchemaCreated
-    - OntologyActionSchemaUpdated
-    - OntologyActionSchemaPublished
-    - OntologyActionSchemaDeleted
-    - OntologyActionTypeCreated
-    - OntologyActionTypeUpdated
-    - OntologyActionTypeDeleted
-    - OntologyActionPropertyCreated
-    - OntologyActionPropertyUpdated
-    - OntologyActionPropertyDeleted
-    - OntologyActionRelationCreated
-    - OntologyActionRelationUpdated
-    - OntologyActionRelationDeleted
-    - AuditActionCRCreated
-    - AuditActionCRItemAdded
-    - AuditActionCRItemRemoved
-    - AuditActionCRAnalyzed
-    - AuditActionCRSubmitted
-    - AuditActionCRScheduled
-    - AuditActionCRPublishStarted
-    - AuditActionCRPublishFinished
-    - AuditActionCRClosed
-    - AuditActionCRRolledBack
-    - AuditActionCRImpactTaskUpdated
-    - AuditActionCRVerified
-    - AuditActionCRNotified
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1849,17 +1817,49 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
+    - AuditActionCRCreated
+    - AuditActionCRItemAdded
+    - AuditActionCRItemRemoved
+    - AuditActionCRAnalyzed
+    - AuditActionCRSubmitted
+    - AuditActionCRScheduled
+    - AuditActionCRPublishStarted
+    - AuditActionCRPublishFinished
+    - AuditActionCRClosed
+    - AuditActionCRRolledBack
+    - AuditActionCRImpactTaskUpdated
+    - AuditActionCRVerified
+    - AuditActionCRNotified
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - OntologyActionSchemaCreated
+    - OntologyActionSchemaUpdated
+    - OntologyActionSchemaPublished
+    - OntologyActionSchemaDeleted
+    - OntologyActionTypeCreated
+    - OntologyActionTypeUpdated
+    - OntologyActionTypeDeleted
+    - OntologyActionPropertyCreated
+    - OntologyActionPropertyUpdated
+    - OntologyActionPropertyDeleted
+    - OntologyActionRelationCreated
+    - OntologyActionRelationUpdated
+    - OntologyActionRelationDeleted
     - AuditActionCandidateCreated
     - AuditActionCandidateConfirmed
     - AuditActionCandidatePublished
     - AuditActionCandidateRejected
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
     - ParseQualityAuditActionComputed
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
@@ -14299,6 +14299,20 @@ definitions:
     - action
     - subject_id
     type: object
+  internal_handler.aclGroupMembersRequest:
+    properties:
+      user_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_handler.aclGroupRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
   internal_handler.addCommentRequest:
     properties:
       anchor:
@@ -16404,6 +16418,182 @@ paths:
       summary: 权限上限违规清单
       tags:
       - 目录权限
+  /acl/groups:
+    get:
+      description: 列出本租户的用户组及成员数。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 授权主体组列表
+      tags:
+      - 知识ACL
+    post:
+      consumes:
+      - application/json
+      description: 创建一个用户组，供文档 ACL 按组授权（KnowAxis V3.0 §2.1）。组内成员自动继承组上的授权；退组即刻收权。
+      parameters:
+      - description: 用户组
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.aclGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 新增授权主体组
+      tags:
+      - 知识ACL
+  /acl/groups/{id}:
+    delete:
+      description: 删除用户组及其成员关系。按组写的授权行保留，但组 ID 不再被任何用户持有，等同于自然失效。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 删除授权主体组
+      tags:
+      - 知识ACL
+    put:
+      consumes:
+      - application/json
+      description: 重命名或修改描述。授权存的是组 ID，改名不会改变已有授权的适用范围。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 用户组
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.aclGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 修改授权主体组
+      tags:
+      - 知识ACL
+  /acl/groups/{id}/members:
+    get:
+      description: 返回组内用户 ID。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 组成员列表
+      tags:
+      - 知识ACL
+    post:
+      consumes:
+      - application/json
+      description: 把用户加入组，成员立即继承组上的全部授权。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 成员
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.aclGroupMembersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 添加组成员
+      tags:
+      - 知识ACL
+  /acl/groups/{id}/members/{user_id}:
+    delete:
+      description: 把用户移出组，组上的授权对该用户立即失效。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 用户 ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 移除组成员
+      tags:
+      - 知识ACL
   /agent-chat/{session_id}:
     post:
       consumes:

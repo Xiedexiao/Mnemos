@@ -41,6 +41,293 @@
                 }
             }
         },
+        "/acl/groups": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出本租户的用户组及成员数。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "授权主体组列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "创建一个用户组，供文档 ACL 按组授权（KnowAxis V3.0 §2.1）。组内成员自动继承组上的授权；退组即刻收权。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "新增授权主体组",
+                "parameters": [
+                    {
+                        "description": "用户组",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.aclGroupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/acl/groups/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "重命名或修改描述。授权存的是组 ID，改名不会改变已有授权的适用范围。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "修改授权主体组",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "用户组",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.aclGroupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除用户组及其成员关系。按组写的授权行保留，但组 ID 不再被任何用户持有，等同于自然失效。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "删除授权主体组",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/acl/groups/{id}/members": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回组内用户 ID。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "组成员列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把用户加入组，成员立即继承组上的全部授权。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "添加组成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "成员",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.aclGroupMembersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/acl/groups/{id}/members/{user_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把用户移出组，组上的授权对该用户立即失效。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识ACL"
+                ],
+                "summary": "移除组成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "用户 ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/agent-chat/{session_id}": {
             "post": {
                 "security": [
@@ -37254,42 +37541,10 @@
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "aipre.completed",
-                "aipre.failed",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -37352,56 +37607,56 @@
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
+                "aipre.completed",
+                "aipre.failed",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
                 "candidate.created",
                 "candidate.confirmed",
                 "candidate.published",
                 "candidate.rejected",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
                 "parse_quality.computed"
             ],
             "x-enum-varnames": [
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -37464,17 +37719,49 @@
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
                 "AuditActionCandidateCreated",
                 "AuditActionCandidateConfirmed",
                 "AuditActionCandidatePublished",
                 "AuditActionCandidateRejected",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
                 "ParseQualityAuditActionComputed"
             ]
         },
@@ -53388,6 +53675,28 @@
                     "type": "string"
                 },
                 "subject_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.aclGroupMembersRequest": {
+            "type": "object",
+            "properties": {
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_handler.aclGroupRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }

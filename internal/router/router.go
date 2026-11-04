@@ -91,6 +91,7 @@ type RouterParams struct {
 	ExternalSubscriptionHandler  *handler.ExternalSubscriptionHandler
 	RewardHandler                *handler.RewardHandler
 	EmbedPushHandler             *handler.EmbedPushHandler
+	ACLSubjectGroupHandler       *handler.ACLSubjectGroupHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
@@ -362,6 +363,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterExternalSubscriptionRoutes(v1, params.ExternalSubscriptionHandler, rbacGuards)
 		RegisterRewardRoutes(v1, params.RewardHandler, rbacGuards)
 		RegisterEmbedPushRoutes(v1, params.EmbedPushHandler, rbacGuards)
+		RegisterACLSubjectGroupRoutes(v1, params.ACLSubjectGroupHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)

@@ -366,9 +366,19 @@ func (s *knowledgeBaseService) hybridSearchCandidates(ctx context.Context,
 	// indexes are accelerators only (§12.7), so a request-time query makes
 	// index lag irrelevant and no separate post-recall re-check is needed.
 	if caller := types.CallerFromContext(ctx); caller.UserID != "" && s.aclRepo != nil {
-		aclDenied, aclErr := s.aclRepo.DeniedKnowledgeIDs(
-			ctx, searchKBIDs, types.KnowledgeACLSubjectUser, caller.UserID,
-			types.PermissionActionAsk, time.Now(),
+		subjects, expandErr := s.aclSubjects.ForCaller(ctx, caller)
+		if expandErr != nil {
+			// 组主体展开失败意味着"组上的 deny 无法确认"。漏掉一条组 deny 就是
+			// 越权，所以这里与 ACL 查询失败同样 fail-closed。
+			logger.ErrorWithFields(ctx, expandErr, map[string]interface{}{
+				"fail_closed": true,
+				"kb_ids":      searchKBIDs,
+				"stage":       "acl_subject_expansion",
+			})
+			return nil, expandErr
+		}
+		aclDenied, aclErr := s.aclRepo.DeniedKnowledgeIDsForSubjects(
+			ctx, searchKBIDs, subjects, types.PermissionActionAsk, time.Now(),
 		)
 		if aclErr != nil {
 			logger.ErrorWithFields(ctx, aclErr, map[string]interface{}{

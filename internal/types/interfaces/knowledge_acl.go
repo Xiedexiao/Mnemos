@@ -40,6 +40,16 @@ type KnowledgeACLRepository interface {
 		action types.PermissionAction,
 		now time.Time,
 	) ([]string, error)
+	// DeniedKnowledgeIDsForSubjects answers the same query for a whole
+	// subject set at once (the user plus their groups and role), so deny-wins
+	// and the classification floor are evaluated in a single pass.
+	DeniedKnowledgeIDsForSubjects(
+		ctx context.Context,
+		knowledgeBaseIDs []string,
+		subjects []types.ACLSubject,
+		action types.PermissionAction,
+		now time.Time,
+	) ([]string, error)
 }
 
 // KnowledgeACLService manages document-level grants and exposes the

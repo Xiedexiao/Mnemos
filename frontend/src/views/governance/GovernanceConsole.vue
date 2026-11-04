@@ -218,6 +218,49 @@
             </t-table>
           </div>
         </div>
+
+        <!-- 授权主体组（§2.1）：文档 ACL 可按组/角色授权，不必逐人维护。 -->
+        <h3 class="governance-console__section governance-console__section--spaced">
+          {{ t('governanceConsole.groupsTitle') }}
+        </h3>
+        <p class="governance-hint">{{ t('governanceConsole.groupsHint') }}</p>
+        <div class="governance-toolbar">
+          <t-button theme="primary" size="small" @click="openGroupDialog()">
+            {{ t('governanceConsole.groupAdd') }}
+          </t-button>
+        </div>
+        <t-table
+          row-key="id"
+          :data="aclGroups"
+          :columns="groupColumns"
+          size="small"
+          :loading="loading"
+          :empty="t('governanceConsole.emptyGroups')"
+        >
+          <template #group="{ row }">
+            <div class="governance-subject">
+              <span class="governance-subject__title">{{ row.name }}</span>
+              <span class="governance-subject__meta">{{ row.description }}</span>
+            </div>
+          </template>
+          <template #op="{ row }">
+            <div class="governance-actions">
+              <t-button variant="text" size="small" @click="openMembers(row)">
+                {{ t('governanceConsole.groupMembers') }}
+              </t-button>
+              <t-button variant="text" size="small" @click="openGroupDialog(row)">
+                {{ t('governanceConsole.feedEdit') }}
+              </t-button>
+              <t-popconfirm :content="t('governanceConsole.groupDeleteConfirm')"
+                @confirm="removeGroup(row)">
+                <t-button theme="danger" variant="text" size="small"
+                  :loading="busyId === row.id">
+                  {{ t('governanceConsole.feedDelete') }}
+                </t-button>
+              </t-popconfirm>
+            </div>
+          </template>
+        </t-table>
       </t-tab-panel>
 
       <!-- ================= 搜索质量（§12.5） ================= -->
@@ -595,6 +638,52 @@
     </t-dialog>
 
     <t-dialog
+      v-model:visible="groupDialogVisible"
+      :header="editingGroupId ? t('governanceConsole.feedEdit') : t('governanceConsole.groupAdd')"
+      width="520px"
+      :confirm-btn="t('governanceConsole.feedSave')"
+      @confirm="saveGroup"
+    >
+      <t-form label-width="110px" label-align="right">
+        <t-form-item :label="t('governanceConsole.groupName')">
+          <t-input v-model="groupForm.name" :placeholder="t('governanceConsole.groupNamePlaceholder')" />
+        </t-form-item>
+        <t-form-item :label="t('governanceConsole.groupDesc')">
+          <t-input v-model="groupForm.description" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
+
+    <t-dialog
+      v-model:visible="membersVisible"
+      :header="t('governanceConsole.groupMembersTitle', { name: membersGroupName })"
+      width="560px"
+      :footer="false"
+    >
+      <div class="governance-toolbar">
+        <t-input v-model="newMemberId" :placeholder="t('governanceConsole.groupMemberPlaceholder')" />
+        <t-button theme="primary" size="small" :loading="membersBusy" @click="addMember">
+          {{ t('governanceConsole.feedAdd') }}
+        </t-button>
+      </div>
+      <t-table
+        row-key="user_id"
+        :data="memberRows"
+        :columns="memberColumns"
+        size="small"
+        :empty="t('governanceConsole.emptyMembers')"
+      >
+        <template #op="{ row }">
+          <t-button theme="danger" variant="text" size="small"
+            :loading="busyId === row.user_id" @click="removeMember(row)">
+            {{ t('governanceConsole.feedDelete') }}
+          </t-button>
+        </template>
+      </t-table>
+      <p class="governance-hint">{{ t('governanceConsole.groupMembersHint') }}</p>
+    </t-dialog>
+
+    <t-dialog
       v-model:visible="pushDialogVisible"
       :header="editingPushId ? t('governanceConsole.pushEdit') : t('governanceConsole.pushAdd')"
       width="640px"
@@ -710,10 +799,17 @@ import {
   deleteExternalFeed,
   listExternalEntries,
   listExternalFeeds,
+  addACLGroupMembers,
+  createACLGroup,
   createEmbedPushRule,
+  deleteACLGroup,
   deleteEmbedPushRule,
   getEmbedPushRuleStats,
+  listACLGroups,
+  listACLGroupMembers,
   listEmbedPushRules,
+  removeACLGroupMember,
+  updateACLGroup,
   updateEmbedPushRule,
   syncExternalFeed,
   updateExternalFeed,
@@ -721,6 +817,7 @@ import {
   type ExternalSubscriptionEntry,
   type ExternalSubscriptionFeed,
   type ExternalSubscriptionSyncResult,
+  type ACLSubjectGroup,
   type EmbedPushRule,
   type EmbedPushRuleStats,
   type GovernanceApprovalTask,
@@ -825,6 +922,18 @@ const lastSync = ref<ExternalSubscriptionSyncResult | null>(null);
 const entriesVisible = ref(false);
 const entriesFeedName = ref('');
 const entries = ref<ExternalSubscriptionEntry[]>([]);
+
+// ---- 授权主体组（§2.1） ----
+const aclGroups = ref<ACLSubjectGroup[]>([]);
+const groupDialogVisible = ref(false);
+const editingGroupId = ref('');
+const groupForm = ref({ name: '', description: '' });
+const membersVisible = ref(false);
+const membersGroupId = ref('');
+const membersGroupName = ref('');
+const memberRows = ref<Array<{ user_id: string }>>([]);
+const newMemberId = ref('');
+const membersBusy = ref(false);
 
 // ---- 嵌入式推送（§15.5） ----
 const pushRules = ref<EmbedPushRule[]>([]);
@@ -1038,6 +1147,17 @@ const feedColumns = computed(() => [
   { colKey: 'op', title: t('governanceConsole.columnOp'), width: 300 },
 ]);
 
+const groupColumns = computed(() => [
+  { colKey: 'group', title: t('governanceConsole.groupName'), ellipsis: true, minWidth: 220 },
+  { colKey: 'member_count', title: t('governanceConsole.groupMemberCount'), width: 110 },
+  { colKey: 'op', title: t('governanceConsole.columnOp'), width: 240 },
+]);
+
+const memberColumns = computed(() => [
+  { colKey: 'user_id', title: t('governanceConsole.groupMemberId'), ellipsis: true, minWidth: 220 },
+  { colKey: 'op', title: t('governanceConsole.columnOp'), width: 100 },
+]);
+
 const pushRuleColumns = computed(() => [
   { colKey: 'rule', title: t('governanceConsole.columnPushRule'), ellipsis: true, minWidth: 300 },
   { colKey: 'priority', title: t('governanceConsole.pushPriority'), width: 100 },
@@ -1122,6 +1242,8 @@ const loadTemplates = () =>
 
 const loadPermissions = () =>
   withLoading(async () => {
+    const groupRes = await listACLGroups().catch(() => ({ data: [] as ACLSubjectGroup[] }));
+    aclGroups.value = groupRes?.data || [];
     const violationRes = await listACLCeilingViolations();
     violations.value = violationRes?.data || [];
     if (permissionKbId.value) {
@@ -1276,6 +1398,94 @@ const openEntries = async (row: ExternalSubscriptionFeed) => {
     entries.value = res?.data || [];
   } catch (error) {
     handleError(error);
+  }
+};
+
+const loadACLGroups = () =>
+  withLoading(async () => {
+    const res = await listACLGroups();
+    aclGroups.value = res?.data || [];
+  });
+
+const openGroupDialog = (row?: ACLSubjectGroup) => {
+  editingGroupId.value = row?.id || '';
+  groupForm.value = { name: row?.name || '', description: row?.description || '' };
+  groupDialogVisible.value = true;
+};
+
+const saveGroup = async () => {
+  const payload = {
+    name: groupForm.value.name.trim(),
+    description: groupForm.value.description.trim(),
+  };
+  try {
+    if (editingGroupId.value) {
+      await updateACLGroup(editingGroupId.value, payload);
+    } else {
+      await createACLGroup(payload);
+    }
+    groupDialogVisible.value = false;
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadACLGroups();
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+const removeGroup = async (row: ACLSubjectGroup) => {
+  busyId.value = row.id;
+  try {
+    await deleteACLGroup(row.id);
+    MessagePlugin.success(t('governanceConsole.confirm'));
+    await loadACLGroups();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
+  }
+};
+
+const openMembers = async (row: ACLSubjectGroup) => {
+  membersGroupId.value = row.id;
+  membersGroupName.value = row.name;
+  memberRows.value = [];
+  newMemberId.value = '';
+  membersVisible.value = true;
+  try {
+    const res = await listACLGroupMembers(row.id);
+    memberRows.value = (res?.data || []).map((userID) => ({ user_id: userID }));
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+const addMember = async () => {
+  const userID = newMemberId.value.trim();
+  if (!userID) return;
+  membersBusy.value = true;
+  try {
+    await addACLGroupMembers(membersGroupId.value, [userID]);
+    newMemberId.value = '';
+    const res = await listACLGroupMembers(membersGroupId.value);
+    memberRows.value = (res?.data || []).map((id) => ({ user_id: id }));
+    await loadACLGroups();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    membersBusy.value = false;
+  }
+};
+
+const removeMember = async (row: { user_id: string }) => {
+  busyId.value = row.user_id;
+  try {
+    await removeACLGroupMember(membersGroupId.value, row.user_id);
+    memberRows.value = memberRows.value.filter((item) => item.user_id !== row.user_id);
+    await loadACLGroups();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    busyId.value = null;
   }
 };
 
@@ -1719,6 +1929,10 @@ onMounted(() => {
   background: var(--td-bg-color-secondarycontainer);
   font-size: var(--app-text-md);
   color: var(--td-text-color-secondary);
+}
+
+.governance-console__section--spaced {
+  margin-top: 24px;
 }
 
 .governance-subtitle {

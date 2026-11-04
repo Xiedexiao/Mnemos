@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
@@ -28,6 +29,8 @@ type knowledgeACLService struct {
 	// versions bumps the authorization epoch on every change so snapshot-holding
 	// caches miss immediately (V3.0 §2.6). Optional: nil skips the bump.
 	versions interfaces.PermissionVersionService
+	// subjects expands a caller into group/role subjects for the deny query.
+	subjects aclSubjectResolver
 	now      func() time.Time
 }
 
@@ -38,10 +41,12 @@ func NewKnowledgeACLService(
 	audit interfaces.AuditLogService,
 	kbShares interfaces.KBShareRepository,
 	versions interfaces.PermissionVersionService,
+	subjectGroups interfaces.ACLSubjectGroupService,
 ) interfaces.KnowledgeACLService {
 	return &knowledgeACLService{
 		repo: repo, kgRepo: kgRepo, audit: audit, kbShares: kbShares,
-		versions: versions, now: time.Now,
+		versions: versions, subjects: newACLSubjectResolver(subjectGroups),
+		now: time.Now,
 	}
 }
 
@@ -51,18 +56,31 @@ func (s *knowledgeACLService) Grant(ctx context.Context, grant *types.KnowledgeA
 	if grant == nil || grant.KnowledgeID == "" || grant.SubjectID == "" {
 		return nil, apperrors.NewBadRequestError("knowledge_id and subject_id are required")
 	}
-	if grant.SubjectType == "" {
-		grant.SubjectType = string(types.KnowledgeACLSubjectUser)
+	subjectType, err := types.SubjectTypeForACLAction(grant.SubjectType, grant.SubjectID)
+	if err != nil {
+		return nil, apperrors.NewBadRequestError(err.Error())
 	}
-	if !types.KnowledgeACLSubjectType(grant.SubjectType).Valid() {
-		return nil, apperrors.NewBadRequestError("unknown subject type")
-	}
+	grant.SubjectType = string(subjectType)
+	grant.SubjectID = strings.TrimSpace(grant.SubjectID)
 	action := types.PermissionAction(grant.Action)
 	if !action.Valid() {
 		return nil, apperrors.NewBadRequestError("unknown permission action")
 	}
 	if grant.Effect != string(types.KnowledgeACLEffectAllow) && grant.Effect != string(types.KnowledgeACLEffectDeny) {
 		return nil, apperrors.NewBadRequestError("effect must be allow or deny")
+	}
+	// 授权上限（§2.1/§2.3）：不能自授、不能授予自己没有的动作、按角色授权
+	// 仅限 Admin+。放在服务层而不是只放 handler：任何新的调用方（批量导入、
+	// Agent 工具）都必须过同一道门。
+	if ceilErr := types.CheckGrantCeiling(types.GrantCeilingInput{
+		GrantorRole:   types.CallerFromContext(ctx).Role,
+		Action:        action,
+		Effect:        types.KnowledgeACLEffect(grant.Effect),
+		SubjectType:   subjectType,
+		SubjectID:     grant.SubjectID,
+		GrantorUserID: types.CallerFromContext(ctx).UserID,
+	}); ceilErr != nil {
+		return nil, apperrors.NewForbiddenError(ceilErr.Error())
 	}
 	if err := s.repo.UpsertGrant(ctx, grant); err != nil {
 		return nil, err
@@ -170,8 +188,23 @@ func (s *knowledgeACLService) DeniedKnowledgeIDs(
 	subjectID string,
 	action types.PermissionAction,
 ) ([]string, error) {
-	ids, err := s.repo.DeniedKnowledgeIDs(
-		ctx, knowledgeBaseIDs, types.KnowledgeACLSubjectUser, subjectID, action, s.now(),
+	// 用上下文里的调用者角色展开组/角色主体；subjectID 与调用者不一致时
+	// （管理员代查）只按该用户本身判定，不能借用调用者的组授权。
+	caller := types.CallerFromContext(ctx)
+	subjects := []types.ACLSubject{
+		{Type: types.KnowledgeACLSubjectUser, ID: subjectID},
+	}
+	if caller.UserID == subjectID && caller.UserID != "" {
+		expanded, err := s.subjects.ForCaller(ctx, caller)
+		if err != nil {
+			// 组展开失败=组 deny 无法确认，越权风险，fail-closed。
+			logger.Warnf(ctx, "ACL subject expansion failed (fail-closed applies): %v", err)
+			return nil, err
+		}
+		subjects = expanded
+	}
+	ids, err := s.repo.DeniedKnowledgeIDsForSubjects(
+		ctx, knowledgeBaseIDs, subjects, action, s.now(),
 	)
 	if err != nil {
 		logger.Warnf(ctx, "ACL denied-ID query failed (fail-closed applies): %v", err)

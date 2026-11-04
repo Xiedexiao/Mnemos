@@ -1815,3 +1815,77 @@ export function deleteEmbedPushRule(id: string) {
 export function getEmbedPushRuleStats(days = 30) {
   return get<EmbedPushRuleStatsResponse>(`/api/v1/embed/push/stats?days=${days}`)
 }
+
+// ============================================================================
+// §2.1 ACL subject groups (grant targets beyond a single user)
+// ============================================================================
+
+// ACLSubjectGroup is one tenant-scoped group usable as an ACL subject.
+export interface ACLSubjectGroup {
+  id: string
+  name: string
+  description: string
+  created_by: string
+  member_count: number
+  created_at: string
+}
+
+interface ACLGroupListResponse {
+  success: boolean
+  data: ACLSubjectGroup[]
+}
+
+interface ACLGroupResponse {
+  success: boolean
+  data: ACLSubjectGroup
+}
+
+interface ACLGroupMembersResponse {
+  success: boolean
+  data: string[]
+}
+
+// GET /api/v1/acl/groups
+export function listACLGroups() {
+  return get<ACLGroupListResponse>('/api/v1/acl/groups')
+}
+
+// POST /api/v1/acl/groups
+export function createACLGroup(payload: { name: string; description?: string }) {
+  return post<ACLGroupResponse>('/api/v1/acl/groups', payload)
+}
+
+// PUT /api/v1/acl/groups/:id
+export function updateACLGroup(
+  id: string,
+  payload: { name?: string; description?: string },
+) {
+  return put<ACLGroupResponse>(`/api/v1/acl/groups/${encodeURIComponent(id)}`, payload)
+}
+
+// DELETE /api/v1/acl/groups/:id
+export function deleteACLGroup(id: string) {
+  return del<{ success: boolean }>(`/api/v1/acl/groups/${encodeURIComponent(id)}`)
+}
+
+// GET /api/v1/acl/groups/:id/members
+export function listACLGroupMembers(id: string) {
+  return get<ACLGroupMembersResponse>(
+    `/api/v1/acl/groups/${encodeURIComponent(id)}/members`,
+  )
+}
+
+// POST /api/v1/acl/groups/:id/members
+export function addACLGroupMembers(id: string, userIds: string[]) {
+  return post<{ success: boolean; data: { added: number } }>(
+    `/api/v1/acl/groups/${encodeURIComponent(id)}/members`,
+    { user_ids: userIds },
+  )
+}
+
+// DELETE /api/v1/acl/groups/:id/members/:userId
+export function removeACLGroupMember(id: string, userId: string) {
+  return del<{ success: boolean }>(
+    `/api/v1/acl/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+  )
+}

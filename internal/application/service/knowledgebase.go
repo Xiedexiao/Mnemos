@@ -77,6 +77,9 @@ type knowledgeBaseService struct {
 	// folderACL applies directory-level denials before recall (§2.3).
 	// Optional: nil means directory grants do not narrow retrieval.
 	folderACL interfaces.FolderACLRepository
+	// aclSubjects expands a caller into the group/role subjects they hold so
+	// group-targeted ACL rows actually apply (§2.1).
+	aclSubjects aclSubjectResolver
 }
 
 // NewKnowledgeBaseService creates a new knowledge base service
@@ -105,6 +108,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 	quality interfaces.SearchQualityService,
 	gaps interfaces.KnowledgeGapService,
 	folderACL interfaces.FolderACLRepository,
+	subjectGroups interfaces.ACLSubjectGroupService,
 ) interfaces.KnowledgeBaseService {
 	return &knowledgeBaseService{
 		repo:            repo,
@@ -132,6 +136,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 		quality:         quality,
 		gaps:            gaps,
 		folderACL:       folderACL,
+		aclSubjects:     newACLSubjectResolver(subjectGroups),
 	}
 }
 
