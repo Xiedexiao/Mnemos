@@ -40411,6 +40411,33 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "aipre.completed",
+                "aipre.failed",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -40424,13 +40451,6 @@ const docTemplate = `{
                 "ontology.relation_created",
                 "ontology.relation_updated",
                 "ontology.relation_deleted",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "aipre.completed",
-                "aipre.failed",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -40493,36 +40513,43 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "parse_quality.computed",
                 "review.submitted",
                 "review.approved",
                 "review.rejected",
                 "review.receipt_issued",
+                "parse_quality.computed",
                 "feedback.recorded",
                 "quality_task.created",
-                "quality_task.updated",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected"
+                "quality_task.updated"
             ],
             "x-enum-varnames": [
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -40536,13 +40563,6 @@ const docTemplate = `{
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
                 "OntologyActionRelationDeleted",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -40605,34 +40625,14 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "ParseQualityAuditActionComputed",
                 "AuditActionReviewSubmitted",
                 "AuditActionReviewApproved",
                 "AuditActionReviewRejected",
                 "AuditActionReviewReceiptIssued",
+                "ParseQualityAuditActionComputed",
                 "AuditActionFeedbackRecorded",
                 "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected"
+                "AuditActionQualityTaskUpdated"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -41662,6 +41662,31 @@ const docTemplate = `{
                     "maximum": 100000,
                     "minimum": 0,
                     "x-agent": true
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.CitationProvenance": {
+            "type": "object",
+            "properties": {
+                "effective_at": {
+                    "description": "EffectiveAt is when this version became effective (nil when unset).",
+                    "type": "string"
+                },
+                "label": {
+                    "description": "Label is the rendered one-line citation suffix (\"\" when nothing is known).",
+                    "type": "string"
+                },
+                "last_reviewed_at": {
+                    "description": "LastReviewedAt is when a human last confirmed it (nil when never).",
+                    "type": "string"
+                },
+                "last_reviewed_by": {
+                    "description": "LastReviewedBy is who confirmed it (\"\" when never).",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "Version is the published version number (0 when unknown).",
+                    "type": "integer"
                 }
             }
         },
@@ -49111,6 +49136,14 @@ const docTemplate = `{
                 "parent_chunk_id": {
                     "description": "父 Chunk ID",
                     "type": "string"
+                },
+                "provenance": {
+                    "description": "Provenance is the §12.2/§13.4 citation basis: which version this hit\nbelongs to, when it took effect and who last confirmed it. The rendered\nlabel is carried too so a client can print the citation suffix without\nre-deriving the format (and so the same string reaches the prompt, an\nexport and the UI).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.CitationProvenance"
+                        }
+                    ]
                 },
                 "score": {
                     "description": "Score",

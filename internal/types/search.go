@@ -242,6 +242,13 @@ type SearchResult struct {
 	// retrieval time, for the same reason.
 	KnowledgeLifecycleStatus string `json:"knowledge_lifecycle_status,omitempty"`
 
+	// Provenance is the §12.2/§13.4 citation basis: which version this hit
+	// belongs to, when it took effect and who last confirmed it. The rendered
+	// label is carried too so a client can print the citation suffix without
+	// re-deriving the format (and so the same string reaches the prompt, an
+	// export and the UI).
+	Provenance CitationProvenance `json:"provenance,omitempty"`
+
 	// SourceLocators point back into the original file for citation
 	// navigation. Merged results carry the union of their chunks' locators.
 	SourceLocators SourceLocators `json:"source_locators,omitempty"`
@@ -289,8 +296,8 @@ type SearchParams struct {
 	// for specific documents and lifecycle filtering still applies to the rest.
 	ExcludeKnowledgeIDs []string `json:"exclude_knowledge_ids,omitempty"`
 	TagIDs              []string `json:"tag_ids"` // Tag IDs for filtering (used for FAQ priority filtering)
-	ScopeTagIDs     []string `json:"scope_tag_ids,omitempty"`
-	OnlyRecommended bool     `json:"only_recommended"`
+	ScopeTagIDs         []string `json:"scope_tag_ids,omitempty"`
+	OnlyRecommended     bool     `json:"only_recommended"`
 	// KnowledgeBaseIDs overrides the single KB ID passed to HybridSearch,
 	// allowing a single retrieval call to span multiple KBs that share the
 	// same embedding model. When empty, HybridSearch uses its own id parameter.

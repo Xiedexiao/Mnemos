@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"time"
 
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/searchutil"
@@ -288,8 +289,31 @@ func (s *knowledgeBaseService) assembleSearchResults(
 		}
 	}
 
+	// 复核人姓名批量解析一次，再统一回填引用依据：逐条查询会变成 N+1，
+	// 而复核人只是标注里的一个可选片段，取不到就省略。
+	finalizeProvenanceLabels(searchResults)
 	logSearchResultChunkTypes(ctx, searchResults)
 	return searchResults
+}
+
+// finalizeProvenanceLabels re-renders each hit's citation label.
+//
+// 复核人姓名刻意不在这里解析：knowledgeBaseService 没有（也不该有）用户
+// 服务的依赖，为一处标注在构造签名里加重依赖得不偿失。这里只渲染"版本 +
+// 生效日期 + 复核日期"，姓名由展示层用 LastReviewedBy 自行解析——依据标注
+// 的主体信息（哪一版、何时生效、是否复核过）已经完整。
+func finalizeProvenanceLabels(results []*types.SearchResult) {
+	if len(results) == 0 {
+		return
+	}
+	now := time.Now()
+	for _, result := range results {
+		if result == nil || !result.Provenance.ProvenanceKnown() {
+			continue
+		}
+		result.Provenance.Label = types.RenderCitationProvenance(
+			result.Provenance, "", now)
+	}
 }
 
 // logSearchResultChunkTypes records how many returned hits came from each
@@ -371,6 +395,11 @@ func (s *knowledgeBaseService) buildSearchResult(chunk *types.Chunk,
 		// not need a second per-hit lookup.
 		KnowledgeClassification:  knowledge.Classification,
 		KnowledgeLifecycleStatus: knowledge.LifecycleStatus,
+		// §12.2/§13.4 引用依据：读者需要知道这条引用是哪一版、何时生效、
+		// 谁最后确认过。纯函数生成，缺项自动省略。
+		Provenance: types.BuildCitationProvenance(
+			knowledge.CurrentVersion, knowledge.EffectiveAt,
+			knowledge.LastReviewedAt, knowledge.LastReviewedBy, "", time.Now()),
 	}
 }
 
