@@ -31,23 +31,26 @@ import (
 type RouterParams struct {
 	dig.In
 
-	Config                       *config.Config
-	FileService                  interfaces.FileService
-	UserService                  interfaces.UserService
-	KBService                    interfaces.KnowledgeBaseService
-	KnowledgeService             interfaces.KnowledgeService
-	ChunkService                 interfaces.ChunkService
-	SessionService               interfaces.SessionService
-	MessageService               interfaces.MessageService
-	ModelService                 interfaces.ModelService
-	EvaluationService            interfaces.EvaluationService
-	KBShareService               interfaces.KBShareService
-	AgentShareService            interfaces.AgentShareService
-	KBHandler                    *handler.KnowledgeBaseHandler
-	GraphSearchHandler           *handler.GraphSearchHandler
-	KnowledgeHandler             *handler.KnowledgeHandler
-	TenantHandler                *handler.TenantHandler
-	TenantService                interfaces.TenantService
+	Config             *config.Config
+	FileService        interfaces.FileService
+	UserService        interfaces.UserService
+	KBService          interfaces.KnowledgeBaseService
+	KnowledgeService   interfaces.KnowledgeService
+	ChunkService       interfaces.ChunkService
+	SessionService     interfaces.SessionService
+	MessageService     interfaces.MessageService
+	ModelService       interfaces.ModelService
+	EvaluationService  interfaces.EvaluationService
+	KBShareService     interfaces.KBShareService
+	AgentShareService  interfaces.AgentShareService
+	KBHandler          *handler.KnowledgeBaseHandler
+	GraphSearchHandler *handler.GraphSearchHandler
+	KnowledgeHandler   *handler.KnowledgeHandler
+	TenantHandler      *handler.TenantHandler
+	TenantService      interfaces.TenantService
+	// NetworkAccessService enforces the tenant IP allow-list (§16.3).
+	// Optional: nil disables the restriction middleware.
+	NetworkAccessService         interfaces.NetworkAccessService
 	TenantAPIKeyService          interfaces.TenantAPIKeyService
 	TenantMemberService          interfaces.TenantMemberService
 	TenantMemberHandler          *handler.TenantMemberHandler
@@ -100,6 +103,7 @@ type RouterParams struct {
 	SCIMHandler                  *handler.SCIMHandler
 	WebhookHandler               *handler.WebhookHandler
 	ReadingHandler               *handler.ReadingHandler
+	NetworkAccessHandler         *handler.NetworkAccessHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
@@ -264,6 +268,12 @@ func NewRouter(params RouterParams) *gin.Engine {
 	// 认证中间件
 	r.Use(middleware.Auth(params.TenantService, params.UserService, params.TenantMemberService, params.TenantAPIKeyService, params.Config))
 
+	// 来源地址限制（§16.3 IP 限制）：放在认证之后，因为判定需要租户上下文；
+	// 放在业务路由之前，这样它对所有已认证入口一致生效。
+	if params.NetworkAccessService != nil {
+		r.Use(middleware.NetworkAccess(params.NetworkAccessService))
+	}
+
 	// 文件服务：统一代理本地/MinIO/COS/TOS存储后端（需要认证）
 	serveFilesWithResources(r, params.FileService, params.StorageBackendResolver, params.ResourceCatalog)
 
@@ -380,6 +390,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterSCIMRoutes(v1, params.SCIMHandler, rbacGuards)
 		RegisterWebhookRoutes(v1, params.WebhookHandler, rbacGuards)
 		RegisterReadingRoutes(v1, params.ReadingHandler, rbacGuards)
+		RegisterNetworkAccessRoutes(v1, params.NetworkAccessHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)

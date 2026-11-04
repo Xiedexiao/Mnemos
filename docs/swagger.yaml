@@ -1652,6 +1652,25 @@ definitions:
     - ontology.relation_created
     - ontology.relation_updated
     - ontology.relation_deleted
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - parse_quality.computed
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
+    - aipre.completed
+    - aipre.failed
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
     - share.created
     - share.revoked
     - share.visited
@@ -1717,18 +1736,6 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
-    - parse_quality.computed
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1742,13 +1749,6 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
-    - aipre.completed
-    - aipre.failed
     type: string
     x-enum-varnames:
     - OntologyActionSchemaCreated
@@ -1764,6 +1764,25 @@ definitions:
     - OntologyActionRelationCreated
     - OntologyActionRelationUpdated
     - OntologyActionRelationDeleted
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - ParseQualityAuditActionComputed
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
     - AuditActionShareLinkCreated
     - AuditActionShareLinkRevoked
     - AuditActionShareLinkVisited
@@ -1829,18 +1848,6 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
-    - ParseQualityAuditActionComputed
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1854,13 +1861,6 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -15456,6 +15456,15 @@ definitions:
     properties:
       parent_id:
         type: string
+    type: object
+  internal_handler.networkAccessRequest:
+    properties:
+      allow_entries:
+        items:
+          type: string
+        type: array
+      enabled:
+        type: boolean
     type: object
   internal_handler.officialAnswerRequest:
     properties:
@@ -32294,6 +32303,48 @@ paths:
       summary: 检查 WeKnoraCloud 凭证状态
       tags:
       - WeKnoraCloud
+  /network-access:
+    get:
+      description: 读取本工作区的 IP 白名单（KnowAxis V3.0 §16.3）。空列表表示不限制。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 来源地址白名单
+      tags:
+      - 空间管理
+    put:
+      consumes:
+      - application/json
+      description: 设置本工作区允许的来源地址（CIDR 或精确 IP，IPv4/IPv6）。启用后不在列表内的请求会被 403 拒绝。写错的条目会直接报错而不是被静默丢弃——否则"我明明加了公司网段"会变成"所有人都进不来"。
+      parameters:
+      - description: 白名单
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.networkAccessRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 设置来源地址白名单
+      tags:
+      - 空间管理
   /notifications:
     get:
       parameters:
