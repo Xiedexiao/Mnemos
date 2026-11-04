@@ -731,3 +731,102 @@ func mergeGraphEvidence(base, incoming types.JSON) types.JSON {
 	}
 	return types.JSON(raw)
 }
+
+// ============================================================================
+// GraphCommit diff 与回放（KnowAxis V3.0 §11.4 可回归 / 可重放）
+// ============================================================================
+
+// ListEntitiesByCommit returns the entities a commit produced or last touched.
+//
+// 按 (tenant, commit_id) 查，走 idx_graph_entities_commit 之外的复合条件；
+// 表规模是千级到万级，这里不做额外索引——diff 是管理面操作，不在热路径上。
+func (r *graphFactRepository) ListEntitiesByCommit(
+	ctx context.Context, tenantID uint64, commitID string, limit int,
+) ([]*types.GraphEntity, error) {
+	if limit <= 0 || limit > types.GraphDiffMaxLimit {
+		limit = types.GraphDiffMaxLimit
+	}
+	var rows []*types.GraphEntity
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND commit_id = ?", tenantID, commitID).
+		Order("id ASC").
+		Limit(limit).
+		Find(&rows).Error
+	return rows, err
+}
+
+// ListFactsByCommit returns the facts a commit produced or last touched.
+func (r *graphFactRepository) ListFactsByCommit(
+	ctx context.Context, tenantID uint64, commitID string, limit int,
+) ([]*types.GraphFact, error) {
+	if limit <= 0 || limit > types.GraphDiffMaxLimit {
+		limit = types.GraphDiffMaxLimit
+	}
+	var rows []*types.GraphFact
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND commit_id = ?", tenantID, commitID).
+		Order("id ASC").
+		Limit(limit).
+		Find(&rows).Error
+	return rows, err
+}
+
+// LatestCommitAt returns the newest commit at or before asOf.
+func (r *graphFactRepository) LatestCommitAt(
+	ctx context.Context, tenantID uint64, asOf time.Time,
+) (*types.GraphCommit, error) {
+	var commit types.GraphCommit
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND created_at <= ?", tenantID, asOf.UTC()).
+		Order("created_at DESC").
+		First(&commit).Error
+	if err != nil {
+		return nil, err
+	}
+	return &commit, nil
+}
+
+// ListEntitiesAsOf returns entities that existed at asOf.
+//
+// 判定是"created_at <= asOf 且 (仍 active 或 被 asOf 之后才废止)"：
+//
+//	created_at > asOf        → 当时还不存在
+//	updated_at <= asOf 的 superseded → 当时就已废止，不算"存在"
+//
+// 只按 created_at 过滤会把"当时还没建"的行带进来；只按 status 过滤会把
+// "现在已废止但当时还在"的行漏掉——回放的价值恰恰包含后者。
+func (r *graphFactRepository) ListEntitiesAsOf(
+	ctx context.Context, tenantID uint64, asOf time.Time, schemaID string, limit int,
+) ([]*types.GraphEntity, error) {
+	if limit <= 0 || limit > types.GraphReplayMaxEntities {
+		limit = types.GraphReplayMaxEntities
+	}
+	query := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND created_at <= ?", tenantID, asOf.UTC()).
+		Where("NOT (status = ? AND updated_at <= ?)",
+			string(types.GraphEntityStatusSuperseded), asOf.UTC())
+	if schemaID != "" {
+		query = query.Where("schema_id = ?", schemaID)
+	}
+	var rows []*types.GraphEntity
+	err := query.Order("id ASC").Limit(limit).Find(&rows).Error
+	return rows, err
+}
+
+// ListFactsAsOf returns facts that existed at asOf.
+func (r *graphFactRepository) ListFactsAsOf(
+	ctx context.Context, tenantID uint64, asOf time.Time, limit int,
+) ([]*types.GraphFact, error) {
+	if limit <= 0 || limit > types.GraphReplayMaxEntities {
+		limit = types.GraphReplayMaxEntities
+	}
+	var rows []*types.GraphFact
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND created_at <= ?", tenantID, asOf.UTC()).
+		Where("NOT (status = ? AND updated_at <= ?)",
+			string(types.GraphFactStatusSuperseded), asOf.UTC()).
+		Order("id ASC").
+		Limit(limit).
+		Find(&rows).Error
+	return rows, err
+}

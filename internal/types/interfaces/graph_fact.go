@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
 )
@@ -63,6 +64,31 @@ type GraphFactRepository interface {
 	//（v1 反向标记而非删除），返回实际标记的行数；commit 行本身不可变。
 	// 单事务完成。
 	RollbackCommit(ctx context.Context, tenantID uint64, commitID string) (entitiesSuperseded, factsSuperseded int, err error)
+	// ListEntitiesByCommit returns the entities a commit produced or last
+	// touched (§11.4 可回归: "这次提交改了什么").
+	ListEntitiesByCommit(
+		ctx context.Context, tenantID uint64, commitID string, limit int,
+	) ([]*types.GraphEntity, error)
+	// ListFactsByCommit returns the facts a commit produced or last touched.
+	ListFactsByCommit(
+		ctx context.Context, tenantID uint64, commitID string, limit int,
+	) ([]*types.GraphFact, error)
+	// LatestCommitAt returns the newest commit created at or before `asOf`,
+	// which is the anchor a replay is taken at.
+	LatestCommitAt(
+		ctx context.Context, tenantID uint64, asOf time.Time,
+	) (*types.GraphCommit, error)
+	// ListEntitiesAsOf returns entities that existed at `asOf`: created before
+	// it and either still active or superseded by a later commit. Rows are
+	// returned with their CURRENT status so a replay can say what happened to
+	// them since.
+	ListEntitiesAsOf(
+		ctx context.Context, tenantID uint64, asOf time.Time, schemaID string, limit int,
+	) ([]*types.GraphEntity, error)
+	// ListFactsAsOf returns the facts that existed at `asOf`.
+	ListFactsAsOf(
+		ctx context.Context, tenantID uint64, asOf time.Time, limit int,
+	) ([]*types.GraphFact, error)
 
 	// ---- 增量抽取缓存（§9.4）----
 
@@ -95,6 +121,14 @@ type GraphFactService interface {
 	RollbackCommit(ctx context.Context, tenantID uint64, commitID, actorID string) (*types.GraphRollbackResult, error)
 	// ListCommits 按创建时间倒序返回 commit（limit 由服务层钳制）。
 	ListCommits(ctx context.Context, tenantID uint64, limit int) ([]*types.GraphCommit, error)
+	// DiffCommit 返回一个 commit 实际改动的实体与事实（§11.4 可回归）。
+	// 计数不是内容："加了 12 条实体"回答不了"哪 12 条"。
+	DiffCommit(ctx context.Context, tenantID uint64, commitID string) (*types.GraphCommitDiff, error)
+	// Replay 重建 `asOf` 时刻的图谱快照（§11.4 可重放）。只读：不修改任何
+	// 数据，也不需要重放写入。
+	Replay(
+		ctx context.Context, tenantID uint64, request types.GraphReplayRequest,
+	) (*types.GraphReplayResult, error)
 
 	// SearchEntities 实体检索：name/normalized_key 模糊；schemaID 为空不过滤；
 	// confidenceFilter 为空时默认 EXTRACTED+INFERRED（AMBIGUOUS 默认不可见）。

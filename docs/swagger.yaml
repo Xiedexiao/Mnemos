@@ -1656,8 +1656,19 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
-    - aipre.completed
-    - aipre.failed
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
     - ontology.schema_created
     - ontology.schema_updated
     - ontology.schema_published
@@ -1671,6 +1682,28 @@ definitions:
     - ontology.relation_created
     - ontology.relation_updated
     - ontology.relation_deleted
+    - parse_quality.computed
+    - cr.created
+    - cr.item_added
+    - cr.item_removed
+    - cr.analyzed
+    - cr.submitted
+    - cr.scheduled
+    - cr.publish_started
+    - cr.publish_finished
+    - cr.closed
+    - cr.rolled_back
+    - cr.impact_task_updated
+    - cr.verified
+    - cr.notified
+    - aipre.completed
+    - aipre.failed
+    - share.created
+    - share.revoked
+    - share.visited
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1734,43 +1767,21 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
-    - cr.created
-    - cr.item_added
-    - cr.item_removed
-    - cr.analyzed
-    - cr.submitted
-    - cr.scheduled
-    - cr.publish_started
-    - cr.publish_finished
-    - cr.closed
-    - cr.rolled_back
-    - cr.impact_task_updated
-    - cr.verified
-    - cr.notified
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - parse_quality.computed
-    - share.created
-    - share.revoked
-    - share.visited
     type: string
     x-enum-varnames:
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
     - OntologyActionSchemaCreated
     - OntologyActionSchemaUpdated
     - OntologyActionSchemaPublished
@@ -1784,6 +1795,28 @@ definitions:
     - OntologyActionRelationCreated
     - OntologyActionRelationUpdated
     - OntologyActionRelationDeleted
+    - ParseQualityAuditActionComputed
+    - AuditActionCRCreated
+    - AuditActionCRItemAdded
+    - AuditActionCRItemRemoved
+    - AuditActionCRAnalyzed
+    - AuditActionCRSubmitted
+    - AuditActionCRScheduled
+    - AuditActionCRPublishStarted
+    - AuditActionCRPublishFinished
+    - AuditActionCRClosed
+    - AuditActionCRRolledBack
+    - AuditActionCRImpactTaskUpdated
+    - AuditActionCRVerified
+    - AuditActionCRNotified
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1847,39 +1880,6 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
-    - AuditActionCRCreated
-    - AuditActionCRItemAdded
-    - AuditActionCRItemRemoved
-    - AuditActionCRAnalyzed
-    - AuditActionCRSubmitted
-    - AuditActionCRScheduled
-    - AuditActionCRPublishStarted
-    - AuditActionCRPublishFinished
-    - AuditActionCRClosed
-    - AuditActionCRRolledBack
-    - AuditActionCRImpactTaskUpdated
-    - AuditActionCRVerified
-    - AuditActionCRNotified
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - ParseQualityAuditActionComputed
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -22659,6 +22659,33 @@ paths:
       summary: 查询治理动作审批状态
       tags:
       - 治理审批
+  /graph/commits/{id}:
+    get:
+      description: 返回一个 GraphCommit 实际改动的实体与事实（KnowAxis V3.0 §11.4 可回归）。计数不是内容——"加了
+        12 条实体"回答不了"哪 12 条、其中几条覆盖了已有行"。输出按 ID 稳定排序，同一 commit 两次请求得到同样结果。
+      parameters:
+      - description: 变更集ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: GraphCommitDiff}'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError'
+      security:
+      - Bearer: []
+      summary: 图谱变更集内容
+      tags:
+      - 图谱
   /graph/commits/{id}/rollback:
     post:
       description: 把该 commit 产出的 active 实体/事实置 superseded（反向标记而非删除，v1）；commit 行不可变，幂等。
@@ -22956,6 +22983,41 @@ paths:
       summary: 图谱路径查询
       tags:
       - 图谱事实层
+  /graph/replay:
+    get:
+      description: 重建指定时刻的图谱快照（KnowAxis V3.0 §11.4 可重放）。只读：不修改任何数据。每行同时带**当前**状态，让读者能区分"当时没有它"与"当时有、后来被撤回"。as_of
+        为 RFC3339，缺省或非法返回 400。
+      parameters:
+      - description: 回放时刻（RFC3339）
+        in: query
+        name: as_of
+        required: true
+        type: string
+      - description: 限定本体 schema
+        in: query
+        name: schema_id
+        type: string
+      - description: 实体/事实上限（默认 2000）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: GraphReplayResult}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError'
+      security:
+      - Bearer: []
+      summary: 图谱时间点回放
+      tags:
+      - 图谱
   /im-channels/{id}:
     delete:
       description: 删除指定 IM 渠道

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Tencent/WeKnora/internal/application/service"
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
@@ -466,4 +467,79 @@ func writeGraphFactError(c *gin.Context, ctx context.Context, err error) {
 		logger.ErrorWithFields(ctx, err, map[string]interface{}{"handler": "graph_fact"})
 		c.Error(apperrors.NewInternalServerError("graph fact operation failed").WithDetails(err.Error()))
 	}
+}
+
+// DiffCommit godoc
+// @Summary      图谱变更集内容
+// @Description  返回一个 GraphCommit 实际改动的实体与事实（KnowAxis V3.0 §11.4 可回归）。计数不是内容——"加了 12 条实体"回答不了"哪 12 条、其中几条覆盖了已有行"。输出按 ID 稳定排序，同一 commit 两次请求得到同样结果。
+// @Tags         图谱
+// @Produce      json
+// @Param        id  path  string  true  "变更集ID"
+// @Success      200  {object}  map[string]interface{}  "{success, data: GraphCommitDiff}"
+// @Failure      404  {object}  apperrors.AppError
+// @Security     Bearer
+// @Router       /graph/commits/{id} [get]
+func (h *GraphFactHandler) DiffCommit(c *gin.Context) {
+	ctx := c.Request.Context()
+	tenantID, ok := types.TenantIDFromContext(ctx)
+	if !ok || tenantID == 0 {
+		c.Error(apperrors.NewUnauthorizedError("tenant context is required"))
+		return
+	}
+	diff, err := h.graphFactService.DiffCommit(ctx, tenantID, c.Param("id"))
+	if err != nil {
+		writeGraphFactError(c, ctx, err)
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "data": diff})
+}
+
+// ReplayGraph godoc
+// @Summary      图谱时间点回放
+// @Description  重建指定时刻的图谱快照（KnowAxis V3.0 §11.4 可重放）。只读：不修改任何数据。每行同时带**当前**状态，让读者能区分"当时没有它"与"当时有、后来被撤回"。as_of 为 RFC3339，缺省或非法返回 400。
+// @Tags         图谱
+// @Produce      json
+// @Param        as_of      query  string  true   "回放时刻（RFC3339）"
+// @Param        schema_id  query  string  false  "限定本体 schema"
+// @Param        limit      query  int     false  "实体/事实上限（默认 2000）"
+// @Success      200  {object}  map[string]interface{}  "{success, data: GraphReplayResult}"
+// @Failure      400  {object}  apperrors.AppError
+// @Security     Bearer
+// @Router       /graph/replay [get]
+func (h *GraphFactHandler) ReplayGraph(c *gin.Context) {
+	ctx := c.Request.Context()
+	tenantID, ok := types.TenantIDFromContext(ctx)
+	if !ok || tenantID == 0 {
+		c.Error(apperrors.NewUnauthorizedError("tenant context is required"))
+		return
+	}
+	raw := strings.TrimSpace(c.Query("as_of"))
+	if raw == "" {
+		c.Error(apperrors.NewBadRequestError("as_of is required (RFC3339)"))
+		return
+	}
+	asOf, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		c.Error(apperrors.NewBadRequestError("as_of must be RFC3339: " + err.Error()))
+		return
+	}
+	limit := 0
+	if rawLimit := strings.TrimSpace(c.Query("limit")); rawLimit != "" {
+		parsed, parseErr := strconv.Atoi(rawLimit)
+		if parseErr != nil {
+			c.Error(apperrors.NewBadRequestError("limit must be a number"))
+			return
+		}
+		limit = parsed
+	}
+	result, replayErr := h.graphFactService.Replay(ctx, tenantID, types.GraphReplayRequest{
+		AsOf:     asOf,
+		SchemaID: strings.TrimSpace(c.Query("schema_id")),
+		Limit:    limit,
+	})
+	if replayErr != nil {
+		writeGraphFactError(c, ctx, replayErr)
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "data": result})
 }

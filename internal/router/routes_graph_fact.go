@@ -38,6 +38,10 @@ func RegisterGraphFactRoutes(r *gin.RouterGroup, g *rbacGuards, h *handler.Graph
 		graph.POST("/facts/commit", g.Contributor(), h.CreateCommit)
 		// 治理面：回滚是破坏性动作（反向标记 superseded），Admin+。
 		graph.POST("/commits/:id/rollback", g.Admin(), h.RollbackCommit)
+		// 变更集内容与时间点回放（§11.4 可回归 / 可重放）。都是只读审计面，
+		// 但会暴露全图的变更历史与历史快照，与回滚同档：Admin+。
+		graph.GET("/commits/:id", g.Admin(), h.DiffCommit)
+		graph.GET("/replay", g.Admin(), h.ReplayGraph)
 
 		// 读取面：实体检索 / 路径 / 影响面。
 		graph.GET("/entities", g.Viewer(), h.SearchEntities)

@@ -652,3 +652,161 @@ func graphFactsNonNil(facts []*types.GraphFact) []*types.GraphFact {
 	}
 	return out
 }
+
+// ============================================================================
+// GraphCommit diff 与回放（KnowAxis V3.0 §11.4）
+// ============================================================================
+
+// DiffCommit returns what one commit actually changed.
+//
+// 计数不是内容："加了 12 条实体"回答不了"哪 12 条、其中几条覆盖了已有行"。
+// 行的 commit_id 记录了产出它的批次，因此 diff 从行反查——不在 commit 行里
+// 再存一份快照，那会多出一个会与行状态不一致的真相。
+func (s *graphFactService) DiffCommit(
+	ctx context.Context, tenantID uint64, commitID string,
+) (*types.GraphCommitDiff, error) {
+	if tenantID == 0 {
+		return nil, ErrGraphTenantMissing
+	}
+	if strings.TrimSpace(commitID) == "" {
+		return nil, ErrGraphCommitNotFound
+	}
+	commit, err := s.repo.GetCommit(ctx, tenantID, commitID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrGraphCommitNotFound
+		}
+		return nil, err
+	}
+	entities, err := s.repo.ListEntitiesByCommit(ctx, tenantID, commitID, types.GraphDiffMaxLimit)
+	if err != nil {
+		return nil, err
+	}
+	facts, err := s.repo.ListFactsByCommit(ctx, tenantID, commitID, types.GraphDiffMaxLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	diff := &types.GraphCommitDiff{
+		CommitID:        commit.ID,
+		Description:     commit.Description,
+		CreatedBy:       commit.CreatedBy,
+		CreatedAt:       commit.CreatedAt,
+		GoldenGatePass:  commit.GoldenGatePass,
+		EntitiesAdded:   commit.EntitiesAdded,
+		EntitiesUpdated: commit.EntitiesUpdated,
+		FactsAdded:      commit.FactsAdded,
+		FactsSuperseded: commit.FactsSuperseded,
+		Entities:        make([]types.GraphDiffEntity, 0, len(entities)),
+		Facts:           make([]types.GraphDiffFact, 0, len(facts)),
+	}
+	for _, entity := range entities {
+		if entity == nil {
+			continue
+		}
+		diff.Entities = append(diff.Entities, types.GraphDiffEntity{
+			EntityID:   entity.ID,
+			Name:       entity.Name,
+			SchemaID:   entity.SchemaID,
+			Status:     string(entity.Status),
+			Confidence: string(entity.Confidence),
+		})
+	}
+	for _, fact := range facts {
+		if fact == nil {
+			continue
+		}
+		diff.Facts = append(diff.Facts, types.GraphDiffFact{
+			FactID:         fact.ID,
+			RelationName:   fact.RelationName,
+			SourceEntityID: fact.SourceEntityID,
+			TargetEntityID: fact.TargetEntityID,
+			Confidence:     string(fact.Confidence),
+			Status:         string(fact.Status),
+		})
+	}
+	// 计数来自 commit 行，可能大于本次返回的行数（历史行被清理）。如实标记。
+	expected := commit.EntitiesAdded + commit.EntitiesUpdated
+	diff.Truncated = len(diff.Entities) < expected || len(diff.Facts) < commit.FactsAdded
+	types.SortGraphDiff(diff)
+	return diff, nil
+}
+
+// Replay rebuilds the graph as of one instant.
+//
+// 只读的时间旅行：不修改任何数据，也不需要重放写入。与回滚是两个不同的
+// 操作——回滚改状态，回放只读历史。
+//
+// 每行带**当前**状态：读者要能区分"当时没有它"与"当时有、后来被撤回"，
+// 只给一份"当时的列表"回答不了后者。
+func (s *graphFactService) Replay(
+	ctx context.Context, tenantID uint64, request types.GraphReplayRequest,
+) (*types.GraphReplayResult, error) {
+	if tenantID == 0 {
+		return nil, ErrGraphTenantMissing
+	}
+	if request.AsOf.IsZero() {
+		return nil, ErrGraphInvalidQuery
+	}
+	request = types.NormalizeGraphReplayRequest(request)
+	asOf := request.AsOf.UTC()
+
+	result := &types.GraphReplayResult{
+		AsOf:     asOf,
+		Entities: []types.GraphReplayEntity{},
+		Facts:    []types.GraphDiffFact{},
+	}
+	if anchor, err := s.repo.LatestCommitAt(ctx, tenantID, asOf); err == nil && anchor != nil {
+		result.AsOfCommitID = anchor.ID
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	} else {
+		result.Note = "该时间点之前没有任何提交"
+	}
+
+	entities, err := s.repo.ListEntitiesAsOf(ctx, tenantID, asOf, request.SchemaID, request.Limit)
+	if err != nil {
+		return nil, err
+	}
+	facts, err := s.repo.ListFactsAsOf(ctx, tenantID, asOf, request.Limit)
+	if err != nil {
+		return nil, err
+	}
+	result.EntityCount = len(entities)
+	result.FactCount = len(facts)
+
+	for _, entity := range entities {
+		if entity == nil {
+			continue
+		}
+		result.Entities = append(result.Entities, types.GraphReplayEntity{
+			GraphDiffEntity: types.GraphDiffEntity{
+				EntityID:   entity.ID,
+				Name:       entity.Name,
+				SchemaID:   entity.SchemaID,
+				Status:     string(entity.Status),
+				Confidence: string(entity.Confidence),
+			},
+			// 当前状态：回放要能回答"这条现在还在不在"。
+			CurrentStatus:   string(entity.Status),
+			CurrentCommitID: entity.CommitID,
+		})
+	}
+	for _, fact := range facts {
+		if fact == nil {
+			continue
+		}
+		result.Facts = append(result.Facts, types.GraphDiffFact{
+			FactID:         fact.ID,
+			RelationName:   fact.RelationName,
+			SourceEntityID: fact.SourceEntityID,
+			TargetEntityID: fact.TargetEntityID,
+			Confidence:     string(fact.Confidence),
+			Status:         string(fact.Status),
+		})
+	}
+	if result.Truncated = len(entities) >= request.Limit || len(facts) >= request.Limit; result.Truncated {
+		result.Note = "快照达到条数上限，结果已截断"
+	}
+	return result, nil
+}
