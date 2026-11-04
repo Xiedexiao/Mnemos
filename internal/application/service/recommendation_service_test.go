@@ -272,3 +272,63 @@ func TestHistoryDedupesRepeatedViews(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, items, 1)
 }
+
+// TestBoardAttachesExplanations is the §15.3 requirement end to end: every
+// returned item carries a "why" panel whose primary signal matches its reason.
+func TestBoardAttachesExplanations(t *testing.T) {
+	svc, repo := newRecommendationFixture()
+	repo.related = []types.RecommendationItem{{
+		KnowledgeID: "k1", KnowledgeBaseID: "kb1", Title: "E45 换型 SOP",
+		Reason:    types.RecommendReasonRelated,
+		UpdatedAt: time.Date(2026, 11, 3, 10, 0, 0, 0, time.UTC),
+	}}
+	repo.hot = []types.RecommendationItem{{
+		KnowledgeID: "k2", KnowledgeBaseID: "kb1", Title: "锁具规程",
+		Reason: types.RecommendReasonHot, Score: 9,
+		UpdatedAt: time.Date(2026, 11, 2, 10, 0, 0, 0, time.UTC),
+	}, {
+		// The denied document must not reach the board at all.
+		KnowledgeID: "k3", KnowledgeBaseID: "kb1", Title: "机密工艺卡",
+		Reason: types.RecommendReasonHot, Score: 100,
+	}}
+
+	ctx := types.WithCaller(context.Background(), types.Caller{
+		TenantID: 7, UserID: "reader", Role: types.TenantRoleViewer,
+	})
+	board, err := svc.Board(ctx, 7, "anchor", 5)
+	require.NoError(t, err)
+
+	require.Len(t, board.Related, 1)
+	require.NotNil(t, board.Related[0].Explanation,
+		"a related item explains itself")
+	assert.True(t, board.Related[0].Explanation.Signals[0].Primary)
+	assert.NotEmpty(t, board.Related[0].Explanation.Summary)
+
+	require.Len(t, board.Hot, 1, "the denied document is filtered out")
+	hot := board.Hot[0]
+	require.NotNil(t, hot.Explanation)
+	assert.Equal(t, types.RecommendationSignalHot, hot.Explanation.Signals[0].Type)
+	assert.Contains(t, hot.Explanation.Signals[0].Evidence, "9",
+		"the view count that drove the rank is reported")
+	assert.NotEmpty(t, hot.Explanation.Summary)
+}
+
+// TestHomeAttachesExplanations covers the personal board path.
+func TestHomeAttachesExplanations(t *testing.T) {
+	svc, repo := newRecommendationFixture()
+	repo.latest = []types.RecommendationItem{{
+		KnowledgeID: "k1", KnowledgeBaseID: "kb1", Title: "E45 换型 SOP",
+		Reason:    types.RecommendReasonLatest,
+		UpdatedAt: time.Date(2026, 11, 4, 8, 0, 0, 0, time.UTC),
+	}}
+
+	ctx := types.WithCaller(context.Background(), types.Caller{
+		TenantID: 7, UserID: "reader", Role: types.TenantRoleViewer,
+	})
+	board, err := svc.Home(ctx, 7, "reader", 5)
+	require.NoError(t, err)
+	require.Len(t, board.Latest, 1)
+	require.NotNil(t, board.Latest[0].Explanation)
+	assert.Equal(t, types.RecommendationSignalLatest,
+		board.Latest[0].Explanation.Signals[0].Type)
+}

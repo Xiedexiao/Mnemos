@@ -102,6 +102,11 @@ type RecommendationItem struct {
 	Score float64 `json:"score"`
 	// UpdatedAt is the document's last change.
 	UpdatedAt time.Time `json:"updated_at"`
+	// Explanation is the "why this one" panel (§15.3): each scoring signal
+	// with its evidence and contribution, largest first. Nil when the caller
+	// did not ask for explanations — the field is additive, so existing
+	// clients keep working unchanged.
+	Explanation *RecommendationExplanation `json:"explanation,omitempty"`
 }
 
 // RecommendationBoard is the §15.3 reading-page payload: four independent

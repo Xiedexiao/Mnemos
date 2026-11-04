@@ -108,7 +108,7 @@ func (s *recommendationService) Board(
 		return nil, err
 	}
 	board.Hot = s.rankAndFilter(ctx, tenantID, caller, hot, knowledgeID, limit)
-	return board, nil
+	return s.explainBoard(board, hot), nil
 }
 
 // Home returns the personal board.
@@ -143,7 +143,29 @@ func (s *recommendationService) Home(
 		return nil, err
 	}
 	board.Hot = s.rankAndFilter(ctx, tenantID, caller, hot, "", limit)
-	return board, nil
+	return s.explainBoard(board, hot), nil
+}
+
+// explainBoard attaches the §15.3 "why this one" panel to every item.
+//
+// 解释是**只读视图**：它读已经算好的 Score 与热度，绝不反过来影响名次。
+// 热度证据从热门候选里取（那里的 Score 就是窗口内阅读次数），这样解释面板
+// 不需要再查一次库。
+func (s *recommendationService) explainBoard(
+	board *types.RecommendationBoard, hotCandidates []types.RecommendationItem,
+) *types.RecommendationBoard {
+	if board == nil {
+		return board
+	}
+	views := make(map[string]int64, len(hotCandidates))
+	for _, item := range hotCandidates {
+		if item.KnowledgeID != "" && item.Score > 0 {
+			views[item.KnowledgeID] = int64(item.Score)
+		}
+	}
+	explained := types.ExplainableBoard(*board, s.weights, s.now(),
+		func(knowledgeID string) int64 { return views[knowledgeID] })
+	return &explained
 }
 
 // RecordView records one read.
