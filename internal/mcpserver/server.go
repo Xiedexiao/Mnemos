@@ -57,6 +57,9 @@ type Server struct {
 	endpointRepo     interfaces.MCPEndpointRepository
 	db               *gorm.DB
 	cfg              *config.Config
+	// audit records one row per tool call (§16.2 受控委派). Nil disables
+	// auditing only — a call still succeeds when the audit store is down.
+	audit interfaces.AuditLogService
 
 	limiter   *ratelimit.Limiter
 	lastTouch sync.Map // endpoint id -> time.Time of the last last_used_at write
@@ -114,11 +117,21 @@ func NewServer(
 		server.WithToolHandlerMiddleware(s.guardTool),
 		server.WithInstructions(serverInstructions),
 	)
-	s.mcp.AddTools(s.toolCatalog()...)
+	s.mcp.AddTools(s.withAuditedTools(s.toolCatalog())...)
 	s.handler = server.NewStreamableHTTPServer(
 		s.mcp,
 		server.WithStateLess(true),
 	)
+	return s
+}
+
+// WithAudit attaches the audit ledger used to record tool calls (§16.2).
+//
+// 用 setter 而不是构造参数：NewServer 已有 16 个依赖，测试里也按位置构造。
+// 加一个参数会让所有既有调用点都要改，而审计是可选的——没接上时调用照常
+// 成功，只是不留痕。
+func (s *Server) WithAudit(audit interfaces.AuditLogService) *Server {
+	s.audit = audit
 	return s
 }
 

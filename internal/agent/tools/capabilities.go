@@ -67,7 +67,13 @@ var ToolCapabilityRequirements = map[string]ToolRequirement{
 	"read_document":         documentReaderRequirement,
 	"list_documents":        documentReaderRequirement,
 	"query_knowledge_graph": {AllOf: []KBCapability{CapGraph}, ConsumesFiles: true},
-	"database_query":        {AnyOf: []KBCapability{CapVector, CapKeyword}, ConsumesFiles: true},
+	// Governance readers. evidence and candidates read stored rows, not the
+	// chunk index, so they need no KB capability — an agent operating on a
+	// single space can still trace an answer. impact follows graph edges.
+	"knowledge_evidence":   {},
+	"knowledge_candidates": {},
+	"knowledge_impact":     {AllOf: []KBCapability{CapGraph}},
+	"database_query":       {AnyOf: []KBCapability{CapVector, CapKeyword}, ConsumesFiles: true},
 	// Retired names keep their requirement so a stored allowlist that has not
 	// been normalized yet still derives the same KB filter.
 	"knowledge_search":      {AnyOf: []KBCapability{CapVector, CapKeyword}, ConsumesFiles: true},

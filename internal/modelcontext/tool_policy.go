@@ -112,6 +112,14 @@ var toolHandlePolicies = map[string]toolHandlePolicy{
 		sourceIDKeys: map[string]struct{}{"knowledge_base_ids": {}},
 		sourceOutput: true,
 	},
+	// Governance readers (§16.2). All three emit durable ids (knowledge,
+	// entity, candidate) that the model must not hold verbatim, so the output
+	// goes through the same handle compaction as the retrieval tools.
+	"knowledge_evidence": {sourceOutput: true},
+	"knowledge_impact":   {sourceOutput: true},
+	"knowledge_candidates": {
+		sourceOutput: true,
+	},
 	toolDatabaseQuery: {
 		sourceTextKeys: map[string]struct{}{"sql": {}},
 		sourceOutput:   true,

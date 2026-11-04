@@ -22,6 +22,12 @@ const (
 	ToolReadDocument        = "read_document"
 	ToolListDocuments       = "list_documents"
 	ToolQueryKnowledgeGraph = "query_knowledge_graph"
+	// Governance surface (§16.2): the evidence behind an answer, the blast
+	// radius of a change, and the review backlog. These exist so a delegated
+	// caller can *trace* rather than only *retrieve*.
+	ToolKnowledgeEvidence   = "knowledge_evidence"
+	ToolKnowledgeImpact     = "knowledge_impact"
+	ToolKnowledgeCandidates = "knowledge_candidates"
 	ToolSearchConversations = "search_conversations"
 	ToolSearchMemory        = "search_memory"
 	ToolDatabaseQuery       = "database_query"
@@ -128,6 +134,24 @@ func AvailableToolDefinitions() []AvailableTool {
 		{Name: ToolReadDocument, Label: "阅读文档", Description: "读取文档元数据与分块内容，支持分页和文内查找", Group: ToolGroupRAG},
 		{Name: ToolListDocuments, Label: "浏览文档列表", Description: "分页列出知识库中的文档", Group: ToolGroupRAG},
 		{Name: ToolQueryKnowledgeGraph, Label: "查询知识图谱", Description: "从知识图谱中查询关系", Group: ToolGroupRAG},
+		{
+			Name:        ToolKnowledgeEvidence,
+			Label:       "查询回答依据",
+			Description: "按 request_id 取一次问答的证据包（引用、拒答标记、模型与提示词版本）",
+			Group:       ToolGroupRAG,
+		},
+		{
+			Name:        ToolKnowledgeImpact,
+			Label:       "查询变更影响",
+			Description: "沿实体的依赖边展开，返回一次变更会影响哪些事实与实体",
+			Group:       ToolGroupRAG,
+		},
+		{
+			Name:        ToolKnowledgeCandidates,
+			Label:       "浏览经验候选",
+			Description: "分页列出待审核的经验候选卡片",
+			Group:       ToolGroupRAG,
+		},
 		{Name: ToolDatabaseQuery, Label: "查询数据库", Description: "查询数据库中的信息", Group: ToolGroupRAG},
 		{Name: ToolWikiSearch, Label: "搜索Wiki", Description: "在Wiki中搜索页面", Group: ToolGroupWikiRead},
 		{Name: ToolWikiReadPage, Label: "读取Wiki页面", Description: "读取指定的Wiki页面内容", Group: ToolGroupWikiRead},

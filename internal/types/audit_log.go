@@ -30,6 +30,14 @@ const (
 	// EnableRBAC=true. Subject to 1-minute sliding-window dedup so a
 	// probing client cannot fill the table.
 	AuditActionAccessDenied AuditAction = "rbac.access_denied"
+	// AuditActionMCPToolCalled fires on every MCP tool invocation (§16.2
+	// 受控委派). Details carry the tool name, the endpoint id, the duration
+	// and the delegation block (purpose / delegated_user_id / trace_id /
+	// client) when the caller declared one.
+	//
+	// 与 rbac.access_denied 分开：那一条是"被拒绝的访问"，这一条是"成功的
+	// 外部取数"，两者的检索与告警规则完全不同。
+	AuditActionMCPToolCalled AuditAction = "mcp.tool_called"
 	// AuditActionInvitationSent fires when an Owner issues a new
 	// tenant invitation. Actor is the inviter, TargetUserID is the
 	// invitee. Note: AuditActionMemberAdded only fires when the

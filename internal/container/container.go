@@ -422,6 +422,14 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewEmbedChannelService))
 	must(container.Provide(service.NewMCPEndpointService))
 	must(container.Provide(mcpserver.NewServer))
+	// MCP tool calls write one audit row each (§16.2 受控委派).
+	//
+	// 用 Decorate 而不是 Invoke：Invoke 会强制立刻构建 *mcpserver.Server，
+	// 而 router_wiring_test 用 dig.DryRun 只校验依赖图，不实例化任何东西——
+	// Invoke 会绕过那种校验并在缺依赖时 panic。Decorate 只在真正构建时套用。
+	must(container.Decorate(func(server *mcpserver.Server, audit interfaces.AuditLogService) *mcpserver.Server {
+		return server.WithAudit(audit)
+	}))
 
 	// Web search service (needed by AgentService)
 	logger.Debugf(ctx, "[Container] Registering web search registry and providers...")
