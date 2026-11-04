@@ -2,6 +2,7 @@ package handler
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	stderrors "errors"
 	"fmt"
@@ -36,6 +37,9 @@ type BatchDownloadKnowledgeRequest struct {
 type knowledgeDownloadEntry struct {
 	ID         string
 	FolderPath string
+	// Watermark is the mark planned for this entry. nil means the document
+	// needs none (public and not forced).
+	Watermark *types.WatermarkApplied
 }
 
 // BatchDownloadKnowledge godoc
@@ -102,7 +106,17 @@ func (h *KnowledgeHandler) BatchDownloadKnowledge(c *gin.Context) {
 		if !item.IsManual() && item.FilePath == "" {
 			continue
 		}
-		entries = append(entries, knowledgeDownloadEntry{ID: id, FolderPath: item.FolderPath})
+		entry := knowledgeDownloadEntry{ID: id, FolderPath: item.FolderPath}
+		// §16.3：批次里每一篇按自己的密级决定水印，而不是整批统一——把一份
+		// internal 文档的水印强度套到同批的 secret 文档上会低估后者。
+		if h.watermarks != nil {
+			applied := h.watermarks.Plan(ctx, tenantID, callerUserID(ctx), item,
+				downloadNameFor(item), "export", "")
+			if applied.Strength != types.WatermarkStrengthNone {
+				entry.Watermark = &applied
+			}
+		}
+		entries = append(entries, entry)
 	}
 	if len(entries) == 0 {
 		_ = c.Error(errors.NewBadRequestError("所选文档没有可下载的原始文件，请取消选择后重试"))
@@ -223,8 +237,26 @@ func writeKnowledgeDownloadArchive(
 			_ = file.Close()
 			return errors.NewInternalServerError("无法写入下载压缩包，请稍后重试")
 		}
+
+		// §16.3 水印：可注入的格式先读进内存再写水印（这些是纯文本，
+		// 体量远小于 limit）；其余格式原样写入，另加一份受控文件说明。
+		var source io.Reader = file
+		if entry.Watermark != nil && entry.Watermark.Mode == types.WatermarkInjected {
+			raw, readErr := io.ReadAll(io.LimitReader(file, limit-total+1))
+			_ = file.Close()
+			if readErr != nil {
+				if isKnowledgeDownloadCanceled(readErr) {
+					return readErr
+				}
+				return errors.NewInternalServerError("部分文件读取失败，未生成压缩包，请稍后重试").WithDetails(
+					gin.H{"knowledge_id": entry.ID},
+				)
+			}
+			source = bytes.NewReader(types.InjectTextWatermark(raw, filename, *entry.Watermark))
+		}
+
 		n, copyErr := io.Copy(zipEntry, io.LimitReader(
-			&knowledgeDownloadReader{ctx: ctx, reader: file}, limit-total+1,
+			&knowledgeDownloadReader{ctx: ctx, reader: source}, limit-total+1,
 		))
 		closeErr := file.Close()
 		total += n
@@ -238,6 +270,19 @@ func writeKnowledgeDownloadArchive(
 			return errors.NewInternalServerError("部分文件读取失败，未生成压缩包，请稍后重试").WithDetails(
 				gin.H{"knowledge_id": entry.ID},
 			)
+		}
+		// sidecar 说明：告诉接收方这份文件本身没有可见水印，以及为什么。
+		if entry.Watermark != nil && entry.Watermark.SidecarName != "" {
+			sidecarName := uniqueKnowledgeDownloadZipPath(entry.FolderPath,
+				entry.Watermark.SidecarName, usedNames)
+			sidecarEntry, sidecarErr := writer.CreateHeader(
+				&zip.FileHeader{Name: sidecarName, Method: zip.Deflate})
+			if sidecarErr != nil {
+				return errors.NewInternalServerError("无法写入下载压缩包，请稍后重试")
+			}
+			if _, sidecarErr := io.WriteString(sidecarEntry, entry.Watermark.SidecarBody()); sidecarErr != nil {
+				return errors.NewInternalServerError("无法写入下载压缩包，请稍后重试")
+			}
 		}
 	}
 	if err := writer.Close(); err != nil {
@@ -358,4 +403,22 @@ func escapeWindowsReservedName(stem string) string {
 		return "_" + stem
 	}
 	return stem
+}
+
+// downloadNameFor renders the delivered file name used when planning a
+// watermark. The real name is resolved by the file service; this only needs
+// the extension, so the plan matches what will actually be sent.
+func downloadNameFor(knowledge *types.Knowledge) string {
+	if knowledge == nil {
+		return ""
+	}
+	if knowledge.IsManual() {
+		// Manual entries are delivered as Markdown (the service appends the
+		// extension); mirror that here so the injection decision matches.
+		return knowledge.Title + ".md"
+	}
+	if knowledge.FileName != "" {
+		return knowledge.FileName
+	}
+	return knowledge.Title
 }

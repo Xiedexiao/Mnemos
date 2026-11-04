@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	goerrors "errors"
@@ -45,6 +46,9 @@ type KnowledgeHandler struct {
 	// discovery records the read so browse history and the hot list are real
 	// (§15.3/§16.1). Optional: nil disables view recording only.
 	discovery interfaces.RecommendationService
+	// watermarks plans and records the §16.3 download mark. Optional: nil
+	// leaves downloads unmarked (the pre-watermark behaviour).
+	watermarks interfaces.WatermarkService
 }
 
 // backlogProbe tells a backlogged document (work still queued) from a stuck
@@ -103,6 +107,7 @@ func NewKnowledgeHandler(
 	housekeeping *service.HousekeepingService,
 	aclService interfaces.KnowledgeACLService,
 	discovery interfaces.RecommendationService,
+	watermarks interfaces.WatermarkService,
 ) *KnowledgeHandler {
 	var backlog backlogProbe
 	if housekeeping != nil {
@@ -122,6 +127,7 @@ func NewKnowledgeHandler(
 		asynqClient:       asynqClient,
 		spanRepo:          spanRepo,
 		discovery:         discovery,
+		watermarks:        watermarks,
 	}
 }
 
@@ -2209,6 +2215,41 @@ func (h *KnowledgeHandler) DownloadKnowledgeFile(c *gin.Context) {
 		c.Error(errors.NewInternalServerError("Failed to retrieve file").WithDetails(err.Error()))
 		return
 	}
+
+	// §16.3 服务端水印：下载是"内容离开平台"的动作，也是最需要溯源的动作。
+	// 能承载文本的格式直接把水印写进正文；其余格式随包附带受控文件说明。
+	// 无论哪种，都记一条台账（谁、何时、哪一篇、什么密级）。
+	if h.watermarks != nil {
+		knowledge, _ := h.kgService.GetKnowledgeByID(effCtx, id)
+		if knowledge != nil {
+			applied := h.watermarks.Plan(effCtx, callerTenantID(ctx), callerUserID(ctx),
+				knowledge, filename, "download", "")
+			if applied.Strength != types.WatermarkStrengthNone {
+				if applied.Mode == types.WatermarkInjected {
+					raw, readErr := io.ReadAll(file)
+					_ = file.Close()
+					if readErr != nil {
+						c.Error(errors.NewInternalServerError("Failed to read file").WithDetails(readErr.Error()))
+						return
+					}
+					file = io.NopCloser(bytes.NewReader(
+						types.InjectTextWatermark(raw, filename, applied)))
+				}
+				// 台账在发送前写：发送失败时这条记录仍然成立（"用户尝试下载"），
+				// 且不会因为连接中断而漏记。
+				if recordErr := h.watermarks.Record(effCtx, callerTenantID(ctx), callerUserID(ctx),
+					knowledge, applied, "download", ""); recordErr != nil {
+					logger.Warnf(ctx, "watermark record failed for %s: %v", id, recordErr)
+				}
+				c.Header("X-KnowAxis-Watermark", applied.Text)
+				c.Header("X-KnowAxis-Watermark-Strength", string(applied.Strength))
+				if applied.Mode == types.WatermarkSidecar {
+					c.Header("X-KnowAxis-Watermark-Sidecar", applied.SidecarName)
+				}
+			}
+		}
+	}
+
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Expires", "0")
@@ -3739,4 +3780,18 @@ func tenantAPIKeySearchScopes(ctx context.Context) ([]types.KnowledgeSearchScope
 		scopes = append(scopes, types.KnowledgeSearchScope{TenantID: tenantID, KBID: kbID})
 	}
 	return scopes, true
+}
+
+// callerTenantID reads the tenant for audit/ledger writes.
+func callerTenantID(ctx context.Context) uint64 {
+	if caller := types.CallerFromContext(ctx); caller.TenantID != 0 {
+		return caller.TenantID
+	}
+	tenantID, _ := types.TenantIDFromContext(ctx)
+	return tenantID
+}
+
+// callerUserID reads the actor for audit/ledger writes.
+func callerUserID(ctx context.Context) string {
+	return types.CallerFromContext(ctx).UserID
 }
