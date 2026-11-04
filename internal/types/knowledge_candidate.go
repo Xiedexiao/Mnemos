@@ -51,6 +51,12 @@ const (
 	KnowledgeCandidateSourceMeetingReview KnowledgeCandidateSourceType = "meeting_review"
 	// KnowledgeCandidateSourceProcessChange 流程变更。
 	KnowledgeCandidateSourceProcessChange KnowledgeCandidateSourceType = "process_change"
+	// KnowledgeCandidateSourceQAAnswer 问答答案沉淀（§13 回答→知识）。
+	//
+	// 九类业务来源之外单独列一类，是因为它的**证据形态**不同：其余来源的
+	// 证据是一张单据或一次评审，而这里是一条已经由模型生成、带引用清单的
+	// 回答。混进 manual 会让"这条经验是怎么来的"在候选列表里看不出来。
+	KnowledgeCandidateSourceQAAnswer KnowledgeCandidateSourceType = "qa_answer"
 )
 
 // Valid 报告来源类型是否在九类白名单内。
@@ -60,7 +66,7 @@ func (t KnowledgeCandidateSourceType) Valid() bool {
 		KnowledgeCandidateSourceProjectClose, KnowledgeCandidateSourceQualityEvent,
 		KnowledgeCandidateSourceProductionEvent, KnowledgeCandidateSourcePLMChange,
 		KnowledgeCandidateSourceCustomerComplaint, KnowledgeCandidateSourceMeetingReview,
-		KnowledgeCandidateSourceProcessChange:
+		KnowledgeCandidateSourceProcessChange, KnowledgeCandidateSourceQAAnswer:
 		return true
 	default:
 		return false
