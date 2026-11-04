@@ -28764,6 +28764,188 @@
                 }
             }
         },
+        "/sampling/draw": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按期抽检已发布内容（KnowAxis V3.0 §6.6）：高风险 100%、中风险 10%、低风险 2%。选样按 (文档, 周期) 哈希确定性取样，同一期重跑得到同一批样本。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "抽检"
+                ],
+                "summary": "执行抽检",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "周期（默认当月，YYYY-MM）",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "候选上限（默认 2000）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/sampling/inspections": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出抽检样本与结论。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "抽检"
+                ],
+                "summary": "抽检清单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "周期",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "pending/passed/failed/waived",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "条数（默认 100）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/sampling/inspections/{id}/decide": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "记录抽检结论。不通过时自动开一张纠错任务（同一篇已有未关闭任务时复用）；不通过与豁免必须写明理由。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "抽检"
+                ],
+                "summary": "提交抽检结论",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "抽检记录 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "结论",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.samplingDecisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/sampling/stats": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "抽检通过率与按风险的分布。通过率只在已结案的样本上计算（passed+failed），pending 与 waived 不计入分母。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "抽检"
+                ],
+                "summary": "抽检统计",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "周期（默认全部）",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/sandbox-configs": {
             "get": {
                 "security": [
@@ -39693,6 +39875,12 @@
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "share.created",
+                "share.revoked",
+                "share.visited",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -39755,7 +39943,19 @@
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "parse_quality.computed",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -39769,42 +39969,30 @@
                 "ontology.relation_created",
                 "ontology.relation_updated",
                 "ontology.relation_deleted",
-                "share.created",
-                "share.revoked",
-                "share.visited",
+                "aipre.completed",
+                "aipre.failed",
                 "candidate.created",
                 "candidate.confirmed",
                 "candidate.published",
                 "candidate.rejected",
-                "aipre.completed",
-                "aipre.failed",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
                 "ontology.schema_proposal_created",
                 "ontology.schema_proposal_checked",
                 "ontology.schema_proposal_approved",
                 "ontology.schema_proposal_rejected",
                 "ontology.schema_proposal_applied",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified"
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "parse_quality.computed"
             ],
             "x-enum-varnames": [
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -39867,7 +40055,19 @@
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "ParseQualityAuditActionComputed",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -39881,40 +40081,22 @@
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
                 "OntologyActionRelationDeleted",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
                 "AuditActionCandidateCreated",
                 "AuditActionCandidateConfirmed",
                 "AuditActionCandidatePublished",
                 "AuditActionCandidateRejected",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
                 "OntologyActionSchemaProposalCreated",
                 "OntologyActionSchemaProposalChecked",
                 "OntologyActionSchemaProposalApproved",
                 "OntologyActionSchemaProposalRejected",
                 "OntologyActionSchemaProposalApplied",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified"
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "ParseQualityAuditActionComputed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -58137,6 +58319,17 @@
                     "type": "string"
                 },
                 "target_version": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.samplingDecisionRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }

@@ -1639,6 +1639,12 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
+    - share.created
+    - share.revoked
+    - share.visited
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1701,41 +1707,6 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - parse_quality.computed
-    - ontology.schema_created
-    - ontology.schema_updated
-    - ontology.schema_published
-    - ontology.schema_deleted
-    - ontology.type_created
-    - ontology.type_updated
-    - ontology.type_deleted
-    - ontology.property_created
-    - ontology.property_updated
-    - ontology.property_deleted
-    - ontology.relation_created
-    - ontology.relation_updated
-    - ontology.relation_deleted
-    - share.created
-    - share.revoked
-    - share.visited
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
-    - aipre.completed
-    - aipre.failed
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1749,8 +1720,43 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
+    - ontology.schema_created
+    - ontology.schema_updated
+    - ontology.schema_published
+    - ontology.schema_deleted
+    - ontology.type_created
+    - ontology.type_updated
+    - ontology.type_deleted
+    - ontology.property_created
+    - ontology.property_updated
+    - ontology.property_deleted
+    - ontology.relation_created
+    - ontology.relation_updated
+    - ontology.relation_deleted
+    - aipre.completed
+    - aipre.failed
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
+    - parse_quality.computed
     type: string
     x-enum-varnames:
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1813,41 +1819,6 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - ParseQualityAuditActionComputed
-    - OntologyActionSchemaCreated
-    - OntologyActionSchemaUpdated
-    - OntologyActionSchemaPublished
-    - OntologyActionSchemaDeleted
-    - OntologyActionTypeCreated
-    - OntologyActionTypeUpdated
-    - OntologyActionTypeDeleted
-    - OntologyActionPropertyCreated
-    - OntologyActionPropertyUpdated
-    - OntologyActionPropertyDeleted
-    - OntologyActionRelationCreated
-    - OntologyActionRelationUpdated
-    - OntologyActionRelationDeleted
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1861,6 +1832,35 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
+    - OntologyActionSchemaCreated
+    - OntologyActionSchemaUpdated
+    - OntologyActionSchemaPublished
+    - OntologyActionSchemaDeleted
+    - OntologyActionTypeCreated
+    - OntologyActionTypeUpdated
+    - OntologyActionTypeDeleted
+    - OntologyActionPropertyCreated
+    - OntologyActionPropertyUpdated
+    - OntologyActionPropertyDeleted
+    - OntologyActionRelationCreated
+    - OntologyActionRelationUpdated
+    - OntologyActionRelationDeleted
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
+    - ParseQualityAuditActionComputed
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -15886,6 +15886,13 @@ definitions:
       change_note:
         type: string
       target_version:
+        type: string
+    type: object
+  internal_handler.samplingDecisionRequest:
+    properties:
+      note:
+        type: string
+      status:
         type: string
     type: object
   internal_handler.sandboxConfigRequest:
@@ -35097,6 +35104,118 @@ paths:
       summary: 取消兑换
       tags:
       - 积分兑换
+  /sampling/draw:
+    post:
+      consumes:
+      - application/json
+      description: 按期抽检已发布内容（KnowAxis V3.0 §6.6）：高风险 100%、中风险 10%、低风险 2%。选样按 (文档,
+        周期) 哈希确定性取样，同一期重跑得到同一批样本。
+      parameters:
+      - description: 周期（默认当月，YYYY-MM）
+        in: query
+        name: period
+        type: string
+      - description: 候选上限（默认 2000）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 执行抽检
+      tags:
+      - 抽检
+  /sampling/inspections:
+    get:
+      description: 列出抽检样本与结论。
+      parameters:
+      - description: 周期
+        in: query
+        name: period
+        type: string
+      - description: pending/passed/failed/waived
+        in: query
+        name: status
+        type: string
+      - description: 条数（默认 100）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 抽检清单
+      tags:
+      - 抽检
+  /sampling/inspections/{id}/decide:
+    post:
+      consumes:
+      - application/json
+      description: 记录抽检结论。不通过时自动开一张纠错任务（同一篇已有未关闭任务时复用）；不通过与豁免必须写明理由。
+      parameters:
+      - description: 抽检记录 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 结论
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.samplingDecisionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 提交抽检结论
+      tags:
+      - 抽检
+  /sampling/stats:
+    get:
+      description: 抽检通过率与按风险的分布。通过率只在已结案的样本上计算（passed+failed），pending 与 waived 不计入分母。
+      parameters:
+      - description: 周期（默认全部）
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 抽检统计
+      tags:
+      - 抽检
   /sandbox-configs:
     get:
       description: List workspace sandbox backend configs with credentials masked.

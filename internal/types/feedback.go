@@ -53,13 +53,18 @@ const (
 	// QualityTaskTypeLowRating is reserved for aggregate low-score signals;
 	// no producer ships in V1 but the value is legal in storage.
 	QualityTaskTypeLowRating QualityTaskType = "low_rating"
+	// QualityTaskTypeSamplingFailed is opened when a §6.6 sampling inspection
+	// fails: a published document was found wrong after release, which needs
+	// correction and a look at why approval missed it.
+	QualityTaskTypeSamplingFailed QualityTaskType = "sampling_failed"
 )
 
 // Valid reports whether the value is a known task type.
 func (t QualityTaskType) Valid() bool {
 	switch t {
 	case QualityTaskTypeUselessThreshold, QualityTaskTypeCorrection,
-		QualityTaskTypeStaleReport, QualityTaskTypeLowRating:
+		QualityTaskTypeStaleReport, QualityTaskTypeLowRating,
+		QualityTaskTypeSamplingFailed:
 		return true
 	default:
 		return false
@@ -71,6 +76,14 @@ func (t QualityTaskType) Valid() bool {
 // caller cannot fabricate threshold evidence; low_rating has no producer yet.
 func (t QualityTaskType) Reportable() bool {
 	return t == QualityTaskTypeCorrection || t == QualityTaskTypeStaleReport
+}
+
+// SystemOnly reports whether the type is produced by the platform only.
+//
+// sampling_failed 只能由抽检失败产生：允许用户直接提交它，等于让任何人凭空
+// 给一篇内容贴上"抽检不通过"的结论。
+func (t QualityTaskType) SystemOnly() bool {
+	return t == QualityTaskTypeUselessThreshold || t == QualityTaskTypeSamplingFailed
 }
 
 // String renders the task type for logs and audit payloads.
@@ -197,20 +210,20 @@ func (MessageFeedback) TableName() string { return "message_feedback" }
 // context (threshold evidence, reporter comment, ...) without another
 // migration; source_type + source_id identify the flagged resource.
 type QualityTask struct {
-	ID         string                `json:"id"             gorm:"type:varchar(36);primaryKey"`
-	TenantID   uint64                `json:"tenant_id"      gorm:"not null"`
-	TaskType   QualityTaskType       `json:"task_type"      gorm:"type:varchar(24);not null"`
-	SourceType QualityTaskSourceType `json:"source_type"    gorm:"type:varchar(16);not null"`
-	SourceID   string                `json:"source_id"      gorm:"type:varchar(36);not null;default:''"`
-	KnowledgeID string               `json:"knowledge_id"   gorm:"type:varchar(36);not null;default:'';index:idx_quality_tasks_knowledge"`
-	ChunkID    string                `json:"chunk_id"       gorm:"type:varchar(36);not null;default:''"`
-	Detail     JSON                  `json:"detail"         gorm:"type:jsonb;not null;default:'{}'"`
-	Status     QualityTaskStatus     `json:"status"         gorm:"type:varchar(16);not null;default:'open';index:idx_quality_tasks_tenant_status,priority:2"`
-	AssigneeID string                `json:"assignee_id"    gorm:"type:varchar(36);not null;default:''"`
-	ResolutionNote string            `json:"resolution_note" gorm:"type:text;not null;default:''"`
-	CreatedAt  time.Time             `json:"created_at"     gorm:"index:idx_quality_tasks_tenant_status,priority:1"`
-	UpdatedAt  time.Time             `json:"updated_at"`
-	ResolvedAt *time.Time            `json:"resolved_at"`
+	ID             string                `json:"id"             gorm:"type:varchar(36);primaryKey"`
+	TenantID       uint64                `json:"tenant_id"      gorm:"not null"`
+	TaskType       QualityTaskType       `json:"task_type"      gorm:"type:varchar(24);not null"`
+	SourceType     QualityTaskSourceType `json:"source_type"    gorm:"type:varchar(16);not null"`
+	SourceID       string                `json:"source_id"      gorm:"type:varchar(36);not null;default:''"`
+	KnowledgeID    string                `json:"knowledge_id"   gorm:"type:varchar(36);not null;default:'';index:idx_quality_tasks_knowledge"`
+	ChunkID        string                `json:"chunk_id"       gorm:"type:varchar(36);not null;default:''"`
+	Detail         JSON                  `json:"detail"         gorm:"type:jsonb;not null;default:'{}'"`
+	Status         QualityTaskStatus     `json:"status"         gorm:"type:varchar(16);not null;default:'open';index:idx_quality_tasks_tenant_status,priority:2"`
+	AssigneeID     string                `json:"assignee_id"    gorm:"type:varchar(36);not null;default:''"`
+	ResolutionNote string                `json:"resolution_note" gorm:"type:text;not null;default:''"`
+	CreatedAt      time.Time             `json:"created_at"     gorm:"index:idx_quality_tasks_tenant_status,priority:1"`
+	UpdatedAt      time.Time             `json:"updated_at"`
+	ResolvedAt     *time.Time            `json:"resolved_at"`
 }
 
 // TableName pins the GORM table name.
