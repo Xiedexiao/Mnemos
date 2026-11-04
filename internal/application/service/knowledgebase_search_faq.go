@@ -155,7 +155,7 @@ func (s *knowledgeBaseService) iterativeRetrieveWithDeduplication(ctx context.Co
 		// list is, searching deeper cannot find anything new.
 		exhausted := !slices.ContainsFunc(append(vectorLists, keywordLists...),
 			func(l []*types.IndexWithScore) bool { return len(l) >= currentTopK })
-		fused := fuseOrDeduplicate(ctx, vectorLists, keywordLists, retrievalCfg)
+		fused := fuseOrDeduplicate(ctx, vectorLists, keywordLists, nil, retrievalCfg)
 
 		// Collect new chunk IDs that need to be fetched from DB
 		newChunkIDs := make([]string, 0)

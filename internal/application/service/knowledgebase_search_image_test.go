@@ -515,7 +515,7 @@ func TestVectorScoreSurvivesFusion(t *testing.T) {
 	filterImageHits([]*types.RetrieveResult{vector, keyword}, g)
 
 	fused := fuseOrDeduplicate(context.Background(),
-		[][]*types.IndexWithScore{vector.Results}, [][]*types.IndexWithScore{keyword.Results}, nil)
+		[][]*types.IndexWithScore{vector.Results}, [][]*types.IndexWithScore{keyword.Results}, nil, nil)
 	byID := map[string]*types.IndexWithScore{}
 	for _, h := range fused {
 		byID[h.ChunkID] = h

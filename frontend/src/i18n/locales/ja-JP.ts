@@ -2910,6 +2910,8 @@ export default {
     rrfVectorWeightDescription: '統合結果に対するベクトル検索の影響を調整します。既定値は 0.7。0 は既定値を使用します。重みの合計を 1 にする必要はありません。',
     rrfKeywordWeightLabel: 'RRF キーワード重み',
     rrfKeywordWeightDescription: '統合結果に対するキーワード検索の影響を調整します。既定値は 0.3。0 は既定値を使用します。重みの合計を 1 にする必要はありません。',
+    rrfGraphWeightLabel: 'グラフ経路の重み',
+    rrfGraphWeightDescription: 'ナレッジグラフ検索がベクトル検索・キーワード検索と同じ融合にどれだけ寄与するかを調整します。既定値は 0.2。0 でグラフ経路を無効化します。補助的な経路のため、ベクトルの重みを超えない値が推奨です。',
     title: '検索設定',
     description: 'ナレッジベース検索とメッセージ検索に共通する検索パラメータを設定します',
     embeddingTopKLabel: 'ベクトル検索のTop K',

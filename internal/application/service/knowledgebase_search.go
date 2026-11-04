@@ -515,17 +515,31 @@ func (s *knowledgeBaseService) hybridSearchCandidates(ctx context.Context,
 	vectorLists, keywordLists := classifyRetrievalResults(ctx, retrieveResults)
 	vectorResults, keywordResults := flattenLists(vectorLists), flattenLists(keywordLists)
 	if len(vectorResults) == 0 && len(keywordResults) == 0 {
-		logger.Info(ctx, "No search results found")
-		return nil, nil
+		// 向量与关键词都没有命中时仍然尝试图谱：这正是"查询词与正文措辞不同、
+		// 但实体关系明确"的场景（例如问设备型号，正文只写了别名）。图谱通道
+		// 为空时保持原有行为，返回 nil 而不是空切片。
+		graphOnly := s.graphRecallCandidates(ctx, searchKBIDs, params.QueryText)
+		if len(graphOnly) == 0 {
+			logger.Info(ctx, "No search results found")
+			return nil, nil
+		}
+		logger.Infof(ctx, "Vector/keyword empty, graph recall produced %d chunks",
+			len(graphOnly[0]))
 	}
-	logger.Infof(ctx, "Result count before fusion: vector=%d, keyword=%d",
-		len(vectorResults), len(keywordResults))
+
+	// 图谱召回（§12.2 图谱扩展）：与向量/关键词一起进入同一个 RRF。
+	//
+	// 放在融合之前而不是追加到结果之后，是为了让图谱命中的名次由"它有多
+	// 相关"决定，而不是由"它不在向量结果里"决定。
+	graphLists := s.graphRecallCandidates(ctx, searchKBIDs, params.QueryText)
+	logger.Infof(ctx, "Result count before fusion: vector=%d, keyword=%d, graph=%d",
+		len(vectorResults), len(keywordResults), len(flattenLists(graphLists)))
 
 	var retrievalCfg *types.RetrievalConfig
 	if tenantInfo != nil {
 		retrievalCfg = tenantInfo.RetrievalConfig
 	}
-	deduplicatedChunks := fuseOrDeduplicate(ctx, vectorLists, keywordLists, retrievalCfg)
+	deduplicatedChunks := fuseOrDeduplicate(ctx, vectorLists, keywordLists, graphLists, retrievalCfg)
 
 	kb.EnsureDefaults()
 

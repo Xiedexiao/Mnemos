@@ -12,6 +12,8 @@ export interface RetrievalConfig {
   rrf_k?: number
   rrf_vector_weight?: number
   rrf_keyword_weight?: number
+  // 图谱通道（§12.2 图谱增强）在同一 RRF 里的权重；0 表示关闭这一路。
+  rrf_graph_weight?: number
 }
 
 // Get tenant retrieval config via KV API

@@ -17,7 +17,7 @@ func TestFuseOrDeduplicate_KeywordOnlyRescalesUnboundedBM25(t *testing.T) {
 		{ChunkID: "strong", Score: 16.1239},
 		{ChunkID: "mid", Score: 8.06195},
 		{ChunkID: "weak", Score: 4.030975},
-	}}, nil)
+	}}, nil, nil)
 
 	require.Len(t, got, 3)
 	require.Equal(t, "strong", got[0].ChunkID)
@@ -36,7 +36,7 @@ func TestFuseOrDeduplicate_KeywordOnlyLeavesUnitIntervalScores(t *testing.T) {
 	flat := fuseOrDeduplicate(context.Background(), nil, [][]*types.IndexWithScore{{
 		{ChunkID: "a", Score: 1.0},
 		{ChunkID: "b", Score: 1.0},
-	}}, nil)
+	}}, nil, nil)
 	require.Len(t, flat, 2)
 	require.InDelta(t, 1.0, flat[0].Score, 1e-9)
 	require.InDelta(t, 1.0, flat[1].Score, 1e-9)
@@ -44,7 +44,7 @@ func TestFuseOrDeduplicate_KeywordOnlyLeavesUnitIntervalScores(t *testing.T) {
 	bounded := fuseOrDeduplicate(context.Background(), nil, [][]*types.IndexWithScore{{
 		{ChunkID: "high", Score: 0.8},
 		{ChunkID: "low", Score: 0.4},
-	}}, nil)
+	}}, nil, nil)
 	require.Equal(t, "high", bounded[0].ChunkID)
 	require.InDelta(t, 0.8, bounded[0].Score, 1e-9)
 	require.InDelta(t, 0.4, bounded[1].Score, 1e-9)
@@ -56,7 +56,7 @@ func TestFuseOrDeduplicate_VectorOnlyKeepsEmbeddingScores(t *testing.T) {
 	got := fuseOrDeduplicate(context.Background(), [][]*types.IndexWithScore{{
 		{ChunkID: "near", Score: 0.91},
 		{ChunkID: "far", Score: 0.22},
-	}}, nil, nil)
+	}}, nil, nil, nil)
 
 	require.Equal(t, "near", got[0].ChunkID)
 	require.InDelta(t, 0.91, got[0].Score, 1e-9)
@@ -69,7 +69,7 @@ func TestFuseOrDeduplicate_HybridUsesRRFNotRawBM25(t *testing.T) {
 	got := fuseOrDeduplicate(context.Background(),
 		[][]*types.IndexWithScore{{{ChunkID: "vec", Score: 0.9}}},
 		[][]*types.IndexWithScore{{{ChunkID: "kw", Score: 16.1239}}},
-		nil,
+		nil, nil,
 	)
 
 	require.Len(t, got, 2)
@@ -91,7 +91,7 @@ func TestFuseOrDeduplicate_HybridTopOfBothScoresOne(t *testing.T) {
 	got := fuseOrDeduplicate(context.Background(),
 		[][]*types.IndexWithScore{{{ChunkID: "both", Score: 0.9}, {ChunkID: "vec", Score: 0.8}}},
 		[][]*types.IndexWithScore{{{ChunkID: "both", Score: 12}}},
-		nil,
+		nil, nil,
 	)
 	require.Equal(t, "both", got[0].ChunkID)
 	require.InDelta(t, 1.0, got[0].Score, 1e-9)
@@ -113,7 +113,7 @@ func TestFuseOrDeduplicate_HybridRanksEachListOnItsOwn(t *testing.T) {
 	got := fuseOrDeduplicate(context.Background(),
 		[][]*types.IndexWithScore{docList, faqList},
 		[][]*types.IndexWithScore{keywordList},
-		nil,
+		nil, nil,
 	)
 	require.Equal(t, "faq-1", got[0].ChunkID, "vector rank 1 in its list plus keyword rank 1")
 	require.InDelta(t, 1.0, got[0].Score, 1e-9)
@@ -133,7 +133,7 @@ func TestFuseOrDeduplicate_KeywordOnlyScalesEachList(t *testing.T) {
 	got := fuseOrDeduplicate(context.Background(), nil, [][]*types.IndexWithScore{
 		{{ChunkID: "pg-top", Score: 20}, {ChunkID: "pg-low", Score: 10}},
 		{{ChunkID: "es-top", Score: 4}},
-	}, nil)
+	}, nil, nil)
 	scores := map[string]float64{}
 	for _, hit := range got {
 		scores[hit.ChunkID] = hit.Score
@@ -222,7 +222,7 @@ func TestFuseOrDeduplicate_HybridIgnoresArrivalOrder(t *testing.T) {
 		}
 		scores := map[string]float64{}
 		for _, hit := range fuseOrDeduplicate(context.Background(), vectorLists,
-			[][]*types.IndexWithScore{keywordList}, nil) {
+			[][]*types.IndexWithScore{keywordList}, nil, nil) {
 			scores[hit.ChunkID] = hit.Score
 		}
 		return scores

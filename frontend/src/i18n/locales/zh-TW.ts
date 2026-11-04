@@ -6844,6 +6844,8 @@ export default {
     rrfVectorWeightDescription: '控制向量檢索對融合結果的影響。預設 0.7；設為 0 使用預設值。兩項權重之和無需等於 1。',
     rrfKeywordWeightLabel: 'RRF 關鍵詞權重',
     rrfKeywordWeightDescription: '控制關鍵詞檢索對融合結果的影響。預設 0.3；設為 0 使用預設值。兩項權重之和無需等於 1。',
+    rrfGraphWeightLabel: '圖譜通道權重',
+    rrfGraphWeightDescription: '控制知識圖譜檢索與向量/關鍵詞在同一融合裡的相對影響。預設 0.2；設為 0 關閉圖譜通道。圖譜是補充通道，不建議高於向量權重。',
     title: '搜尋設定',
     description: '設定知識庫搜尋和訊息搜尋的全局檢索參數',
     embeddingTopKLabel: '向量檢索數量 (Top K)',

@@ -186,11 +186,12 @@ const defaultConfig: RetrievalConfig = {
   rerank_model_id: '',
 }
 
-type RrfField = 'rrf_k' | 'rrf_vector_weight' | 'rrf_keyword_weight'
+type RrfField = 'rrf_k' | 'rrf_vector_weight' | 'rrf_keyword_weight' | 'rrf_graph_weight'
 const rrfFields = computed<{ key: RrfField; label: string; description: string; defaultValue: number; step: number }[]>(() => [
   { key: 'rrf_k', label: t('retrievalSettings.rrfKLabel'), description: t('retrievalSettings.rrfKDescription'), defaultValue: 60, step: 1 },
   { key: 'rrf_vector_weight', label: t('retrievalSettings.rrfVectorWeightLabel'), description: t('retrievalSettings.rrfVectorWeightDescription'), defaultValue: 0.7, step: 0.1 },
   { key: 'rrf_keyword_weight', label: t('retrievalSettings.rrfKeywordWeightLabel'), description: t('retrievalSettings.rrfKeywordWeightDescription'), defaultValue: 0.3, step: 0.1 },
+  { key: 'rrf_graph_weight', label: t('retrievalSettings.rrfGraphWeightLabel'), description: t('retrievalSettings.rrfGraphWeightDescription'), defaultValue: 0.2, step: 0.1 },
 ])
 
 const localConfig = reactive<RetrievalConfig>({ ...defaultConfig })
@@ -232,6 +233,7 @@ const loadConfig = async () => {
       rrf_k: cfg.rrf_k,
       rrf_vector_weight: cfg.rrf_vector_weight,
       rrf_keyword_weight: cfg.rrf_keyword_weight,
+      rrf_graph_weight: cfg.rrf_graph_weight,
     })
     initialConfig = { ...localConfig }
     await nextTick()

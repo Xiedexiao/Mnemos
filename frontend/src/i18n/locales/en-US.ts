@@ -2910,6 +2910,8 @@ export default {
     rrfVectorWeightDescription: 'Controls the contribution of vector search to merged results. Default: 0.7; 0 uses the default. Weights do not need to sum to 1.',
     rrfKeywordWeightLabel: 'RRF keyword weight',
     rrfKeywordWeightDescription: 'Controls the contribution of keyword search to merged results. Default: 0.3; 0 uses the default. Weights do not need to sum to 1.',
+    rrfGraphWeightLabel: 'Graph channel weight',
+    rrfGraphWeightDescription: 'Controls how much knowledge-graph retrieval contributes inside the same fusion as vector and keyword search. Default: 0.2; 0 disables the graph channel. It is a supplementary channel — keep it below the vector weight.',
     title: 'Search Settings',
     description: 'Configure global retrieval parameters for knowledge search and message search',
     embeddingTopKLabel: 'Vector Search Top K',

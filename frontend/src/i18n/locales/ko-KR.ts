@@ -6843,6 +6843,8 @@ export default {
     rrfVectorWeightDescription: '통합 결과에 대한 벡터 검색의 영향을 조정합니다. 기본값은 0.7이며, 0은 기본값을 사용합니다. 가중치의 합이 1일 필요는 없습니다.',
     rrfKeywordWeightLabel: 'RRF 키워드 가중치',
     rrfKeywordWeightDescription: '통합 결과에 대한 키워드 검색의 영향을 조정합니다. 기본값은 0.3이며, 0은 기본값을 사용합니다. 가중치의 합이 1일 필요는 없습니다.',
+    rrfGraphWeightLabel: '그래프 채널 가중치',
+    rrfGraphWeightDescription: '지식 그래프 검색이 벡터·키워드 검색과 같은 융합에서 얼마나 기여하는지 조정합니다. 기본값은 0.2이며, 0이면 그래프 채널을 끕니다. 보조 채널이므로 벡터 가중치보다 낮게 두는 것이 좋습니다.',
     title: '검색 설정',
     description: '전역 검색 파라미터를 설정합니다. 지식베이스 검색과 메시지 검색이 이 설정을 공유합니다',
     embeddingTopKLabel: '벡터 검색 Top K',

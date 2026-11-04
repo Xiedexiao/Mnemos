@@ -35,6 +35,13 @@ type RetrievalConfig struct {
 	RRFVectorWeight float64 `json:"rrf_vector_weight,omitempty"`
 	// RRFKeywordWeight is the keyword counterpart. Default: 0.3.
 	RRFKeywordWeight float64 `json:"rrf_keyword_weight,omitempty"`
+	// RRFGraphWeight is the weight of the §11 knowledge-graph channel inside the
+	// same fusion (KnowAxis V3.0 §12.2 "图谱增强"). Default: 0.2.
+	//
+	// 图谱召回与向量/关键词**在同一个 RRF 里排序**，而不是像此前那样作为一个
+	// 独立后置阶段把结果追加到末尾。追加式合并的问题不是精度不够，而是图谱
+	// 命中永远排在所有向量/关键词命中之后——即使它才是唯一真正相关的那条。
+	RRFGraphWeight float64 `json:"rrf_graph_weight,omitempty"`
 }
 
 // DefaultRetrievalTopK is the retrieval depth used when a caller supplies no
@@ -97,21 +104,35 @@ func (c *RetrievalConfig) GetEffectiveRRFK() int {
 	return c.RRFK
 }
 
-// GetEffectiveRRFWeights returns vector / keyword weights with sensible defaults.
-// When neither weight is set explicitly, returns 0.7 / 0.3.
-func (c *RetrievalConfig) GetEffectiveRRFWeights() (vector, keyword float64) {
-	if c == nil || (c.RRFVectorWeight == 0 && c.RRFKeywordWeight == 0) {
-		return 0.7, 0.3
+// GetEffectiveRRFWeights returns vector / keyword / graph weights.
+//
+// 默认 0.7 / 0.3 / 0.2：图谱是一个**补充**通道，不该单独压过向量召回（它的
+// 召回面只覆盖抽取过实体的文档），但也不该被设成 0 —— 0 等于关掉这一路，
+// 那就回到了"图谱只是个后置阶段"的旧行为。三者不要求和为 1：RRF 本身按
+// 排名贡献，权重的绝对尺度只影响归一化常数。
+func (c *RetrievalConfig) GetEffectiveRRFWeights() (vector, keyword, graph float64) {
+	if c == nil {
+		return 0.7, 0.3, 0.2
 	}
-	v := c.RRFVectorWeight
-	k := c.RRFKeywordWeight
-	if v <= 0 {
-		v = 0.7
+	if c.RRFVectorWeight == 0 && c.RRFKeywordWeight == 0 && c.RRFGraphWeight == 0 {
+		return 0.7, 0.3, 0.2
 	}
-	if k <= 0 {
-		k = 0.3
+	vector = c.RRFVectorWeight
+	if vector <= 0 {
+		vector = 0.7
 	}
-	return v, k
+	keyword = c.RRFKeywordWeight
+	if keyword <= 0 {
+		keyword = 0.3
+	}
+	// 图谱权重允许显式为 0：那是"关掉图谱通道"的合法配置，与"没配置"不同。
+	graph = c.RRFGraphWeight
+	if graph < 0 {
+		graph = 0
+	} else if graph == 0 && c.RRFGraphWeight == 0 && c.RRFVectorWeight == 0 && c.RRFKeywordWeight == 0 {
+		graph = 0.2
+	}
+	return vector, keyword, graph
 }
 
 // Value implements the driver.Valuer interface for database serialization
