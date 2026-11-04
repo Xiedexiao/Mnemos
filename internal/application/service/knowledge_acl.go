@@ -31,7 +31,12 @@ type knowledgeACLService struct {
 	versions interfaces.PermissionVersionService
 	// subjects expands a caller into group/role subjects for the deny query.
 	subjects aclSubjectResolver
-	now      func() time.Time
+	// departments answers "is this grant target inside the caller's managed
+	// subtree" (§2.1). Optional: nil skips that check (installs without an
+	// organization tree).
+	departments interfaces.OrgDepartmentService
+	groups      interfaces.ACLSubjectGroupService
+	now         func() time.Time
 }
 
 // NewKnowledgeACLService constructs the ACL service.
@@ -42,10 +47,12 @@ func NewKnowledgeACLService(
 	kbShares interfaces.KBShareRepository,
 	versions interfaces.PermissionVersionService,
 	subjectGroups interfaces.ACLSubjectGroupService,
+	departments interfaces.OrgDepartmentService,
 ) interfaces.KnowledgeACLService {
 	return &knowledgeACLService{
 		repo: repo, kgRepo: kgRepo, audit: audit, kbShares: kbShares,
 		versions: versions, subjects: newACLSubjectResolver(subjectGroups),
+		departments: departments, groups: subjectGroups,
 		now: time.Now,
 	}
 }
@@ -72,14 +79,18 @@ func (s *knowledgeACLService) Grant(ctx context.Context, grant *types.KnowledgeA
 	// 授权上限（§2.1/§2.3）：不能自授、不能授予自己没有的动作、按角色授权
 	// 仅限 Admin+。放在服务层而不是只放 handler：任何新的调用方（批量导入、
 	// Agent 工具）都必须过同一道门。
-	if ceilErr := types.CheckGrantCeiling(types.GrantCeilingInput{
-		GrantorRole:   types.CallerFromContext(ctx).Role,
+	caller := types.CallerFromContext(ctx)
+	ceiling := types.GrantCeilingInput{
+		GrantorRole:   caller.Role,
 		Action:        action,
 		Effect:        types.KnowledgeACLEffect(grant.Effect),
 		SubjectType:   subjectType,
 		SubjectID:     grant.SubjectID,
-		GrantorUserID: types.CallerFromContext(ctx).UserID,
-	}); ceilErr != nil {
+		GrantorUserID: caller.UserID,
+	}
+	// 部门范围（§2.1）：只有当授权对象是一个部门组时才有"位置"可比较。
+	ceiling.SubjectDepartmentPath, ceiling.GrantorScope = s.departmentScope(ctx, caller, subjectType, grant.SubjectID)
+	if ceilErr := types.CheckGrantCeiling(ceiling); ceilErr != nil {
 		return nil, apperrors.NewForbiddenError(ceilErr.Error())
 	}
 	if err := s.repo.UpsertGrant(ctx, grant); err != nil {
@@ -308,4 +319,68 @@ func differenceSubjectIDs(a, b map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// departmentScope resolves the subject's department path and the caller's
+// managed scope for the grant ceiling (§2.1).
+//
+// 只有组主体可能是部门：用户的部门归属不能作为比较位置（一个人可以兼任多
+// 个部门，授权对象是他本人而不是某个位置）。返回 nil 作用域表示"未评估"，
+// 保持既有行为而不是阻断所有授权——没有组织树的部署不该因此无法授权。
+func (s *knowledgeACLService) departmentScope(
+	ctx context.Context, caller types.Caller,
+	subjectType types.KnowledgeACLSubjectType, subjectID string,
+) (string, *types.DepartmentScope) {
+	if s.departments == nil || subjectType != types.KnowledgeACLSubjectGroup {
+		return "", nil
+	}
+	// Admin+ 是全租户范围，不必查部门表。
+	if caller.Role.HasPermission(types.TenantRoleAdmin) {
+		scope := types.DepartmentScope{UserID: caller.UserID, TenantWide: true}
+		return "", &scope
+	}
+	subjectPath := ""
+	if s.groups != nil {
+		if groups, err := s.groups.ListGroups(ctx, caller.TenantID); err == nil {
+			for _, group := range groups {
+				if group == nil || group.ID != subjectID {
+					continue
+				}
+				// 组名可能对应一个部门；按名字找部门节点。
+				if tree, treeErr := s.departments.ListTree(ctx, caller.TenantID); treeErr == nil {
+					subjectPath = findDepartmentPathByName(tree, group.Name)
+				}
+				break
+			}
+		}
+	}
+	if subjectPath == "" {
+		// 手工创建的组不挂在部门上：没有位置可比，交给其它规则判定。
+		return "", nil
+	}
+	scope, err := s.departments.ScopeOf(ctx, caller.TenantID, caller.UserID)
+	if err != nil {
+		// 范围查询失败时按"无权限"处理：这是权限判定，不能因为读失败就放行。
+		logger.Warnf(ctx, "[acl] department scope lookup failed: %v", err)
+		empty := types.DepartmentScope{UserID: caller.UserID}
+		return subjectPath, &empty
+	}
+	return subjectPath, &scope
+}
+
+// findDepartmentPathByName returns the path of the first department whose name
+// matches, depth-first.
+func findDepartmentPathByName(nodes []*types.OrgDepartmentNode, name string) string {
+	for _, node := range nodes {
+		if node == nil {
+			continue
+		}
+		if node.Name == name {
+			return node.Path
+		}
+		if found := findDepartmentPathByName(node.Children, name); found != "" {
+			return found
+		}
+	}
+	return ""
 }

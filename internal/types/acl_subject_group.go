@@ -135,6 +135,16 @@ type GrantCeilingInput struct {
 	SubjectID   string
 	// GrantorUserID is checked against user subjects (不能自授).
 	GrantorUserID string
+	// SubjectDepartmentPath is the department path of a group subject, when the
+	// group is a department ('' for a hand-made group).
+	//
+	// 部门组是唯一能回答"这个授权对象在谁的管辖范围内"的主体：给单个用户
+	// 授权时没有可比较的位置，所以范围判定只对部门组生效。
+	SubjectDepartmentPath string
+	// GrantorScope is the caller's department scope. A nil pointer means
+	// "not evaluated" (callers without a department tree), which preserves the
+	// previous behaviour rather than blocking every grant.
+	GrantorScope *DepartmentScope
 }
 
 // GrantCeilingViolation names the reason a grant is refused.
@@ -152,6 +162,8 @@ const (
 	GrantViolationRoleCeiling GrantCeilingViolation = "role_ceiling"
 	// GrantViolationSubjectType 未知主体类型。
 	GrantViolationSubjectType GrantCeilingViolation = "unknown_subject_type"
+	// GrantViolationOutOfScope 授权对象不在授权人的管辖部门范围内（§2.1）。
+	GrantViolationOutOfScope GrantCeilingViolation = "subject_out_of_scope"
 )
 
 // Error renders the violation for an API response.
@@ -167,6 +179,8 @@ func (v GrantCeilingViolation) Error() string {
 		return "only an admin may grant by role"
 	case GrantViolationSubjectType:
 		return "unknown subject type"
+	case GrantViolationOutOfScope:
+		return "the grant target is outside your managed departments"
 	default:
 		return string(v)
 	}
@@ -195,6 +209,14 @@ func CheckGrantCeiling(input GrantCeilingInput) error {
 	if input.SubjectType == KnowledgeACLSubjectRole &&
 		!input.GrantorRole.HasPermission(TenantRoleAdmin) {
 		return GrantViolationRoleCeiling
+	}
+	// 部门范围（§2.1）：给一个部门授权时，那个部门必须在授权人的管辖子树里。
+	// allow 与 deny 都受约束——把 deny 写到别人的部门上同样是一次越界的
+	// 权限改动，只是方向不同。
+	if input.GrantorScope != nil && input.SubjectDepartmentPath != "" {
+		if !input.GrantorScope.Covers(input.SubjectDepartmentPath) {
+			return GrantViolationOutOfScope
+		}
 	}
 	if input.Effect == KnowledgeACLEffectDeny {
 		return nil

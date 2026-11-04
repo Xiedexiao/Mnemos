@@ -142,3 +142,48 @@ func TestACLSubjectString(t *testing.T) {
 	assert.True(t, ACLSubject{Type: KnowledgeACLSubjectRole, ID: "admin"}.Valid())
 	assert.False(t, ACLSubject{Type: KnowledgeACLSubjectRole, ID: " "}.Valid())
 }
+
+// TestCheckGrantCeilingDepartmentScope is the §2.1 organization-range rule: a
+// manager may only write grants for groups inside their own subtree.
+func TestCheckGrantCeilingDepartmentScope(t *testing.T) {
+	managerScope := &DepartmentScope{
+		UserID: "manager-1", ManagedPaths: []string{"/org/gongyi"},
+	}
+	base := GrantCeilingInput{
+		GrantorRole: TenantRoleContributor, Action: PermissionActionView,
+		Effect: KnowledgeACLEffectAllow, SubjectType: KnowledgeACLSubjectGroup,
+		SubjectID: "g-1", GrantorUserID: "manager-1", GrantorScope: managerScope,
+	}
+
+	// Inside the subtree: allowed.
+	inScope := base
+	inScope.SubjectDepartmentPath = "/org/gongyi/sop"
+	require.NoError(t, CheckGrantCeiling(inScope))
+
+	// Outside it: refused, for allow and deny alike.
+	outOfScope := base
+	outOfScope.SubjectDepartmentPath = "/org/caigou"
+	require.ErrorIs(t, CheckGrantCeiling(outOfScope), GrantViolationOutOfScope)
+	outOfScope.Effect = KnowledgeACLEffectDeny
+	require.ErrorIs(t, CheckGrantCeiling(outOfScope), GrantViolationOutOfScope)
+
+	// A tenant-wide admin passes.
+	adminScope := &DepartmentScope{UserID: "admin-1", TenantWide: true}
+	admin := base
+	admin.GrantorRole = TenantRoleAdmin
+	admin.GrantorUserID = "admin-1"
+	admin.GrantorScope = adminScope
+	admin.SubjectDepartmentPath = "/org/caigou"
+	require.NoError(t, CheckGrantCeiling(admin))
+
+	// A hand-made group has no department position, so the rule does not fire.
+	handmade := base
+	handmade.GrantorScope = managerScope
+	require.NoError(t, CheckGrantCeiling(handmade))
+
+	// Without a scope (no organization tree) the rule is skipped entirely.
+	noTree := base
+	noTree.SubjectDepartmentPath = "/org/caigou"
+	noTree.GrantorScope = nil
+	require.NoError(t, CheckGrantCeiling(noTree))
+}
