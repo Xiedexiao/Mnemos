@@ -479,6 +479,10 @@ func (s *Server) runQA(
 	if err := s.messageService.UpdateMessage(context.WithoutCancel(ctx), assistantMsg); err != nil {
 		logger.Warnf(ctx, "[mcpserver] failed to persist assistant message: %v", err)
 	}
+	// §13.4 证据包：回答落盘之后冻结一次取证快照。用 WithoutCancel 是因为
+	// 客户端可能已经断开，而"它问过什么、拿到了什么依据"仍然必须留下。
+	s.recordAskEvidence(context.WithoutCancel(ctx), requestID, session.ID,
+		assistantMsg.ID, question, text, collected)
 	return text, summarizeReferences(collected), nil
 }
 

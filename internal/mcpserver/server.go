@@ -65,6 +65,9 @@ type Server struct {
 	// rather than run under an unverified principal.
 	userService   interfaces.UserService
 	memberService interfaces.TenantMemberService
+	// evidenceService freezes one pack per `ask` answer (§13.4). Nil disables
+	// that write only; the answer is still returned.
+	evidenceService interfaces.EvidencePackService
 
 	limiter   *ratelimit.Limiter
 	lastTouch sync.Map // endpoint id -> time.Time of the last last_used_at write
@@ -143,6 +146,15 @@ func (s *Server) WithAudit(audit interfaces.AuditLogService) *Server {
 // WithDelegationServices supplies the lookups used to verify a delegated
 // identity (§16.2). Without them a call that declares a delegation is refused:
 // an unverified principal must not silently fall back to the endpoint identity.
+// WithEvidenceService supplies the evidence-pack writer used by `ask`.
+//
+// 用 setter 与 WithAudit 同一理由：NewServer 的构造签名保持稳定，而证据包
+// 写入是可选的——没接上时问答照常返回，只是不留取证快照。
+func (s *Server) WithEvidenceService(evidence interfaces.EvidencePackService) *Server {
+	s.evidenceService = evidence
+	return s
+}
+
 func (s *Server) WithDelegationServices(
 	users interfaces.UserService, members interfaces.TenantMemberService,
 ) *Server {

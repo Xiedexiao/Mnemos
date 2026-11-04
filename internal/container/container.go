@@ -432,8 +432,11 @@ func BuildContainer(container *dig.Container) *dig.Container {
 		audit interfaces.AuditLogService,
 		users interfaces.UserService,
 		members interfaces.TenantMemberService,
+		evidence interfaces.EvidencePackService,
 	) *mcpserver.Server {
-		return server.WithAudit(audit).WithDelegationServices(users, members)
+		return server.WithAudit(audit).
+			WithDelegationServices(users, members).
+			WithEvidenceService(evidence)
 	}))
 
 	// Web search service (needed by AgentService)
