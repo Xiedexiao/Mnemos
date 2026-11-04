@@ -1639,12 +1639,32 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
+    - parse_quality.computed
     - feedback.recorded
     - quality_task.created
     - quality_task.updated
+    - aipre.completed
+    - aipre.failed
+    - ontology.schema_created
+    - ontology.schema_updated
+    - ontology.schema_published
+    - ontology.schema_deleted
+    - ontology.type_created
+    - ontology.type_updated
+    - ontology.type_deleted
+    - ontology.property_created
+    - ontology.property_updated
+    - ontology.property_deleted
+    - ontology.relation_created
+    - ontology.relation_updated
+    - ontology.relation_deleted
     - share.created
     - share.revoked
     - share.visited
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1707,6 +1727,15 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1720,43 +1749,34 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
-    - ontology.schema_created
-    - ontology.schema_updated
-    - ontology.schema_published
-    - ontology.schema_deleted
-    - ontology.type_created
-    - ontology.type_updated
-    - ontology.type_deleted
-    - ontology.property_created
-    - ontology.property_updated
-    - ontology.property_deleted
-    - ontology.relation_created
-    - ontology.relation_updated
-    - ontology.relation_deleted
-    - aipre.completed
-    - aipre.failed
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - parse_quality.computed
     type: string
     x-enum-varnames:
+    - ParseQualityAuditActionComputed
     - AuditActionFeedbackRecorded
     - AuditActionQualityTaskCreated
     - AuditActionQualityTaskUpdated
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - OntologyActionSchemaCreated
+    - OntologyActionSchemaUpdated
+    - OntologyActionSchemaPublished
+    - OntologyActionSchemaDeleted
+    - OntologyActionTypeCreated
+    - OntologyActionTypeUpdated
+    - OntologyActionTypeDeleted
+    - OntologyActionPropertyCreated
+    - OntologyActionPropertyUpdated
+    - OntologyActionPropertyDeleted
+    - OntologyActionRelationCreated
+    - OntologyActionRelationUpdated
+    - OntologyActionRelationDeleted
     - AuditActionShareLinkCreated
     - AuditActionShareLinkRevoked
     - AuditActionShareLinkVisited
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1819,6 +1839,15 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1832,35 +1861,6 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
-    - OntologyActionSchemaCreated
-    - OntologyActionSchemaUpdated
-    - OntologyActionSchemaPublished
-    - OntologyActionSchemaDeleted
-    - OntologyActionTypeCreated
-    - OntologyActionTypeUpdated
-    - OntologyActionTypeDeleted
-    - OntologyActionPropertyCreated
-    - OntologyActionPropertyUpdated
-    - OntologyActionPropertyDeleted
-    - OntologyActionRelationCreated
-    - OntologyActionRelationUpdated
-    - OntologyActionRelationDeleted
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - ParseQualityAuditActionComputed
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -34432,6 +34432,29 @@ paths:
       summary: 处理质量任务
       tags:
       - 反馈与质量任务
+  /quality/metrics:
+    get:
+      description: 及时性（源变更→更新时延、复审按时率、纠错关闭时长）、准确性（错误发布率、抽检不合格率、回答引用覆盖率）、价值（复用率、解决率、重复问题下降、缺口关闭率）三组指标（KnowAxis
+        V3.0 §14.7）。每个比率都带分子/分母；分母为 0 时返回 null 而不是 0——"没有样本"与"全部失败"是两回事。
+      parameters:
+      - description: 窗口天数（默认 30，上限 365）
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: QualityMetrics}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 质量运营指标
+      tags:
+      - 质量运营
   /reading/continue:
     get:
       description: 最近的阅读位置（KnowAxis V3.0 §15.2）。无权访问的文档保留占位但不显示标题。
