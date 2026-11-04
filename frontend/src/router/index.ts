@@ -167,6 +167,14 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true }
         },
         {
+          // 审批流设计器（§6.3）：按空间配置审批链、SLA、条件路由并试算。
+          // 后端 /approval-flows 为 Admin+，非管理员进入后由接口 403 → 空态。
+          path: "review/approval-flow",
+          name: "approvalFlowDesigner",
+          component: () => import("../views/review/ApprovalFlowDesigner.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
           // 个人中心（§15.3）：我提交的审批、收藏、知识与认证。只读当前登录者。
           path: "me",
           name: "personalCenter",
