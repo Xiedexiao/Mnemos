@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
@@ -95,6 +96,56 @@ func assessRefusal(results []*types.SearchResult) RefusalDecision {
 	}
 }
 
+// assessHighRiskCoverage applies the §13.5 "high-risk decision without an
+// official source" rule on top of the freshness matrix.
+//
+// 判定需要两件事：问题的决策风险（查询侧关键词分级）与每条引用的知识层级
+// （L2/L3 才算官方来源）。层级来自 CustomMetadata 的 knowaxis_level，因此
+// 这里从结果的自定义元数据里读——命中行已经带了它，不必再查一次库。
+//
+// 只有高风险才要求覆盖率 100%。不足时**不拒答**（场景表里 AllowsAnswer
+// 为 true），而是加一条必须先声明的提示：读者拿到的是参考资料，不能直接
+// 当决策依据。这与"无依据拒答"是两件事——后者是完全没有材料。
+func assessHighRiskCoverage(
+	chatManage *types.ChatManage, results []*types.SearchResult,
+) types.CitationCoverage {
+	question := ""
+	if chatManage != nil {
+		question = chatManage.Query
+	}
+	levelOf := func(result *types.SearchResult) string {
+		if result == nil {
+			return ""
+		}
+		return knowledgeLevelFromCustomMetadata(result.KnowledgeCustomMetadata)
+	}
+	return types.AssessCitationCoverage(question, results, levelOf)
+}
+
+// knowledgeLevelFromCustomMetadata extracts the §10.4 level from the
+// human-readable metadata text carried on a hit.
+//
+// KnowledgeCustomMetadataText 是 "key: value" 逐行的可读形式（它同时进提示
+// 词），所以这里按行解析而不是当 JSON。解析不出来就是"未标注"，与"标注为
+// 低层级"是两件事，都会落回"非官方来源"。
+func knowledgeLevelFromCustomMetadata(text string) string {
+	for _, line := range strings.Split(text, "\n") {
+		key, value, found := strings.Cut(line, ":")
+		if !found {
+			continue
+		}
+		if strings.TrimSpace(key) != types.KnowledgeCandidateMetaLevelKey {
+			continue
+		}
+		level := strings.TrimSpace(value)
+		if types.KnowledgeCandidateLevel(level).Valid() {
+			return level
+		}
+		return ""
+	}
+	return ""
+}
+
 // refusalNoticeFor returns the user-facing text for a marker, if any.
 func refusalNoticeFor(marker types.EvidencePackRefusal) string {
 	if marker == types.EvidenceRefusalNone {
@@ -123,6 +174,19 @@ func (s *sessionService) applyRefusalAssessment(
 	}
 	decision := assessRefusal(chatManage.MergeResult)
 	if decision.Silent() {
+		// 资料本身可用，再看 §13.5 的高风险覆盖率要求：高风险问题里只要
+		// 有一条引用不是官方来源，读者就无法区分"必须遵守"与"仅供参考"。
+		coverage := assessHighRiskCoverage(chatManage, chatManage.MergeResult)
+		if coverage.RequiresCaveat {
+			scenario := types.RefusalScenarios[types.EvidenceRefusalNoOfficialSource]
+			chatManage.RefusalMarker = scenario.Marker
+			chatManage.RefusalNotice = scenario.Message
+			logger.Warnf(ctx,
+				"high-risk answer carries %d/%d official sources for session %s (%s)",
+				coverage.OfficialCount, coverage.CandidateCount,
+				chatManage.SessionID, coverage.Reason)
+			return false
+		}
 		chatManage.RefusalMarker = types.EvidenceRefusalNone
 		chatManage.RefusalNotice = ""
 		return false
