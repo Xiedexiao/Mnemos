@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
@@ -25,14 +26,29 @@ import (
 type ontologyService struct {
 	repo  interfaces.OntologyRepository
 	audit interfaces.AuditLogService
+	// goldenSets backs the §8.2 L4 requirement: a change to a critical
+	// ontology must pass a golden-set regression before it is published.
+	// Optional: nil means the deployment has no quality gate, which is the
+	// correct reading for installs that never created a golden set.
+	goldenSets interfaces.GoldenSetService
+	// governance records approval receipts for the L2+ dual-approval rule.
+	// Optional: nil skips that gate (an install without an approval engine
+	// cannot require two approvers).
+	governance interfaces.GovernanceApprovalService
+	now        func() time.Time
 }
 
 // NewOntologyService constructs the ontology service.
 func NewOntologyService(
 	repo interfaces.OntologyRepository,
 	audit interfaces.AuditLogService,
+	goldenSets interfaces.GoldenSetService,
+	governance interfaces.GovernanceApprovalService,
 ) interfaces.OntologyService {
-	return &ontologyService{repo: repo, audit: audit}
+	return &ontologyService{
+		repo: repo, audit: audit, goldenSets: goldenSets,
+		governance: governance, now: time.Now,
+	}
 }
 
 // CreateSchema creates a draft schema (version 1) with a tenant-unique name.
@@ -137,6 +153,11 @@ func (s *ontologyService) PublishSchema(
 	}
 	if schema.Status != types.OntologySchemaStatusDraft {
 		return nil, apperrors.NewBadRequestError("only draft schemas can be published")
+	}
+	// §8.2 治理门禁 0：级别要求更强的审核。L4 需要黄金集回归通过；这套检查
+	// 放在结构校验之前，因为"根本没有资格发布"比"结构写错了"更早成立。
+	if err := s.requireGovernanceGate(ctx, tenantID, schema); err != nil {
+		return nil, err
 	}
 	// 发布门禁 1：至少 1 个类型（空 schema 发布出去毫无约束力）。
 	typeList, err := s.repo.ListTypesBySchema(ctx, schemaID)
@@ -594,4 +615,101 @@ func normalizeOntologyJSON(v types.JSON, fallback string) types.JSON {
 		return types.JSON(fallback)
 	}
 	return v
+}
+
+// requireGovernanceGate enforces the §8.2 level-dependent publish rules.
+//
+// 三条规则按级别递进：
+//   - L4：本空间黄金集最近一次评测必须通过。本体是抽取规则的来源，改它
+//     等于改全空间的抽取结果，没有回归门禁就把结构放出去等于赌运气。
+//   - L2+：结构变更需要治理审批。这里检查是否已经存在针对本 schema 的
+//     待决/已通过审批；没有审批引擎的部署（governance == nil）跳过该条，
+//     而不是让整个本体功能不可用。
+//   - L3 的"迁移预演"是操作步骤而非服务端判定：它由发布前的 dry-run
+//     接口承担（类型变更影响面），这里不重复拦截。
+//
+// 门禁查询失败一律**放行并记日志**：这是治理增强，不是安全门禁，用一次
+// 数据库抖动锁死全部本体发布不划算。
+func (s *ontologyService) requireGovernanceGate(
+	ctx context.Context, tenantID uint64, schema *types.OntologySchema,
+) error {
+	level := types.ParseOntologyGovernanceLevel(schema.GovernanceLevel)
+	if level.RequiresGoldenRegression() && s.goldenSets != nil {
+		pass, run, err := s.checkGoldenRegression(ctx, tenantID, schema)
+		if err != nil {
+			logger.Warnf(ctx, "[ontology] golden gate check failed for schema %s: %v", schema.ID, err)
+		} else if !pass {
+			runID := ""
+			if run != nil {
+				runID = run.ID
+			}
+			s.logAudit(ctx, tenantID, "", types.OntologyActionSchemaUpdated,
+				"ontology_schema", schema.ID, map[string]interface{}{
+					"blocked_by": "golden_gate",
+					"run_id":     runID,
+					"level":      string(level),
+				})
+			return apperrors.NewForbiddenError(
+				"该本体为 L4（关键级），发布前必须通过黄金集回归评测")
+		}
+	}
+	if level.RequiresDualApproval() && s.governance != nil {
+		approved, err := s.hasOntologyApproval(ctx, tenantID, schema)
+		if err != nil {
+			logger.Warnf(ctx, "[ontology] approval lookup failed for schema %s: %v", schema.ID, err)
+		} else if !approved {
+			return apperrors.NewForbiddenError(
+				"该本体为 " + string(level) + " 级，发布前需要经过治理审批")
+		}
+	}
+	return nil
+}
+
+// checkGoldenRegression asks the golden gate of the schema's domain.
+//
+// 本体没有"自己的空间"，所以沿 domain 找一个覆盖该领域的黄金集：评测的是
+// 抽取结果，而抽取结果按空间存放。找不到任何集合时返回"未通过"——L4 级
+// 结构声称自己是关键路径，没有可验证的基准就不该发布。
+func (s *ontologyService) checkGoldenRegression(
+	ctx context.Context, tenantID uint64, schema *types.OntologySchema,
+) (bool, *types.GoldenSetRun, error) {
+	sets, err := s.goldenSets.ListSets(ctx, tenantID, schema.Domain)
+	if err != nil {
+		return false, nil, err
+	}
+	if len(sets) == 0 {
+		return false, nil, nil
+	}
+	for _, set := range sets {
+		if set == nil {
+			continue
+		}
+		pass, run, gateErr := s.goldenSets.CheckGate(ctx, tenantID, set.ID)
+		if gateErr != nil {
+			return false, nil, gateErr
+		}
+		if !pass {
+			return false, run, nil
+		}
+	}
+	return true, nil, nil
+}
+
+// hasOntologyApproval reports whether the schema has an approved governance
+// task for this version.
+//
+// 审批主体用 ontology_schema；多级链的会签/或签由审批引擎自己判定，这里只问
+// "最新一条是否已通过并带回了回执"。
+func (s *ontologyService) hasOntologyApproval(
+	ctx context.Context, tenantID uint64, schema *types.OntologySchema,
+) (bool, error) {
+	decision, err := s.governance.RequireApproval(
+		ctx, tenantID, types.ApprovalSubjectOntology, schema.ID)
+	if err != nil {
+		if errors.Is(err, ErrGovernanceNotApproved) {
+			return false, nil
+		}
+		return false, err
+	}
+	return decision != nil && decision.Approved, nil
 }
