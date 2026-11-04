@@ -38,10 +38,12 @@ func NewFreshnessHandler(
 // @Tags         知识生命周期
 // @Produce      json
 // @Param        id  path  string  true  "知识ID"  extensions(x-agent=knowledge_id)
-// @Success      200  {object}  map[string]interface{}  "{success, knowledge_id, data: {total, grade, top_signals}}"
+// @Success      200  {object}  handler.DataResponse{data=types.FreshnessScore}  "{success, knowledge_id, data: {total, grade, top_signals}}"
 // @Failure      404  {object}  apperrors.AppError  "知识不存在"
 // @Security     Bearer
 // @Security     ApiKeyAuth
+// @x-agent      {"id":"knowledge.freshness","risk":"read"}
+// @x-agent-hint "Scores how current one document is: a 0-100 total, a grade (good/aging/stale/critical) and the top reasons it lost points. Use it before citing an old document or when asked whether content is still valid."
 // @Router       /knowledge/{id}/freshness [get]
 func (h *FreshnessHandler) GetKnowledgeFreshness(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -59,6 +59,9 @@ func registerOperationAreas(v1 *gin.RouterGroup, g *rbacGuards) {
 	// a governance action are lookups; approving and voting are not.
 	RegisterSchemaProposalRoutes(v1, &handler.SchemaProposalHandler{}, g)
 	RegisterGovernanceApprovalRoutes(v1, &handler.GovernanceApprovalHandler{}, g)
+	// Freshness (§7.9) is a per-document read: an agent can tell whether a
+	// document it is about to cite is still current.
+	RegisterFreshnessRoutes(v1, &handler.FreshnessHandler{}, g)
 }
 
 // TestBuiltinOperationsMatchRegisteredRoutes requires every operation to

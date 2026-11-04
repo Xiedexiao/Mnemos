@@ -334,7 +334,7 @@
 | 推荐协同过滤 | **未实现，数据依赖阻塞** | 全仓无协同过滤实现（`collaborative` 命中两处与评论无关的字符串）。协同过滤需要用户-物品交互矩阵，冷启动期没有可用信号 |
 | 性能/容灾演练 | **未实现，环境依赖阻塞** | 无压测脚本与基线、无演练记录。需要真实环境与容量基线 |
 | 业务连接器 ×7 | **按约定保持占位** | 用户已明确允许；`business_api` 只读一个列表端点，任何同步失败都会说明缺什么 |
-| Agent 目录 50 端点 DTO 化 | **进行中：5 个端点已交付，其余待续** | 变更单（26）、证据包与经验候选（27）、本体提案与审批待办（28）已按同一形状完成：类型标签 + 目录注解 + 只读区域白名单 + 契约测试。其余约 45 个端点同样推进——每个都需判断哪些字段可给模型、是否可进只读区域、角色是否与守卫一致；自由格式 JSON 字段需先摊平 |
+| Agent 目录 50 端点 DTO 化 | **进行中：6 个端点已交付，其余待续** | 变更单（26）、证据包与经验候选（27）、本体提案与审批待办（28）、新鲜度（29）已按同一形状完成：类型标签 + 目录注解 + 只读区域白名单 + 契约测试。其余约 44 个端点同样推进——每个都需判断哪些字段可给模型、是否可进只读区域、角色是否与守卫一致；自由格式 JSON 字段需先摊平 |
 | §16.5 chat 生成侧降级 | **未实现，可在本会话交付** | embedding 侧已接入调用点；`chat_pipeline/prepareChatModel` 仍只取单一模型，主力不可用即整条回答失败 |
 | 灰度发布 / 回滚 | **未实现，外部依赖阻塞** | 无 canary 流量切分（`canary` 仅在 SSRF 测试里出现）。灰度需要多版本并存与流量网关，属部署形态问题 |
 
@@ -376,6 +376,14 @@
 | 审批待办读面进不了目录 | §6.2 | `ApprovalTask` 补标签（id/title/subject_type/subject_id/knowledge_id/kb_id/risk_level/status/mode/sla_due/时间戳），`GET /governance-approvals` → `approval_task.list`（read，**role=admin**）。`requested_by`、`baseline`、`content_hash`、`decided_history`、`receipt_id` 保持内部 | 本批 |
 | 审批列表的角色声明必须匹配路由守卫 | §16.2 | 路由契约测试抓到：该路由守卫要求 admin，而目录按 risk=read 默认声明 viewer。已在注解里显式写 `"role":"admin"`——目录声明的角色必须等于守卫实际放行的最低角色，否则模型会按 viewer 去调用并 403 | 本批 |
 | 投票与批准不能给模型 | §6.2 四眼原则 | 测试断言 `approval_task.decide/submit` 与 `ontology_proposal.create/approve/reject/apply` 全部不可达。允许模型对自己的动作请求投票会让四眼原则失效 | 本批 |
+
+### 第二十九批：2026-11 收口（目录 DTO：新鲜度）
+
+| 事项 | 文档 | 落点 | 提交 |
+|---|---|---|---|
+| 新鲜度读面进不了目录 | §7.9 | `FreshnessScore` 补标签（total/grade/top_signals），`GET /knowledge/{id}/freshness` → `knowledge.freshness`（read）。agent 在引用一份文档前可以判断它是否仍然有效 | 本批 |
+| 参数相关的权限无法被目录表达 | §16.2 | `GET /knowledge-health` **刻意不纳入目录**：其角色门槛取决于 query（`scope=tenant` 需 admin，其余只需 viewer）。目录只能声明一个角色，而模型不传参数时会落到默认口径——声明 viewer 会稳定 403，声明 admin 又把本可给 viewer 的读面伪装成管理接口。参数相关的权限无法被正确表达时，不纳入比给一个必然错一半的声明更安全 | 本批 |
+| 治理队列不进读面 | §7.7 | 测试断言 `review_queue.list`、`knowledge.health_compute` 不可达——待复审清单与强制重算是 Admin 治理面 | 本批 |
 
 ---
 

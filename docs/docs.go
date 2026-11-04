@@ -17656,8 +17656,19 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, knowledge_id, data: {total, grade, top_signals}}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.FreshnessScore"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -17666,7 +17677,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "knowledge.freshness",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Scores how current one document is: a 0-100 total, a grade (good/aging/stale/critical) and the top reasons it lost points. Use it before citing an old document or when asked whether content is still valid."
             }
         },
         "/knowledge/{id}/parse-quality": {
@@ -40926,12 +40942,6 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "parse_quality.computed",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "aipre.completed",
-                "aipre.failed",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -40945,22 +40955,41 @@ const docTemplate = `{
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "parse_quality.computed",
                 "ontology.schema_proposal_created",
                 "ontology.schema_proposal_checked",
                 "ontology.schema_proposal_approved",
                 "ontology.schema_proposal_rejected",
                 "ontology.schema_proposal_applied",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
+                "aipre.completed",
+                "aipre.failed",
                 "candidate.created",
                 "candidate.confirmed",
                 "candidate.published",
                 "candidate.rejected",
-                "share.created",
-                "share.revoked",
-                "share.visited",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -41023,28 +41052,9 @@ const docTemplate = `{
                 "wiki.content_changed",
                 "faq.import_started",
                 "faq.import_completed",
-                "faq.import_failed",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted"
+                "faq.import_failed"
             ],
             "x-enum-varnames": [
-                "ParseQualityAuditActionComputed",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -41058,22 +41068,41 @@ const docTemplate = `{
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "ParseQualityAuditActionComputed",
                 "OntologyActionSchemaProposalCreated",
                 "OntologyActionSchemaProposalChecked",
                 "OntologyActionSchemaProposalApproved",
                 "OntologyActionSchemaProposalRejected",
                 "OntologyActionSchemaProposalApplied",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
                 "AuditActionCandidateCreated",
                 "AuditActionCandidateConfirmed",
                 "AuditActionCandidatePublished",
                 "AuditActionCandidateRejected",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -41136,20 +41165,7 @@ const docTemplate = `{
                 "AuditActionWikiContentChanged",
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
-                "AuditActionFAQImportFailed",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted"
+                "AuditActionFAQImportFailed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -44207,6 +44223,48 @@ const docTemplate = `{
                 },
                 "suppress_when_answer_asks_question": {
                     "type": "boolean"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.FreshnessGrade": {
+            "type": "string",
+            "enum": [
+                "good",
+                "aging",
+                "stale",
+                "critical"
+            ],
+            "x-enum-varnames": [
+                "FreshnessGradeGood",
+                "FreshnessGradeAging",
+                "FreshnessGradeStale",
+                "FreshnessGradeCritical"
+            ]
+        },
+        "github_com_Tencent_WeKnora_internal_types.FreshnessScore": {
+            "type": "object",
+            "properties": {
+                "grade": {
+                    "description": "Grade 档位：good / aging / stale / critical。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.FreshnessGrade"
+                        }
+                    ],
+                    "x-agent": true
+                },
+                "top_signals": {
+                    "description": "TopSignals 按\"丢分最多\"排序的条目级可行动信号（最多 3 个）。\n平台级缺口（源系统状态、反馈在 V1 恒为 0）不列入：它们不是\n条目属性、对所有条目相同，列出来只会淹没真正的行动信号。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-agent": true
+                },
+                "total": {
+                    "description": "Total 加权和（0-100；V1 可达上限 70，见 FreshnessV1MaxScore）。",
+                    "type": "integer",
+                    "x-agent": true
                 }
             }
         },

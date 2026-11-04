@@ -106,13 +106,13 @@ func worseGrade(a, b FreshnessGrade) FreshnessGrade {
 // FreshnessScore 是单条知识的新鲜度评分结果（§7.9）。
 type FreshnessScore struct {
 	// Total 加权和（0-100；V1 可达上限 70，见 FreshnessV1MaxScore）。
-	Total int `json:"total"`
+	Total int `json:"total" extensions:"x-agent"`
 	// Grade 档位：good / aging / stale / critical。
-	Grade FreshnessGrade `json:"grade"`
+	Grade FreshnessGrade `json:"grade" extensions:"x-agent"`
 	// TopSignals 按"丢分最多"排序的条目级可行动信号（最多 3 个）。
 	// 平台级缺口（源系统状态、反馈在 V1 恒为 0）不列入：它们不是
 	// 条目属性、对所有条目相同，列出来只会淹没真正的行动信号。
-	TopSignals []string `json:"top_signals"`
+	TopSignals []string `json:"top_signals" extensions:"x-agent"`
 }
 
 // 新鲜度信号 token（条目级、可行动）。出现在 TopSignals 里表示该信号
