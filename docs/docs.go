@@ -7326,6 +7326,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "x-agent": "request_id",
                         "description": "请求追踪ID",
                         "name": "request_id",
                         "in": "path",
@@ -7336,8 +7337,19 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: 证据包}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.EvidencePack"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "401": {
@@ -7352,7 +7364,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "evidence_pack.get",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Returns what backed one earlier answer: its citations with knowledge ids, the refusal marker, and the model/prompt versions. Use request_id from a previous answer or from evidence_pack.list."
             }
         },
         "/export-requests": {
@@ -15025,6 +15042,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "x-agent": "candidate_id",
                         "description": "候选ID",
                         "name": "id",
                         "in": "path",
@@ -15035,8 +15053,19 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: 候选卡片}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeCandidate"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "401": {
@@ -15051,7 +15080,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "knowledge_candidate.get",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Reads one experience candidate: its title, level, confidence, dedup status and the knowledge id once published. Use it to check whether an experience was already captured before proposing a new one."
             }
         },
         "/knowledge-candidates/{id}/confirm": {
@@ -40763,13 +40797,24 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "share.created",
-                "share.revoked",
-                "share.visited",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
+                "aipre.completed",
+                "aipre.failed",
                 "feedback.recorded",
                 "quality_task.created",
                 "quality_task.updated",
-                "parse_quality.computed",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -40833,34 +40878,6 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
-                "aipre.completed",
-                "aipre.failed",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -40873,16 +40890,44 @@ const docTemplate = `{
                 "ontology.property_deleted",
                 "ontology.relation_created",
                 "ontology.relation_updated",
-                "ontology.relation_deleted"
+                "ontology.relation_deleted",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "parse_quality.computed"
             ],
             "x-enum-varnames": [
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
                 "AuditActionFeedbackRecorded",
                 "AuditActionQualityTaskCreated",
                 "AuditActionQualityTaskUpdated",
-                "ParseQualityAuditActionComputed",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -40946,34 +40991,6 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -40986,7 +41003,24 @@ const docTemplate = `{
                 "OntologyActionPropertyDeleted",
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted"
+                "OntologyActionRelationDeleted",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "ParseQualityAuditActionComputed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -43182,6 +43216,117 @@ const docTemplate = `{
                 "total": {
                     "description": "Total items to evaluate",
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.EvidenceCitationRef": {
+            "type": "object",
+            "properties": {
+                "knowledge_id": {
+                    "description": "KnowledgeID is the cited document (\"\" for web citations).",
+                    "type": "string",
+                    "x-agent": "knowledge_id"
+                },
+                "title": {
+                    "description": "Title is the cited document's title.",
+                    "type": "string",
+                    "x-agent": true
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.EvidencePack": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "description": "Answer 答案全文。拒绝路径下可为空。",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-max-runes": "1200"
+                },
+                "candidate_count": {
+                    "description": "CandidateCount is how many retrieval candidates the pack froze.",
+                    "type": "integer",
+                    "x-agent": true
+                },
+                "candidates": {
+                    "description": "Candidates 检索候选快照（EvidenceCandidate 数组，脱敏后）。",
+                    "type": "object"
+                },
+                "citation_refs": {
+                    "description": "CitationRefs is the model-facing projection of Citations: a flat list of\nthe knowledge ids and titles an answer rested on.\n\n目录是扁平化投影，不能嵌套数组对象，而 citations 是 JSONB 列（Swagger 里\n是自由格式 object）。因此这里给 agent 一个已经摊平的读面：它需要的正是\n\"这个回答引用了哪几篇\"，不需要 chunk 序号与定位信息。由 handler 在返回前\n填充，不落库。",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.EvidenceCitationRef"
+                    },
+                    "x-agent": true
+                },
+                "citations": {
+                    "description": "Citations 引用清单（EvidenceCitation 数组）。",
+                    "type": "object"
+                },
+                "context_snapshot": {
+                    "description": "ContextSnapshot 上下文编译结果摘要（EvidenceContextSnapshot）。",
+                    "type": "object"
+                },
+                "created_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "hash_chain_prev": {
+                    "description": "HashChainPrev 链上前一行的 hash_chain_row（链首为 GENESIS）。",
+                    "type": "string"
+                },
+                "hash_chain_row": {
+                    "description": "HashChainRow 本行哈希 = ComputeEvidenceRowHash(prev, pack)。",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "message_id": {
+                    "type": "string"
+                },
+                "model_version": {
+                    "description": "ModelVersion 回答所用模型标识（model id / 版本串）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "permission_snapshot": {
+                    "description": "PermissionSnapshot 当时权限基线摘要（EvidencePermissionSnapshot）。",
+                    "type": "object"
+                },
+                "prompt_version": {
+                    "description": "PromptVersion 系统提示词模板版本标识。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "question": {
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-max-runes": "500"
+                },
+                "refusal": {
+                    "description": "Refusal 拒绝路径标记：'' | refused | conflict | no_evidence。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "request_id": {
+                    "description": "RequestID 请求追踪 ID（messages.request_id 同源），全表唯一。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "retention_until": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -45639,6 +45784,88 @@ const docTemplate = `{
                 },
                 "source_tenant_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.KnowledgeCandidate": {
+            "type": "object",
+            "properties": {
+                "card": {
+                    "description": "Card 候选卡片结构（what/scope/phenomenon/cause_candidate/measures/\nvalidation/evidence_links）。",
+                    "type": "object"
+                },
+                "confidence": {
+                    "description": "Confidence 证据置信标注（EXTRACTED|INFERRED|AMBIGUOUS）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "created_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "dedup_status": {
+                    "description": "DedupStatus 查重结论（pending|unique|duplicate|conflict）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "duplicate_of": {
+                    "description": "DuplicateOf 查重命中的既有候选 ID（duplicate/conflict 时指向）。",
+                    "type": "string"
+                },
+                "evidence": {
+                    "description": "Evidence 结构化证据引用 [{source_type,source_id,locator,quote}]。",
+                    "type": "object"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "knowledge_id": {
+                    "description": "KnowledgeID 发布后生成的正式知识 ID（published 时回填）。",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-response": true
+                },
+                "level": {
+                    "description": "Level 知识层级 L0-L3（§10.4）；确认时 L1→L2，L3 发布有门禁。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "requested_by": {
+                    "description": "RequestedBy 提交人（创建者/连接器身份）。",
+                    "type": "string"
+                },
+                "review_comment": {
+                    "description": "ReviewComment 审核意见（驳回原因等）。",
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "description": "ReviewedBy 审核人（确认/驳回时回填）。",
+                    "type": "string"
+                },
+                "source_id": {
+                    "description": "SourceID 来源系统内的业务单据号（连接器回填；手工为空）。",
+                    "type": "string"
+                },
+                "source_type": {
+                    "description": "SourceType 九类业务来源之一（manual|work_order|...）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "status": {
+                    "description": "Status 状态机：candidate → in_review → confirmed → published。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "updated_at": {
+                    "type": "string",
+                    "x-agent": true
                 }
             }
         },

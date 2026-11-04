@@ -169,11 +169,19 @@ type EvidenceCitation struct {
 	// Index 引用序号（答案内 [n] 标号），从 1 开始；未知时为 0。
 	Index int `json:"index"`
 	// KnowledgeID 被引用的知识 ID；web 引用为空。
-	KnowledgeID string `json:"knowledge_id"`
+	KnowledgeID string `json:"knowledge_id" extensions:"x-agent=knowledge_id"`
 	// ChunkID 被引用的 chunk ID；web 引用存 URL。
 	ChunkID string `json:"chunk_id"`
 	// Title 引用标题快照（知识标题 / 网页标题）。
-	Title string `json:"title"`
+	Title string `json:"title" extensions:"x-agent"`
+}
+
+// EvidenceCitationRef is one citation as the model reads it.
+type EvidenceCitationRef struct {
+	// KnowledgeID is the cited document ("" for web citations).
+	KnowledgeID string `json:"knowledge_id" extensions:"x-agent=knowledge_id"`
+	// Title is the cited document's title.
+	Title string `json:"title" extensions:"x-agent"`
 }
 
 // EvidencePermissionSnapshot 是回答时刻的权限基线摘要：按知识记录当时
@@ -194,33 +202,44 @@ type EvidencePack struct {
 	ID       string `json:"id" gorm:"type:varchar(36);primaryKey"`
 	TenantID uint64 `json:"tenant_id" gorm:"not null;index:idx_evidence_packs_tenant_time,priority:1"`
 	// RequestID 请求追踪 ID（messages.request_id 同源），全表唯一。
-	RequestID string `json:"request_id" gorm:"type:varchar(64);not null;uniqueIndex:uq_evidence_packs_request_id"`
-	SessionID string `json:"session_id" gorm:"type:varchar(36);not null;default:'';index:idx_evidence_packs_session"`
+	RequestID string `json:"request_id" gorm:"type:varchar(64);not null;uniqueIndex:uq_evidence_packs_request_id" extensions:"x-agent"`
+	SessionID string `json:"session_id" gorm:"type:varchar(36);not null;default:'';index:idx_evidence_packs_session" extensions:"x-agent"`
 	MessageID string `json:"message_id" gorm:"type:varchar(36);not null;default:''"`
 	UserID    string `json:"user_id" gorm:"type:varchar(36);not null;default:''"`
-	Question  string `json:"question" gorm:"type:text;not null;default:''"`
+	Question  string `json:"question" gorm:"type:text;not null;default:''" extensions:"x-agent,x-agent-max-runes=500"`
 	// Candidates 检索候选快照（EvidenceCandidate 数组，脱敏后）。
 	Candidates JSON `json:"candidates" gorm:"type:jsonb;not null;default:'[]'"`
 	// ContextSnapshot 上下文编译结果摘要（EvidenceContextSnapshot）。
 	ContextSnapshot JSON `json:"context_snapshot" gorm:"type:jsonb;not null;default:'{}'"`
 	// ModelVersion 回答所用模型标识（model id / 版本串）。
-	ModelVersion string `json:"model_version" gorm:"type:varchar(128);not null;default:''"`
+	ModelVersion string `json:"model_version" gorm:"type:varchar(128);not null;default:''" extensions:"x-agent"`
 	// PromptVersion 系统提示词模板版本标识。
-	PromptVersion string `json:"prompt_version" gorm:"type:varchar(64);not null;default:''"`
+	PromptVersion string `json:"prompt_version" gorm:"type:varchar(64);not null;default:''" extensions:"x-agent"`
 	// Answer 答案全文。拒绝路径下可为空。
-	Answer string `json:"answer" gorm:"type:text;not null;default:''"`
+	Answer string `json:"answer" gorm:"type:text;not null;default:''" extensions:"x-agent,x-agent-max-runes=1200"`
 	// Citations 引用清单（EvidenceCitation 数组）。
 	Citations JSON `json:"citations" gorm:"type:jsonb;not null;default:'[]'"`
 	// PermissionSnapshot 当时权限基线摘要（EvidencePermissionSnapshot）。
 	PermissionSnapshot JSON `json:"permission_snapshot" gorm:"type:jsonb;not null;default:'{}'"`
 	// Refusal 拒绝路径标记：'' | refused | conflict | no_evidence。
-	Refusal string `json:"refusal" gorm:"type:varchar(16);not null;default:''"`
+	Refusal string `json:"refusal" gorm:"type:varchar(16);not null;default:''" extensions:"x-agent"`
 	// HashChainPrev 链上前一行的 hash_chain_row（链首为 GENESIS）。
 	HashChainPrev string `json:"hash_chain_prev" gorm:"type:varchar(64);not null;default:''"`
 	// HashChainRow 本行哈希 = ComputeEvidenceRowHash(prev, pack)。
 	HashChainRow   string     `json:"hash_chain_row" gorm:"type:varchar(64);not null"`
 	RetentionUntil *time.Time `json:"retention_until"`
-	CreatedAt      time.Time  `json:"created_at" gorm:"index:idx_evidence_packs_tenant_time,priority:2"`
+
+	// CitationRefs is the model-facing projection of Citations: a flat list of
+	// the knowledge ids and titles an answer rested on.
+	//
+	// 目录是扁平化投影，不能嵌套数组对象，而 citations 是 JSONB 列（Swagger 里
+	// 是自由格式 object）。因此这里给 agent 一个已经摊平的读面：它需要的正是
+	// "这个回答引用了哪几篇"，不需要 chunk 序号与定位信息。由 handler 在返回前
+	// 填充，不落库。
+	CitationRefs []EvidenceCitationRef `json:"citation_refs,omitempty" gorm:"-" extensions:"x-agent"`
+	// CandidateCount is how many retrieval candidates the pack froze.
+	CandidateCount int       `json:"candidate_count" gorm:"-" extensions:"x-agent"`
+	CreatedAt      time.Time `json:"created_at" gorm:"index:idx_evidence_packs_tenant_time,priority:2" extensions:"x-agent"`
 }
 
 // TableName 固定 GORM 表名。

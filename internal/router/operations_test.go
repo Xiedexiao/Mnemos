@@ -49,6 +49,11 @@ func registerOperationAreas(v1 *gin.RouterGroup, g *rbacGuards) {
 	// Change requests are in the catalog read-only (§7.2): the agent may look
 	// at what a change will affect, never schedule or publish one.
 	RegisterChangeRequestRoutes(v1, g, &handler.ChangeRequestHandler{})
+	// Evidence packs (§13.4) and experience candidates (§10.4) are read-only in
+	// the catalog for the same reason: tracing an answer and checking whether an
+	// experience exists are lookups; publishing and reviewing are not.
+	RegisterEvidenceRoutes(v1, g, &handler.EvidencePackHandler{})
+	RegisterKnowledgeCandidateRoutes(v1, g, &handler.KnowledgeCandidateHandler{})
 }
 
 // TestBuiltinOperationsMatchRegisteredRoutes requires every operation to

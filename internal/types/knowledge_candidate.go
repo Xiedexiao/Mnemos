@@ -266,35 +266,35 @@ type KnowledgeCandidate struct {
 	ID       string `json:"id" gorm:"type:varchar(36);primaryKey"`
 	TenantID uint64 `json:"tenant_id" gorm:"not null;index:idx_knowledge_candidates_tenant_status,priority:1;index:idx_knowledge_candidates_tenant_level,priority:1"`
 	// SourceType 九类业务来源之一（manual|work_order|...）。
-	SourceType string `json:"source_type" gorm:"type:varchar(24);not null;default:'manual'"`
+	SourceType string `json:"source_type" gorm:"type:varchar(24);not null;default:'manual'" extensions:"x-agent"`
 	// SourceID 来源系统内的业务单据号（连接器回填；手工为空）。
 	SourceID string `json:"source_id" gorm:"type:varchar(64);not null;default:''"`
-	Title    string `json:"title" gorm:"type:varchar(255);not null"`
+	Title    string `json:"title" gorm:"type:varchar(255);not null" extensions:"x-agent"`
 	// Level 知识层级 L0-L3（§10.4）；确认时 L1→L2，L3 发布有门禁。
-	Level string `json:"level" gorm:"type:varchar(8);not null;default:'L1';index:idx_knowledge_candidates_tenant_level,priority:2"`
+	Level string `json:"level" gorm:"type:varchar(8);not null;default:'L1';index:idx_knowledge_candidates_tenant_level,priority:2" extensions:"x-agent"`
 	// Card 候选卡片结构（what/scope/phenomenon/cause_candidate/measures/
 	// validation/evidence_links）。
 	Card JSON `json:"card" gorm:"type:json;not null;default:'{}'"`
 	// Evidence 结构化证据引用 [{source_type,source_id,locator,quote}]。
 	Evidence JSON `json:"evidence" gorm:"type:json;default:'[]'"`
 	// Confidence 证据置信标注（EXTRACTED|INFERRED|AMBIGUOUS）。
-	Confidence string `json:"confidence" gorm:"type:varchar(16);not null;default:'AMBIGUOUS'"`
+	Confidence string `json:"confidence" gorm:"type:varchar(16);not null;default:'AMBIGUOUS'" extensions:"x-agent"`
 	// DedupStatus 查重结论（pending|unique|duplicate|conflict）。
-	DedupStatus string `json:"dedup_status" gorm:"type:varchar(16);not null;default:'pending'"`
+	DedupStatus string `json:"dedup_status" gorm:"type:varchar(16);not null;default:'pending'" extensions:"x-agent"`
 	// DuplicateOf 查重命中的既有候选 ID（duplicate/conflict 时指向）。
 	DuplicateOf string `json:"duplicate_of" gorm:"type:varchar(36);not null;default:''"`
 	// Status 状态机：candidate → in_review → confirmed → published。
-	Status string `json:"status" gorm:"type:varchar(16);not null;default:'candidate';index:idx_knowledge_candidates_tenant_status,priority:2"`
+	Status string `json:"status" gorm:"type:varchar(16);not null;default:'candidate';index:idx_knowledge_candidates_tenant_status,priority:2" extensions:"x-agent"`
 	// KnowledgeID 发布后生成的正式知识 ID（published 时回填）。
-	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;default:''"`
+	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;default:''" extensions:"x-agent,x-agent-response"`
 	// RequestedBy 提交人（创建者/连接器身份）。
 	RequestedBy string `json:"requested_by" gorm:"type:varchar(36);not null"`
 	// ReviewedBy 审核人（确认/驳回时回填）。
 	ReviewedBy string `json:"reviewed_by" gorm:"type:varchar(36);not null;default:''"`
 	// ReviewComment 审核意见（驳回原因等）。
 	ReviewComment string    `json:"review_comment" gorm:"type:text;not null;default:''"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at" extensions:"x-agent"`
+	UpdatedAt     time.Time `json:"updated_at" extensions:"x-agent"`
 }
 
 // TableName 固定 GORM 表名。

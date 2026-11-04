@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -45,11 +46,13 @@ func evidenceSessionIDParam(c *gin.Context) string {
 // @Description  返回一次问答（request_id）的完整证据包：检索候选快照、上下文编译摘要、模型/提示词版本、答案、引用清单与当时权限基线，附哈希链锚点（hash_chain_prev/row）供链校验。
 // @Tags         证据包
 // @Produce      json
-// @Param        request_id  path  string  true  "请求追踪ID"
-// @Success      200  {object}  map[string]interface{}  "{success, data: 证据包}"
+// @Param        request_id  path  string  true  "请求追踪ID"  extensions(x-agent=request_id)
+// @Success      200  {object}  handler.DataResponse{data=types.EvidencePack}  "{success, data: 证据包}"
 // @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Failure      404  {object}  apperrors.AppError  "证据包不存在"
 // @Security     Bearer
+// @x-agent      {"id":"evidence_pack.get","risk":"read"}
+// @x-agent-hint "Returns what backed one earlier answer: its citations with knowledge ids, the refusal marker, and the model/prompt versions. Use request_id from a previous answer or from evidence_pack.list."
 // @Router       /evidence-packs/{request_id} [get]
 func (h *EvidencePackHandler) GetByRequestID(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -69,7 +72,7 @@ func (h *EvidencePackHandler) GetByRequestID(c *gin.Context) {
 		writeEvidencePackError(c, ctx, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "data": pack})
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": projectEvidencePack(pack)})
 }
 
 // ListBySession godoc
@@ -131,4 +134,37 @@ func writeEvidencePackError(c *gin.Context, ctx context.Context, err error) {
 		logger.ErrorWithFields(ctx, err, map[string]interface{}{"handler": "evidence_pack"})
 		c.Error(apperrors.NewInternalServerError("evidence pack operation failed").WithDetails(err.Error()))
 	}
+}
+
+// projectEvidencePack fills the flat, model-facing fields.
+//
+// citations 是 JSONB（Swagger 里为自由格式 object），目录的投影是扁平化的，
+// 不能嵌套数组对象。这里把它摊成 citation_refs —— agent 需要的正是"这个回答
+// 引用了哪几篇"，而 chunk 序号与文件定位属于回放面，不进入模型上下文。
+func projectEvidencePack(pack *types.EvidencePack) *types.EvidencePack {
+	if pack == nil {
+		return pack
+	}
+	citations := pack.CitationsList()
+	refs := make([]types.EvidenceCitationRef, 0, len(citations))
+	for _, citation := range citations {
+		if citation.KnowledgeID == "" && citation.Title == "" {
+			continue
+		}
+		refs = append(refs, types.EvidenceCitationRef{
+			KnowledgeID: citation.KnowledgeID,
+			Title:       citation.Title,
+		})
+	}
+	pack.CitationRefs = refs
+
+	// candidate_count 同理：候选快照本身是 JSONB，模型只需要条数来判断
+	// "这个回答是在多少候选里挑出来的"。坏 JSON 按 0 处理，不让一行脏数据
+	// 让整包读不出来。
+	var candidates []types.EvidenceCandidate
+	if len(pack.Candidates) > 0 {
+		_ = json.Unmarshal(pack.Candidates, &candidates)
+	}
+	pack.CandidateCount = len(candidates)
+	return pack
 }

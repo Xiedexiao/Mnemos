@@ -135,11 +135,13 @@ func (h *KnowledgeCandidateHandler) List(c *gin.Context) {
 // @Description  按候选 ID 返回候选卡片（租户隔离）。
 // @Tags         过程经验沉淀
 // @Produce      json
-// @Param        id  path  string  true  "候选ID"
-// @Success      200  {object}  map[string]interface{}  "{success, data: 候选卡片}"
+// @Param        id  path  string  true  "候选ID"  extensions(x-agent=candidate_id)
+// @Success      200  {object}  handler.DataResponse{data=types.KnowledgeCandidate}  "{success, data: 候选卡片}"
 // @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Failure      404  {object}  apperrors.AppError  "候选不存在"
 // @Security     Bearer
+// @x-agent      {"id":"knowledge_candidate.get","risk":"read"}
+// @x-agent-hint "Reads one experience candidate: its title, level, confidence, dedup status and the knowledge id once published. Use it to check whether an experience was already captured before proposing a new one."
 // @Router       /knowledge-candidates/{id} [get]
 func (h *KnowledgeCandidateHandler) Get(c *gin.Context) {
 	ctx := c.Request.Context()

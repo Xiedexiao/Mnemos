@@ -358,6 +358,15 @@ var allowedRouteAreas = map[string]bool{
 	// reason: they are part of the request's blast radius, not a control
 	// surface.
 	"impact-tasks": true,
+	// §13.4 evidence packs, read-only: an answering agent can look up what
+	// backed an earlier answer so it does not contradict it. The packs carry
+	// a hash chain and permission snapshots; only the tagged fields are
+	// projected, so those stay internal.
+	"evidence-packs": true,
+	// §10.4 experience candidates, read-only: the agent may check whether an
+	// experience was already captured before proposing one. Confirming,
+	// publishing and rejecting are review decisions and stay out.
+	"knowledge-candidates": true,
 }
 
 // readOnlyRouteAreas admit only operations that change nothing. Deleting,
@@ -365,12 +374,14 @@ var allowedRouteAreas = map[string]bool{
 // chat itself, and content the assistant reads (documents, past answers)
 // must never be able to talk it into erasing history.
 var readOnlyRouteAreas = map[string]bool{
-	"sessions":        true,
-	"messages":        true,
-	"artifacts":       true,
-	"change-requests": true,
-	"impact-tasks":    true,
-	"system":          true, // Only info and parser-engines are reachable; see parseRoute.
+	"sessions":             true,
+	"messages":             true,
+	"artifacts":            true,
+	"change-requests":      true,
+	"impact-tasks":         true,
+	"evidence-packs":       true,
+	"knowledge-candidates": true,
+	"system":               true, // Only info and parser-engines are reachable; see parseRoute.
 }
 
 // forbiddenRouteSegments are refused anywhere inside an allowed area:

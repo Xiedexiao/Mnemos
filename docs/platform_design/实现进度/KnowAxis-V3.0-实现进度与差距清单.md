@@ -334,7 +334,7 @@
 | 推荐协同过滤 | **未实现，数据依赖阻塞** | 全仓无协同过滤实现（`collaborative` 命中两处与评论无关的字符串）。协同过滤需要用户-物品交互矩阵，冷启动期没有可用信号 |
 | 性能/容灾演练 | **未实现，环境依赖阻塞** | 无压测脚本与基线、无演练记录。需要真实环境与容量基线 |
 | 业务连接器 ×7 | **按约定保持占位** | 用户已明确允许；`business_api` 只读一个列表端点，任何同步失败都会说明缺什么 |
-| Agent 目录 50 端点 DTO 化 | **进行中：样板已交付，其余待续** | 变更单读面已完成（第二十六批）：类型标签 + 目录注解 + 只读区域白名单 + 四项契约测试。其余约 49 个端点按同一形状推进——每个都需补带 `x-agent` 标签的响应字段、写注解、审慎评估是否可进只读区域 |
+| Agent 目录 50 端点 DTO 化 | **进行中：3 个端点已交付，其余待续** | 变更单（第二十六批）、证据包与经验候选（第二十七批）已按同一形状完成：类型标签 + 目录注解 + 只读区域白名单 + 契约测试。其余约 47 个端点同样推进——每个都需补带 `x-agent` 标签的响应字段、审慎评估是否可进只读区域；自由格式 JSON 字段需先摊平 |
 | §16.5 chat 生成侧降级 | **未实现，可在本会话交付** | embedding 侧已接入调用点；`chat_pipeline/prepareChatModel` 仍只取单一模型，主力不可用即整条回答失败 |
 | 灰度发布 / 回滚 | **未实现，外部依赖阻塞** | 无 canary 流量切分（`canary` 仅在 SSRF 测试里出现）。灰度需要多版本并存与流量网关，属部署形态问题 |
 
@@ -357,6 +357,16 @@
 | 未标注字段会泄露内部数据 | §2.10 | 契约测试断言 `tenant_id`、`approval_receipt_id`、`baseline` 快照**不出现**在模型可见载荷里，而 `id`/`cr_number`/`title`/`status`/`risk_level`/`items[].knowledge_id` 正常投影。这是"只投影标注字段"这一默认策略的实际验证 | 本批 |
 | 写操作可能被误纳入 | §7.2 | 测试断言 `change_request.create/schedule/publish/rollback/add_items` **都不可达**——变更单的签发与回滚是不可逆的治理动作 | 本批 |
 | 50 个端点的样板 | §16.2 | 本批交付第一个完整样板：类型标签 + 目录注解 + 区域白名单 + 四项契约测试（在目录内 / 参数可设 / 字段投影与脱敏 / 写操作排除）。其余端点按同一形状推进 | 本批 |
+
+### 第二十七批：2026-11 收口（目录 DTO：证据包与经验候选）
+
+| 事项 | 文档 | 落点 | 提交 |
+|---|---|---|---|
+| 证据包读面进不了目录 | §13.4 | `EvidencePack` 补 `x-agent` 标签（request_id/session_id/question/answer/refusal/model_version/prompt_version/created_at），新增**扁平化**的 `citation_refs` 与 `candidate_count`。`GET /evidence-packs/{request_id}` → `evidence_pack.get`（read） | 本批 |
+| 自由格式 JSON 无法被目录投影 | §16.2 | 目录是**扁平化**投影，不支持嵌套数组对象；`citations` 是 JSONB（Swagger 里为自由格式 object）。改为在 handler 返回前摊成 `citation_refs`（knowledge_id + title）——agent 需要的正是"引用了哪几篇"，chunk 序号与定位属于回放面。`candidate_count` 同理只给条数 | 本批 |
+| 证据包内部字段可能外泄 | §2.10 | `hash_chain_prev/row`、`permission_snapshot`、原始 `candidates` 快照**不加标签**，契约测试断言它们不出现。哈希链与权限基线是审计数据，不是模型上下文 | 本批 |
+| 候选卡片读面进不了目录 | §10.4 | `KnowledgeCandidate` 补标签（title/level/status/confidence/dedup_status/source_type），`GET /knowledge-candidates/{id}` → `knowledge_candidate.get`（read）。`requested_by`/`review_comment`/`card` 保持内部 | 本批 |
+| 写操作被误纳入 | §10.4 | 测试断言 `knowledge_candidate.create/confirm/publish/reject/withdraw` 都不可达——审核与发布是人的决策 | 本批 |
 
 ---
 
