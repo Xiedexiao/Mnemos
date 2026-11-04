@@ -1641,10 +1641,34 @@ definitions:
     enum:
     - aipre.completed
     - aipre.failed
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
+    - share.created
+    - share.revoked
+    - share.visited
+    - cr.created
+    - cr.item_added
+    - cr.item_removed
+    - cr.analyzed
+    - cr.submitted
+    - cr.scheduled
+    - cr.publish_started
+    - cr.publish_finished
+    - cr.closed
+    - cr.rolled_back
+    - cr.impact_task_updated
+    - cr.verified
+    - cr.notified
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1707,35 +1731,11 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
     - parse_quality.computed
-    - share.created
-    - share.revoked
-    - share.visited
-    - cr.created
-    - cr.item_added
-    - cr.item_removed
-    - cr.analyzed
-    - cr.submitted
-    - cr.scheduled
-    - cr.publish_started
-    - cr.publish_finished
-    - cr.closed
-    - cr.rolled_back
-    - cr.impact_task_updated
-    - cr.verified
-    - cr.notified
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
     - ontology.schema_created
     - ontology.schema_updated
     - ontology.schema_published
@@ -1753,10 +1753,34 @@ definitions:
     x-enum-varnames:
     - AuditActionAIPreReviewCompleted
     - AuditActionAIPreReviewFailed
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
+    - AuditActionCRCreated
+    - AuditActionCRItemAdded
+    - AuditActionCRItemRemoved
+    - AuditActionCRAnalyzed
+    - AuditActionCRSubmitted
+    - AuditActionCRScheduled
+    - AuditActionCRPublishStarted
+    - AuditActionCRPublishFinished
+    - AuditActionCRClosed
+    - AuditActionCRRolledBack
+    - AuditActionCRImpactTaskUpdated
+    - AuditActionCRVerified
+    - AuditActionCRNotified
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1819,35 +1843,11 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
     - ParseQualityAuditActionComputed
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
-    - AuditActionCRCreated
-    - AuditActionCRItemAdded
-    - AuditActionCRItemRemoved
-    - AuditActionCRAnalyzed
-    - AuditActionCRSubmitted
-    - AuditActionCRScheduled
-    - AuditActionCRPublishStarted
-    - AuditActionCRPublishFinished
-    - AuditActionCRClosed
-    - AuditActionCRRolledBack
-    - AuditActionCRImpactTaskUpdated
-    - AuditActionCRVerified
-    - AuditActionCRNotified
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
     - OntologyActionSchemaCreated
     - OntologyActionSchemaUpdated
     - OntologyActionSchemaPublished
@@ -36549,6 +36549,34 @@ paths:
       summary: 清空搜索历史
       tags:
       - 搜索建议
+  /search/rewrite:
+    get:
+      description: 对一条查询给出容错计划（KnowAxis V3.0 §12.1 容错）：中文查询返回无调拼音与语料中的纠错候选；纯拼音输入返回它可能拼的中文词。**原查询永远保留**，备选词只是额外召回路径——服务端不会替用户改词。候选只来自调用者可见的空间与租户术语表；含数字的编号片段不纠错（§12.1
+        编号精确通道）。
+      parameters:
+      - description: 查询文本
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: 限定空间，逗号分隔（默认取调用者可见空间）
+        in: query
+        name: knowledge_base_ids
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: QueryRewrite}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 查询容错（拼音与错别字）
+      tags:
+      - 查询容错
   /search/suggestions:
     get:
       description: 搜索框联想（KnowAxis V3.0 §12.1）：历史搜索（本人）、热门搜索（本租户窗口内高频词）、实时联想（标题，已按

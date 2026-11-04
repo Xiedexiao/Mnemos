@@ -109,6 +109,7 @@ type RouterParams struct {
 	SamplingHandler              *handler.SamplingHandler
 	GraphAnalysisHandler         *handler.GraphAnalysisHandler
 	SearchSuggestionHandler      *handler.SearchSuggestionHandler
+	QueryRewriteHandler          *handler.QueryRewriteHandler
 	QualityMetricsHandler        *handler.QualityMetricsHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
@@ -402,6 +403,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterSamplingRoutes(v1, params.SamplingHandler, rbacGuards)
 		RegisterGraphAnalysisRoutes(v1, params.GraphAnalysisHandler, rbacGuards)
 		RegisterSearchSuggestionRoutes(v1, params.SearchSuggestionHandler, rbacGuards)
+		RegisterQueryRewriteRoutes(v1, params.QueryRewriteHandler, rbacGuards)
 		RegisterQualityMetricsRoutes(v1, params.QualityMetricsHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
