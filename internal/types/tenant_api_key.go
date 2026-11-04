@@ -162,6 +162,12 @@ const (
 	APIKeyCapabilitySystemRuntimeRead    APIKeyCapability = "system_runtime_read"
 	APIKeyCapabilitySystemRuntimeManage  APIKeyCapability = "system_runtime_manage"
 	APIKeyCapabilitySystemAuditRead      APIKeyCapability = "system_audit_read"
+	// APIKeyCapabilitySCIMProvision lets an IdP provision users and groups
+	// through the SCIM 2.0 endpoints (KnowAxis V3.0 §16.4). It is a separate
+	// capability from manage_members because SCIM tokens are handed to an
+	// external identity provider: they must be revocable on their own and
+	// must not carry the rest of member administration.
+	APIKeyCapabilitySCIMProvision APIKeyCapability = "scim_provision"
 )
 
 // NormalizeAPIKeyCapability maps an input capability string to a known
@@ -218,6 +224,8 @@ func NormalizeAPIKeyCapability(c APIKeyCapability) APIKeyCapability {
 		return APIKeyCapabilitySystemRuntimeManage
 	case APIKeyCapabilitySystemAuditRead:
 		return APIKeyCapabilitySystemAuditRead
+	case APIKeyCapabilitySCIMProvision:
+		return APIKeyCapabilitySCIMProvision
 	default:
 		return ""
 	}

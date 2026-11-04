@@ -1639,10 +1639,36 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
+    - cr.created
+    - cr.item_added
+    - cr.item_removed
+    - cr.analyzed
+    - cr.submitted
+    - cr.scheduled
+    - cr.publish_started
+    - cr.publish_finished
+    - cr.closed
+    - cr.rolled_back
+    - cr.impact_task_updated
+    - cr.verified
+    - cr.notified
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
+    - ontology.schema_created
+    - ontology.schema_updated
+    - ontology.schema_published
+    - ontology.schema_deleted
+    - ontology.type_created
+    - ontology.type_updated
+    - ontology.type_deleted
+    - ontology.property_created
+    - ontology.property_updated
+    - ontology.property_deleted
+    - ontology.relation_created
+    - ontology.relation_updated
+    - ontology.relation_deleted
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1705,56 +1731,56 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - share.created
-    - share.revoked
-    - share.visited
+    - aipre.completed
+    - aipre.failed
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
     - ontology.schema_proposal_created
     - ontology.schema_proposal_checked
     - ontology.schema_proposal_approved
     - ontology.schema_proposal_rejected
     - ontology.schema_proposal_applied
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - ontology.schema_created
-    - ontology.schema_updated
-    - ontology.schema_published
-    - ontology.schema_deleted
-    - ontology.type_created
-    - ontology.type_updated
-    - ontology.type_deleted
-    - ontology.property_created
-    - ontology.property_updated
-    - ontology.property_deleted
-    - ontology.relation_created
-    - ontology.relation_updated
-    - ontology.relation_deleted
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - cr.created
-    - cr.item_added
-    - cr.item_removed
-    - cr.analyzed
-    - cr.submitted
-    - cr.scheduled
-    - cr.publish_started
-    - cr.publish_finished
-    - cr.closed
-    - cr.rolled_back
-    - cr.impact_task_updated
-    - cr.verified
-    - cr.notified
-    - aipre.completed
-    - aipre.failed
+    - share.created
+    - share.revoked
+    - share.visited
     - parse_quality.computed
     type: string
     x-enum-varnames:
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
+    - AuditActionCRCreated
+    - AuditActionCRItemAdded
+    - AuditActionCRItemRemoved
+    - AuditActionCRAnalyzed
+    - AuditActionCRSubmitted
+    - AuditActionCRScheduled
+    - AuditActionCRPublishStarted
+    - AuditActionCRPublishFinished
+    - AuditActionCRClosed
+    - AuditActionCRRolledBack
+    - AuditActionCRImpactTaskUpdated
+    - AuditActionCRVerified
+    - AuditActionCRNotified
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
+    - OntologyActionSchemaCreated
+    - OntologyActionSchemaUpdated
+    - OntologyActionSchemaPublished
+    - OntologyActionSchemaDeleted
+    - OntologyActionTypeCreated
+    - OntologyActionTypeUpdated
+    - OntologyActionTypeDeleted
+    - OntologyActionPropertyCreated
+    - OntologyActionPropertyUpdated
+    - OntologyActionPropertyDeleted
+    - OntologyActionRelationCreated
+    - OntologyActionRelationUpdated
+    - OntologyActionRelationDeleted
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1817,49 +1843,23 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
     - OntologyActionSchemaProposalCreated
     - OntologyActionSchemaProposalChecked
     - OntologyActionSchemaProposalApproved
     - OntologyActionSchemaProposalRejected
     - OntologyActionSchemaProposalApplied
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - OntologyActionSchemaCreated
-    - OntologyActionSchemaUpdated
-    - OntologyActionSchemaPublished
-    - OntologyActionSchemaDeleted
-    - OntologyActionTypeCreated
-    - OntologyActionTypeUpdated
-    - OntologyActionTypeDeleted
-    - OntologyActionPropertyCreated
-    - OntologyActionPropertyUpdated
-    - OntologyActionPropertyDeleted
-    - OntologyActionRelationCreated
-    - OntologyActionRelationUpdated
-    - OntologyActionRelationDeleted
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionCRCreated
-    - AuditActionCRItemAdded
-    - AuditActionCRItemRemoved
-    - AuditActionCRAnalyzed
-    - AuditActionCRSubmitted
-    - AuditActionCRScheduled
-    - AuditActionCRPublishStarted
-    - AuditActionCRPublishFinished
-    - AuditActionCRClosed
-    - AuditActionCRRolledBack
-    - AuditActionCRImpactTaskUpdated
-    - AuditActionCRVerified
-    - AuditActionCRNotified
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
     - ParseQualityAuditActionComputed
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
@@ -8063,6 +8063,183 @@ definitions:
         type: string
       use_ssl:
         type: boolean
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMEmail:
+    properties:
+      primary:
+        type: boolean
+      type:
+        type: string
+      value:
+        type: string
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMEnterpriseUser:
+    properties:
+      department:
+        description: Department is the department display name the IdP reports.
+        type: string
+      employeeNumber:
+        description: EmployeeNumber is the HR identifier.
+        type: string
+      manager:
+        allOf:
+        - $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMManager'
+        description: Manager identifies the manager.
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMGroup:
+    properties:
+      displayName:
+        description: DisplayName is the group name; unique per tenant.
+        type: string
+      externalId:
+        description: ExternalID is the IdP's identifier (stable across renames).
+        type: string
+      id:
+        description: ID is the platform's identifier.
+        type: string
+      members:
+        description: Members are the group's users.
+        items:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroupMember'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMMeta'
+        description: Meta carries resource metadata.
+      schemas:
+        description: Schemas identifies the resource type.
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMGroupMember:
+    properties:
+      display:
+        type: string
+      type:
+        type: string
+      value:
+        type: string
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMGroupRef:
+    properties:
+      display:
+        type: string
+      type:
+        type: string
+      value:
+        type: string
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMListResponse:
+    properties:
+      Resources:
+        items: {}
+        type: array
+      itemsPerPage:
+        type: integer
+      schemas:
+        items:
+          type: string
+        type: array
+      startIndex:
+        type: integer
+      totalResults:
+        type: integer
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMManager:
+    properties:
+      value:
+        type: string
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMMeta:
+    properties:
+      created:
+        description: Created is the creation instant.
+        type: string
+      lastModified:
+        description: LastModified is the last change.
+        type: string
+      location:
+        description: Location is the resource URL.
+        type: string
+      resourceType:
+        description: ResourceType is "User" or "Group".
+        type: string
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMName:
+    properties:
+      familyName:
+        type: string
+      formatted:
+        type: string
+      givenName:
+        type: string
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMPatchOperation:
+    properties:
+      op:
+        type: string
+      path:
+        type: string
+      value: {}
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMPatchRequest:
+    properties:
+      Operations:
+        items:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMPatchOperation'
+        type: array
+      schemas:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_Tencent_WeKnora_internal_types.SCIMUser:
+    properties:
+      active:
+        description: Active controls whether the account may sign in.
+        type: boolean
+      displayName:
+        description: DisplayName is the display label.
+        type: string
+      emails:
+        description: Emails are the address entries; the primary one is the account
+          email.
+        items:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMEmail'
+        type: array
+      externalId:
+        description: ExternalID is the IdP's identifier (stable across renames).
+        type: string
+      groups:
+        description: Groups lists the groups the user belongs to (read-only projection).
+        items:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroupRef'
+        type: array
+      id:
+        description: ID is the platform's identifier.
+        type: string
+      meta:
+        allOf:
+        - $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMMeta'
+        description: Meta carries resource metadata.
+      name:
+        allOf:
+        - $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMName'
+        description: Name is the display name parts.
+      schemas:
+        description: Schemas identifies the resource type.
+        items:
+          type: string
+        type: array
+      urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:
+        allOf:
+        - $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMEnterpriseUser'
+        description: EnterpriseUser carries the department attribute when the IdP
+          sends it.
+      userName:
+        description: UserName is the login name (required by SCIM).
+        type: string
     type: object
   github_com_Tencent_WeKnora_internal_types.SandboxCheckpoint:
     properties:
@@ -14900,6 +15077,26 @@ definitions:
       superseded_by_id:
         type: string
     type: object
+  internal_handler.departmentMembersRequest:
+    properties:
+      user_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_handler.departmentRequest:
+    properties:
+      external_id:
+        type: string
+      manager_user_id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      subject_group_id:
+        type: string
+    type: object
   internal_handler.externalFeedRequest:
     properties:
       auth_header:
@@ -15254,6 +15451,11 @@ definitions:
     required:
     - source_id
     - target_id
+    type: object
+  internal_handler.moveDepartmentRequest:
+    properties:
+      parent_id:
+        type: string
     type: object
   internal_handler.officialAnswerRequest:
     properties:
@@ -32989,6 +33191,230 @@ paths:
       summary: 运营看板
       tags:
       - 运营看板
+  /organization/departments:
+    get:
+      description: 返回本工作区的部门树（含成员数）。部门是权限模型的 L1 层：部门经理可管理本部门子树的授权，Admin+ 管理全租户。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 组织架构树
+      tags:
+      - 组织架构
+    post:
+      consumes:
+      - application/json
+      description: 在指定父部门下新建部门；不传 parent_id 则为根部门。会自动创建一个同名 ACL 主体组，便于"给整个部门授权"。
+      parameters:
+      - description: 部门
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.departmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 新增部门
+      tags:
+      - 组织架构
+  /organization/departments/{id}:
+    delete:
+      description: 删除部门。仍有子部门时拒绝——一次误删会让整棵子树连同成员关系一起消失。
+      parameters:
+      - description: 部门 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 删除部门
+      tags:
+      - 组织架构
+    get:
+      description: 返回一个部门及其成员。
+      parameters:
+      - description: 部门 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 部门详情
+      tags:
+      - 组织架构
+    put:
+      consumes:
+      - application/json
+      description: 修改部门名称、负责人或绑定主体组。空字段表示不修改。
+      parameters:
+      - description: 部门 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 部门
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.departmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 修改部门
+      tags:
+      - 组织架构
+  /organization/departments/{id}/members:
+    post:
+      consumes:
+      - application/json
+      description: 把用户加入部门。成员同时进入该部门的 ACL 主体组，因此组上的授权立即生效。
+      parameters:
+      - description: 部门 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 成员
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.departmentMembersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 添加部门成员
+      tags:
+      - 组织架构
+  /organization/departments/{id}/members/{user_id}:
+    delete:
+      description: 把用户移出部门，该部门主体组上的授权对其立即失效。
+      parameters:
+      - description: 部门 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 用户 ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 移除部门成员
+      tags:
+      - 组织架构
+  /organization/departments/{id}/move:
+    post:
+      consumes:
+      - application/json
+      description: 把部门挂到另一个父部门下（传空则为根）。拒绝挂到自己的子树下，也拒绝超过深度上限。
+      parameters:
+      - description: 部门 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 新父部门
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.moveDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 移动部门
+      tags:
+      - 组织架构
+  /organization/departments/scope:
+    get:
+      description: 返回当前用户可管理的部门子树。Admin+ 为全租户；部门经理为本部门子树。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 我的部门管理范围
+      tags:
+      - 组织架构
   /organizations:
     get:
       description: 获取当前空间所属的所有组织，并附带各空间内知识库/智能体数量
@@ -35252,6 +35678,276 @@ paths:
       summary: Release a shared user sandbox
       tags:
       - SandboxConfig
+  /scim/v2/Groups:
+    get:
+      description: SCIM 2.0 Group 资源列表；组即平台的 ACL 主体组，成员变动立即影响文档授权。
+      parameters:
+      - description: 起始序号
+        in: query
+        name: startIndex
+        type: integer
+      - description: 每页条数
+        in: query
+        name: count
+        type: integer
+      - description: 过滤表达式（支持 displayName eq）
+        in: query
+        name: filter
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMListResponse'
+      summary: SCIM 组列表
+      tags:
+      - SCIM
+    post:
+      consumes:
+      - application/json
+      description: 由身份提供方创建组（映射为 ACL 主体组）。
+      parameters:
+      - description: SCIM Group
+        in: body
+        name: group
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup'
+      summary: SCIM 创建组
+      tags:
+      - SCIM
+  /scim/v2/Groups/{id}:
+    delete:
+      description: 删除组及其成员关系。按组写的授权行保留，但组 ID 不再被任何人持有。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: SCIM 删除组
+      tags:
+      - SCIM
+    get:
+      description: 读取一个组及其成员。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup'
+      summary: SCIM 组详情
+      tags:
+      - SCIM
+    patch:
+      consumes:
+      - application/json
+      description: 支持 displayName 与 members 的 add/remove/replace。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SCIM PatchOp
+        in: body
+        name: patch
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMPatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup'
+      summary: SCIM 部分更新组
+      tags:
+      - SCIM
+    put:
+      consumes:
+      - application/json
+      description: PUT 全量替换组名与成员列表。只处理真正变化的成员，避免权限版本反复前进。
+      parameters:
+      - description: 组 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SCIM Group
+        in: body
+        name: group
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup'
+      summary: SCIM 替换组
+      tags:
+      - SCIM
+  /scim/v2/Users:
+    get:
+      description: SCIM 2.0 User 资源列表，供身份提供方做增量对账。支持 startIndex/count 分页与 `userName
+        eq "..."` 过滤。
+      parameters:
+      - description: 起始序号（1 起）
+        in: query
+        name: startIndex
+        type: integer
+      - description: 每页条数（默认 100，上限 500）
+        in: query
+        name: count
+        type: integer
+      - description: 过滤表达式（支持 userName eq）
+        in: query
+        name: filter
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMListResponse'
+      summary: SCIM 用户列表
+      tags:
+      - SCIM
+    post:
+      consumes:
+      - application/json
+      description: 由身份提供方开通用户（KnowAxis V3.0 §16.4）。userName 已存在返回 409 uniqueness；enterprise
+        扩展里的 department 会映射到部门树（找不到则新建根部门）。
+      parameters:
+      - description: SCIM User
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser'
+      summary: SCIM 创建用户
+      tags:
+      - SCIM
+  /scim/v2/Users/{id}:
+    delete:
+      description: 不物理删除：审计、审批回执与版本都引用用户 ID，删行会让这些记录失去主体。停用即刻失去访问。
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: SCIM 停用用户
+      tags:
+      - SCIM
+    get:
+      description: 按平台用户 ID 读取一个 SCIM User 资源。
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser'
+      summary: SCIM 用户详情
+      tags:
+      - SCIM
+    patch:
+      consumes:
+      - application/json
+      description: 只支持 replace active（停用/启用）与 displayName（平台侧由用户名合成，显式忽略）。IdP 停用账号走的就是这条。
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SCIM PatchOp
+        in: body
+        name: patch
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMPatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser'
+      summary: SCIM 部分更新用户
+      tags:
+      - SCIM
+    put:
+      consumes:
+      - application/json
+      description: PUT 全量替换用户的可变属性（邮箱、active、department）。
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SCIM User
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser'
+      summary: SCIM 替换用户
+      tags:
+      - SCIM
   /search-quality:
     get:
       description: 返回窗口内的查询量、零结果率、权限过滤量、点击率与平均耗时（KnowAxis V3.0 §12.5）。权限过滤量是聚合数字，用于运营判断"内容存在但看不到"，不会回传给检索用户。

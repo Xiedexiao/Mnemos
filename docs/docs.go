@@ -25870,6 +25870,372 @@ const docTemplate = `{
                 }
             }
         },
+        "/organization/departments": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回本工作区的部门树（含成员数）。部门是权限模型的 L1 层：部门经理可管理本部门子树的授权，Admin+ 管理全租户。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "组织架构树",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "在指定父部门下新建部门；不传 parent_id 则为根部门。会自动创建一个同名 ACL 主体组，便于\"给整个部门授权\"。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "新增部门",
+                "parameters": [
+                    {
+                        "description": "部门",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.departmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/departments/scope": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回当前用户可管理的部门子树。Admin+ 为全租户；部门经理为本部门子树。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "我的部门管理范围",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/departments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回一个部门及其成员。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "部门详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "部门 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "修改部门名称、负责人或绑定主体组。空字段表示不修改。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "修改部门",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "部门 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "部门",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.departmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除部门。仍有子部门时拒绝——一次误删会让整棵子树连同成员关系一起消失。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "删除部门",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "部门 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/departments/{id}/members": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把用户加入部门。成员同时进入该部门的 ACL 主体组，因此组上的授权立即生效。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "添加部门成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "部门 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "成员",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.departmentMembersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/departments/{id}/members/{user_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把用户移出部门，该部门主体组上的授权对其立即失效。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "移除部门成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "部门 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "用户 ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/departments/{id}/move": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把部门挂到另一个父部门下（传空则为根）。拒绝挂到自己的子树下，也拒绝超过深度上限。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "组织架构"
+                ],
+                "summary": "移动部门",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "部门 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "新父部门",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.moveDepartmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/organizations": {
             "get": {
                 "security": [
@@ -29425,6 +29791,412 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/scim/v2/Groups": {
+            "get": {
+                "description": "SCIM 2.0 Group 资源列表；组即平台的 ACL 主体组，成员变动立即影响文档授权。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 组列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "起始序号",
+                        "name": "startIndex",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "count",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "过滤表达式（支持 displayName eq）",
+                        "name": "filter",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "由身份提供方创建组（映射为 ACL 主体组）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 创建组",
+                "parameters": [
+                    {
+                        "description": "SCIM Group",
+                        "name": "group",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup"
+                        }
+                    }
+                }
+            }
+        },
+        "/scim/v2/Groups/{id}": {
+            "get": {
+                "description": "读取一个组及其成员。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 组详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "PUT 全量替换组名与成员列表。只处理真正变化的成员，避免权限版本反复前进。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 替换组",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "SCIM Group",
+                        "name": "group",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "删除组及其成员关系。按组写的授权行保留，但组 ID 不再被任何人持有。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 删除组",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "description": "支持 displayName 与 members 的 add/remove/replace。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 部分更新组",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "组 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "SCIM PatchOp",
+                        "name": "patch",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMPatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroup"
+                        }
+                    }
+                }
+            }
+        },
+        "/scim/v2/Users": {
+            "get": {
+                "description": "SCIM 2.0 User 资源列表，供身份提供方做增量对账。支持 startIndex/count 分页与 ` + "`" + `userName eq \"...\"` + "`" + ` 过滤。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 用户列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "起始序号（1 起）",
+                        "name": "startIndex",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认 100，上限 500）",
+                        "name": "count",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "过滤表达式（支持 userName eq）",
+                        "name": "filter",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "由身份提供方开通用户（KnowAxis V3.0 §16.4）。userName 已存在返回 409 uniqueness；enterprise 扩展里的 department 会映射到部门树（找不到则新建根部门）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 创建用户",
+                "parameters": [
+                    {
+                        "description": "SCIM User",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser"
+                        }
+                    }
+                }
+            }
+        },
+        "/scim/v2/Users/{id}": {
+            "get": {
+                "description": "按平台用户 ID 读取一个 SCIM User 资源。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 用户详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "PUT 全量替换用户的可变属性（邮箱、active、department）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 替换用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "SCIM User",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "不物理删除：审计、审批回执与版本都引用用户 ID，删行会让这些记录失去主体。停用即刻失去访问。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 停用用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "description": "只支持 replace active（停用/启用）与 displayName（平台侧由用户名合成，显式忽略）。IdP 停用账号走的就是这条。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SCIM"
+                ],
+                "summary": "SCIM 部分更新用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "SCIM PatchOp",
+                        "name": "patch",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMPatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMUser"
                         }
                     }
                 }
@@ -38334,10 +39106,36 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -38400,56 +39198,56 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "share.created",
-                "share.revoked",
-                "share.visited",
+                "aipre.completed",
+                "aipre.failed",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
                 "ontology.schema_proposal_created",
                 "ontology.schema_proposal_checked",
                 "ontology.schema_proposal_approved",
                 "ontology.schema_proposal_rejected",
                 "ontology.schema_proposal_applied",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
-                "aipre.completed",
-                "aipre.failed",
+                "share.created",
+                "share.revoked",
+                "share.visited",
                 "parse_quality.computed"
             ],
             "x-enum-varnames": [
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -38512,49 +39310,23 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
                 "OntologyActionSchemaProposalCreated",
                 "OntologyActionSchemaProposalChecked",
                 "OntologyActionSchemaProposalApproved",
                 "OntologyActionSchemaProposalRejected",
                 "OntologyActionSchemaProposalApplied",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
                 "ParseQualityAuditActionComputed"
             ]
         },
@@ -46336,6 +47108,274 @@ const docTemplate = `{
                 },
                 "use_ssl": {
                     "type": "boolean"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMEmail": {
+            "type": "object",
+            "properties": {
+                "primary": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMEnterpriseUser": {
+            "type": "object",
+            "properties": {
+                "department": {
+                    "description": "Department is the department display name the IdP reports.",
+                    "type": "string"
+                },
+                "employeeNumber": {
+                    "description": "EmployeeNumber is the HR identifier.",
+                    "type": "string"
+                },
+                "manager": {
+                    "description": "Manager identifies the manager.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMManager"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMGroup": {
+            "type": "object",
+            "properties": {
+                "displayName": {
+                    "description": "DisplayName is the group name; unique per tenant.",
+                    "type": "string"
+                },
+                "externalId": {
+                    "description": "ExternalID is the IdP's identifier (stable across renames).",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID is the platform's identifier.",
+                    "type": "string"
+                },
+                "members": {
+                    "description": "Members are the group's users.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroupMember"
+                    }
+                },
+                "meta": {
+                    "description": "Meta carries resource metadata.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMMeta"
+                        }
+                    ]
+                },
+                "schemas": {
+                    "description": "Schemas identifies the resource type.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMGroupMember": {
+            "type": "object",
+            "properties": {
+                "display": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMGroupRef": {
+            "type": "object",
+            "properties": {
+                "display": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMListResponse": {
+            "type": "object",
+            "properties": {
+                "Resources": {
+                    "type": "array",
+                    "items": {}
+                },
+                "itemsPerPage": {
+                    "type": "integer"
+                },
+                "schemas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "startIndex": {
+                    "type": "integer"
+                },
+                "totalResults": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMManager": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMMeta": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "description": "Created is the creation instant.",
+                    "type": "string"
+                },
+                "lastModified": {
+                    "description": "LastModified is the last change.",
+                    "type": "string"
+                },
+                "location": {
+                    "description": "Location is the resource URL.",
+                    "type": "string"
+                },
+                "resourceType": {
+                    "description": "ResourceType is \"User\" or \"Group\".",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMName": {
+            "type": "object",
+            "properties": {
+                "familyName": {
+                    "type": "string"
+                },
+                "formatted": {
+                    "type": "string"
+                },
+                "givenName": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMPatchOperation": {
+            "type": "object",
+            "properties": {
+                "op": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "value": {}
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMPatchRequest": {
+            "type": "object",
+            "properties": {
+                "Operations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMPatchOperation"
+                    }
+                },
+                "schemas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SCIMUser": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "description": "Active controls whether the account may sign in.",
+                    "type": "boolean"
+                },
+                "displayName": {
+                    "description": "DisplayName is the display label.",
+                    "type": "string"
+                },
+                "emails": {
+                    "description": "Emails are the address entries; the primary one is the account email.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMEmail"
+                    }
+                },
+                "externalId": {
+                    "description": "ExternalID is the IdP's identifier (stable across renames).",
+                    "type": "string"
+                },
+                "groups": {
+                    "description": "Groups lists the groups the user belongs to (read-only projection).",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMGroupRef"
+                    }
+                },
+                "id": {
+                    "description": "ID is the platform's identifier.",
+                    "type": "string"
+                },
+                "meta": {
+                    "description": "Meta carries resource metadata.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMMeta"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Name is the display name parts.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMName"
+                        }
+                    ]
+                },
+                "schemas": {
+                    "description": "Schemas identifies the resource type.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "description": "EnterpriseUser carries the department attribute when the IdP sends it.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SCIMEnterpriseUser"
+                        }
+                    ]
+                },
+                "userName": {
+                    "description": "UserName is the login name (required by SCIM).",
+                    "type": "string"
                 }
             }
         },
@@ -55332,6 +56372,37 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handler.departmentMembersRequest": {
+            "type": "object",
+            "properties": {
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_handler.departmentRequest": {
+            "type": "object",
+            "properties": {
+                "external_id": {
+                    "type": "string"
+                },
+                "manager_user_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "subject_group_id": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handler.externalFeedRequest": {
             "type": "object",
             "properties": {
@@ -55850,6 +56921,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.moveDepartmentRequest": {
+            "type": "object",
+            "properties": {
+                "parent_id": {
                     "type": "string"
                 }
             }
