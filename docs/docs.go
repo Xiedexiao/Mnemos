@@ -35567,6 +35567,78 @@ const docTemplate = `{
                 }
             }
         },
+        "/tenant-export": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把当前租户的白名单表导出为 JSON 清单（KnowAxis V3.0 §16.3）。secret/confidential 内容的导出必须带 ` + "`" + `export_request_id` + "`" + `（已批准的 export request）；没有凭据直接 403，而不是\"先导出再补审批\"——数据一旦流出无法召回。单表失败或超限会写进清单说明，不让整次导出静默少一张表。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "数据导出"
+                ],
+                "summary": "执行逻辑导出",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "已批准的导出申请 ID（高密级导出必填）",
+                        "name": "export_request_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: TenantExportDocument}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "高密级导出缺少已批准的申请",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/tenant-export/plan": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回一次租户级逻辑导出会包含哪些表、各多少行，以及需要的最高密级（KnowAxis V3.0 §16.3）。secret/confidential 内容的导出需先取得已批准的 export request，把其 ID 传给导出接口。**这是逻辑导出，不是数据库备份**：不含索引、序列与 WAL；凭据、会话令牌与邀请链接被显式排除。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "数据导出"
+                ],
+                "summary": "导出预检",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: TenantExportManifest}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/tenants": {
             "get": {
                 "security": [
@@ -40976,6 +41048,7 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "parse_quality.computed",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -41039,39 +41112,6 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "parse_quality.computed",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -41085,10 +41125,43 @@ const docTemplate = `{
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
                 "aipre.completed",
-                "aipre.failed"
+                "aipre.failed",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted"
             ],
             "x-enum-varnames": [
+                "ParseQualityAuditActionComputed",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -41152,39 +41225,6 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "ParseQualityAuditActionComputed",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -41198,8 +41238,40 @@ const docTemplate = `{
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
                 "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed"
+                "AuditActionAIPreReviewFailed",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
