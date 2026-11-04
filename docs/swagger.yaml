@@ -1639,6 +1639,21 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - share.created
+    - share.revoked
+    - share.visited
+    - parse_quality.computed
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
+    - aipre.completed
+    - aipre.failed
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1652,10 +1667,9 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1718,15 +1732,10 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
-    - parse_quality.computed
-    - share.created
-    - share.revoked
-    - share.visited
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
     - ontology.schema_created
     - ontology.schema_updated
     - ontology.schema_published
@@ -1740,17 +1749,23 @@ definitions:
     - ontology.relation_created
     - ontology.relation_updated
     - ontology.relation_deleted
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - aipre.completed
-    - aipre.failed
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
     type: string
     x-enum-varnames:
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
+    - ParseQualityAuditActionComputed
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1764,10 +1779,9 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1830,15 +1844,10 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
-    - ParseQualityAuditActionComputed
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
     - OntologyActionSchemaCreated
     - OntologyActionSchemaUpdated
     - OntologyActionSchemaPublished
@@ -1852,15 +1861,6 @@ definitions:
     - OntologyActionRelationCreated
     - OntologyActionRelationUpdated
     - OntologyActionRelationDeleted
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -15570,6 +15570,13 @@ definitions:
       stock:
         type: integer
     type: object
+  internal_handler.rollbackVersionRequest:
+    properties:
+      change_note:
+        type: string
+      target_version:
+        type: string
+    type: object
   internal_handler.sandboxConfigRequest:
     properties:
       config:
@@ -27466,6 +27473,97 @@ paths:
       summary: 建符号索引
       tags:
       - 符号索引
+  /knowledge/{id}/versions/as-of:
+    get:
+      description: 回答"在某一时点生效的是哪一版"（KnowAxis V3.0 §7.4 as-of 查询）。
+      parameters:
+      - description: 知识ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 时点（RFC3339）
+        in: query
+        name: at
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: AsOfVersion}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 历史时点版本
+      tags:
+      - 版本
+  /knowledge/{id}/versions/diff:
+    get:
+      description: 按段落对比两个版本（KnowAxis V3.0 §7.4）。左右可用语义化版本（1.2.0）、递增号（3）或 current；left
+        缺省为 right 的前一版。
+      parameters:
+      - description: 知识ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 左侧版本（缺省=前一版）
+        in: query
+        name: left
+        type: string
+      - description: 右侧版本（缺省 current）
+        in: query
+        name: right
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: VersionDiff}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 版本差异
+      tags:
+      - 版本
+  /knowledge/{id}/versions/rollback:
+    post:
+      consumes:
+      - application/json
+      description: 以历史版本的内容**新建**一版（KnowAxis V3.0 §7.4：历史永久可查，不做删除式回退）。必须填写原因，回滚是一次会撤销已批准内容的动作。
+      parameters:
+      - description: 知识ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 回滚
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.rollbackVersionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: VersionRollbackResult}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 回滚到历史版本
+      tags:
+      - 版本
   /knowledge/{knowledge_id}/lifecycle:
     get:
       description: 返回知识行与读取时解析出的生效行为（含到期/生效窗口），用于页面徽章与问答提示。

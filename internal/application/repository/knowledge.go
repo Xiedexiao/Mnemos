@@ -1293,6 +1293,46 @@ func (r *knowledgeRepository) GetLatestKnowledgeVersion(ctx context.Context, kno
 	return &version, nil
 }
 
+// GetKnowledgeVersion resolves one exact snapshot by version number.
+func (r *knowledgeRepository) GetKnowledgeVersion(
+	ctx context.Context, tenantID uint64, knowledgeID string, version int,
+) (*types.KnowledgeVersion, error) {
+	var row types.KnowledgeVersion
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND knowledge_id = ? AND version = ?", tenantID, knowledgeID, version).
+		First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+// ListKnowledgeVersionsUpTo returns the snapshots created at or before an
+// instant, newest first (the §7.4 as-of lookup).
+//
+// 用 created_at 而不是 effective_at 过滤：快照在"写入那一刻"就存在了，而
+// 生效日是内容属性。as-of 问的是"那个时点上系统里能查到哪一版"，写入时间
+// 才是这个问题的答案；生效窗口由调用方在结果上再做一次判定。
+func (r *knowledgeRepository) ListKnowledgeVersionsUpTo(
+	ctx context.Context, knowledgeID string, at time.Time, limit int,
+) ([]*types.KnowledgeVersion, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	var rows []*types.KnowledgeVersion
+	if err := r.db.WithContext(ctx).
+		Where("knowledge_id = ? AND created_at <= ?", knowledgeID, at.UTC()).
+		Order("version DESC").
+		Limit(limit).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 // ListKnowledgeIDsUnderFolderPaths returns the IDs of entries stored in the
 // given folder paths or their descendants (V3.0 §2.3 目录级授权).
 //

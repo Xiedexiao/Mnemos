@@ -65,11 +65,11 @@ var knowledgeLifecycleTransitions = map[KnowledgeLifecycleStatus][]KnowledgeLife
 		KnowledgeLifecycleValid, KnowledgeLifecycleExpired, KnowledgeLifecycleReplaced,
 		KnowledgeLifecycleConflict, KnowledgeLifecycleDelisted, KnowledgeLifecycleArchived, KnowledgeLifecyclePendingReview,
 	},
-	KnowledgeLifecycleExpired:    {KnowledgeLifecycleValid, KnowledgeLifecycleArchived, KnowledgeLifecycleDelisted},
-	KnowledgeLifecycleReplaced:   {KnowledgeLifecycleArchived, KnowledgeLifecycleDelisted},
-	KnowledgeLifecycleConflict:   {KnowledgeLifecycleValid, KnowledgeLifecycleStale, KnowledgeLifecycleDelisted, KnowledgeLifecycleArchived},
-	KnowledgeLifecycleDelisted:   {KnowledgeLifecycleValid, KnowledgeLifecycleArchived}, // 恢复需走审批
-	KnowledgeLifecycleArchived:   {KnowledgeLifecycleValid, KnowledgeLifecycleDelisted},
+	KnowledgeLifecycleExpired:  {KnowledgeLifecycleValid, KnowledgeLifecycleArchived, KnowledgeLifecycleDelisted},
+	KnowledgeLifecycleReplaced: {KnowledgeLifecycleArchived, KnowledgeLifecycleDelisted},
+	KnowledgeLifecycleConflict: {KnowledgeLifecycleValid, KnowledgeLifecycleStale, KnowledgeLifecycleDelisted, KnowledgeLifecycleArchived},
+	KnowledgeLifecycleDelisted: {KnowledgeLifecycleValid, KnowledgeLifecycleArchived}, // 恢复需走审批
+	KnowledgeLifecycleArchived: {KnowledgeLifecycleValid, KnowledgeLifecycleDelisted},
 }
 
 // CanTransitionTo reports whether moving from one lifecycle state to another
@@ -244,18 +244,25 @@ func ParseKnowledgeClassification(raw string) KnowledgeClassification {
 // knowledge entry (V3.0 §7.4). Answers cite "依据版本 + 生效日期"; historical
 // versions stay queryable but never back current answers.
 type KnowledgeVersion struct {
-	ID          string     `json:"id" gorm:"type:varchar(36);primaryKey"`
-	TenantID    uint64     `json:"tenant_id" gorm:"type:integer;not null"`
-	KnowledgeID string     `json:"knowledge_id" gorm:"type:varchar(36);not null;index:idx_knowledge_versions_knowledge,priority:1"`
-	Version     int        `json:"version" gorm:"not null;index:idx_knowledge_versions_knowledge,priority:2,sort:desc"`
-	ContentHash string     `json:"content_hash" gorm:"type:varchar(128);not null"`
-	Title       string     `json:"title" gorm:"type:varchar(255);not null;default:''"`
-	ChangeNote  string     `json:"change_note" gorm:"type:text;not null;default:''"`
-	Snapshot    JSON       `json:"snapshot" gorm:"type:json;not null"`
-	PublishedBy string     `json:"published_by" gorm:"type:varchar(36);not null;default:''"`
-	ReceiptID   string     `json:"receipt_id" gorm:"type:varchar(64);not null;default:''"`
-	EffectiveAt *time.Time `json:"effective_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID          string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	TenantID    uint64 `json:"tenant_id" gorm:"type:integer;not null"`
+	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;index:idx_knowledge_versions_knowledge,priority:1"`
+	Version     int    `json:"version" gorm:"not null;index:idx_knowledge_versions_knowledge,priority:2,sort:desc"`
+	// SemanticVersion is the §7.4 主.次.修订 label ("1.2.0"). Legacy rows
+	// written before migration 000178 carry '' and are rendered from Version.
+	SemanticVersion string `json:"semantic_version" gorm:"type:varchar(24);not null;default:''"`
+	// BumpSize records how large this change was (patch/minor/major).
+	BumpSize string `json:"bump_size" gorm:"type:varchar(8);not null;default:''"`
+	// RolledBackFrom names the version a rollback restored, '' otherwise.
+	RolledBackFrom string     `json:"rolled_back_from" gorm:"type:varchar(24);not null;default:''"`
+	ContentHash    string     `json:"content_hash" gorm:"type:varchar(128);not null"`
+	Title          string     `json:"title" gorm:"type:varchar(255);not null;default:''"`
+	ChangeNote     string     `json:"change_note" gorm:"type:text;not null;default:''"`
+	Snapshot       JSON       `json:"snapshot" gorm:"type:json;not null"`
+	PublishedBy    string     `json:"published_by" gorm:"type:varchar(36);not null;default:''"`
+	ReceiptID      string     `json:"receipt_id" gorm:"type:varchar(64);not null;default:''"`
+	EffectiveAt    *time.Time `json:"effective_at"`
+	CreatedAt      time.Time  `json:"created_at"`
 
 	// Specified marks fields explicitly provided on partial updates.
 	ChangeNoteSpecified bool `json:"-" gorm:"-"`
@@ -321,6 +328,16 @@ type KnowledgeLifecycleTransitionInput struct {
 	ChangeNote string
 	// ReceiptID links a publish action to its approval receipt (A2).
 	ReceiptID string
+	// VersionBump is the author's chosen change size (patch/minor/major).
+	// Empty means "infer from ChangeType" (§7.4).
+	VersionBump string
+	// ChangeType is the change-request type, used to infer VersionBump when
+	// the author did not choose one.
+	ChangeType ChangeType
+	// RolledBackFrom names the version a rollback restored ('' for normal
+	// publishes); it is recorded on the new snapshot so the history explains
+	// why the old content came back.
+	RolledBackFrom string
 	// Classification / EffectiveAt / ExpiresAt / ReviewCycleDays apply to the
 	// update_settings action. Pointers distinguish "unset" from zero.
 	Classification  *KnowledgeClassification

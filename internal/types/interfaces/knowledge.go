@@ -412,6 +412,16 @@ type KnowledgeVersionRepository interface {
 	ListKnowledgeVersions(ctx context.Context, knowledgeID string, limit int) ([]*types.KnowledgeVersion, error)
 	// GetLatestKnowledgeVersion returns the newest snapshot or nil.
 	GetLatestKnowledgeVersion(ctx context.Context, knowledgeID string) (*types.KnowledgeVersion, error)
+	// GetKnowledgeVersion resolves one exact snapshot by its 1-based version
+	// number, used by diff and rollback.
+	GetKnowledgeVersion(
+		ctx context.Context, tenantID uint64, knowledgeID string, version int,
+	) (*types.KnowledgeVersion, error)
+	// ListKnowledgeVersionsUpTo returns snapshots at or before an instant,
+	// newest first, for the as-of query (§7.4).
+	ListKnowledgeVersionsUpTo(
+		ctx context.Context, knowledgeID string, at time.Time, limit int,
+	) ([]*types.KnowledgeVersion, error)
 }
 
 // KnowledgeLifecycleService owns the lifecycle state machine (V3.0 §7.1).
@@ -426,4 +436,23 @@ type KnowledgeLifecycleService interface {
 	ListVersions(ctx context.Context, knowledgeID string, limit int) ([]*types.KnowledgeVersion, error)
 	// ResolvedForDisplay computes the read-time behaviour of one entry.
 	ResolvedForDisplay(k *types.Knowledge, now time.Time) types.KnowledgeLifecycleResolved
+}
+
+// KnowledgeVersionQueryService is the §7.4 version surface: paragraph diff,
+// as-of lookup and rollback.
+type KnowledgeVersionQueryService interface {
+	// Diff compares two versions; an empty left ref means "the version before
+	// right", and "current" means the live document.
+	Diff(
+		ctx context.Context, tenantID uint64, knowledgeID, leftRef, rightRef string,
+	) (*types.VersionDiff, error)
+	// AsOf resolves the version in force at one instant.
+	AsOf(
+		ctx context.Context, tenantID uint64, knowledgeID string, at time.Time,
+	) (*types.AsOfVersion, error)
+	// Rollback restores a historical version as a NEW version (history is
+	// never deleted: it must stay queryable, §7.4).
+	Rollback(
+		ctx context.Context, tenantID uint64, input types.VersionRollbackInput,
+	) (*types.VersionRollbackResult, error)
 }

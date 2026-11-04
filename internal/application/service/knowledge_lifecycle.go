@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
@@ -299,24 +300,49 @@ func (s *knowledgeLifecycleService) writeVersionSnapshot(
 		version = latest.Version + 1
 	}
 	snapshot := map[string]interface{}{
-		"title":          knowledge.Title,
+		"title": knowledge.Title,
+		// description 是快照里唯一可比的正文文本：没有它，§7.4 的段落差异
+		// 只能比标题，等于比不出来。
+		"description":    knowledge.Description,
 		"file_hash":      knowledge.FileHash,
 		"file_size":      knowledge.StorageSize,
 		"parse_status":   knowledge.ParseStatus,
 		"classification": knowledge.Classification,
 	}
 	snapshotJSON := lifecycleJSON(snapshot)
+
+	// 语义化版本（§7.4）：由作者选择的 bump 级别推进；没选时按变更类型
+	// 推断（推断只降低填表负担，作者的选择优先）。
+	bump := types.VersionBump(strings.TrimSpace(input.VersionBump))
+	if !bump.Valid() {
+		bump = types.ClassifyVersionBump(input.ChangeType)
+	}
+	previous := types.SemanticVersion{Major: 1}
+	if latest != nil {
+		if parsed, parseErr := types.ParseSemanticVersion(latest.SemanticVersion); parseErr == nil &&
+			latest.SemanticVersion != "" {
+			previous = parsed
+		} else {
+			// 旧行没有语义化版本：以递增号作为主版本起点，保证单调。
+			previous = types.SemanticVersion{Major: latest.Version}
+		}
+	}
+	semantic := previous.Bump(bump)
+
 	record := &types.KnowledgeVersion{
-		TenantID:    knowledge.TenantID,
-		KnowledgeID: knowledge.ID,
-		Version:     version,
-		ContentHash: knowledge.FileHash,
-		Title:       knowledge.Title,
-		ChangeNote:  input.ChangeNote,
-		Snapshot:    snapshotJSON,
-		PublishedBy: input.ActorID,
-		ReceiptID:   input.ReceiptID,
-		EffectiveAt: knowledge.EffectiveAt,
+		TenantID:        knowledge.TenantID,
+		KnowledgeID:     knowledge.ID,
+		Version:         version,
+		SemanticVersion: semantic.String(),
+		BumpSize:        string(bump),
+		ContentHash:     knowledge.FileHash,
+		Title:           knowledge.Title,
+		ChangeNote:      input.ChangeNote,
+		Snapshot:        snapshotJSON,
+		PublishedBy:     input.ActorID,
+		ReceiptID:       input.ReceiptID,
+		EffectiveAt:     knowledge.EffectiveAt,
+		RolledBackFrom:  input.RolledBackFrom,
 	}
 	if err := s.versionRepo.CreateKnowledgeVersion(ctx, record); err != nil {
 		return 0, err
