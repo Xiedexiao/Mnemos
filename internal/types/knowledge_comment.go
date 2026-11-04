@@ -64,6 +64,10 @@ type KnowledgeComment struct {
 	// Anchor is the JSONB text-selection anchor; nil = global comment.
 	// Marshalled with SetAnchor (json.Marshal), never inline structs.
 	Anchor JSON `json:"anchor" gorm:"type:jsonb"`
+	// Mentions holds the resolved @ mentions (§5.1). Only mentions the server
+	// validated (existing, same workspace, document visible to the author)
+	// are stored here; everything else is dropped before the insert.
+	Mentions JSON `json:"mentions" gorm:"type:jsonb"`
 	// Resolved marks the discussion as settled.
 	Resolved bool `json:"resolved" gorm:"not null;default:false"`
 	// ResolvedBy records who resolved the comment.
@@ -128,4 +132,30 @@ type KnowledgeCommentThread struct {
 	// parent was soft-deleted are promoted to top level so no surviving
 	// content drops out of the thread view.
 	Replies []*KnowledgeCommentThread `json:"replies"`
+}
+
+// CommentMentions decodes the stored mention list, tolerating a bad payload.
+func (c *KnowledgeComment) CommentMentions() []Mention {
+	if c == nil || len(c.Mentions) == 0 {
+		return nil
+	}
+	var mentions []Mention
+	if err := json.Unmarshal(c.Mentions, &mentions); err != nil {
+		return nil
+	}
+	return mentions
+}
+
+// SetMentions marshals the mention list into the JSONB payload.
+func (c *KnowledgeComment) SetMentions(mentions []Mention) error {
+	if len(mentions) == 0 {
+		c.Mentions = JSON("[]")
+		return nil
+	}
+	data, err := json.Marshal(mentions)
+	if err != nil {
+		return err
+	}
+	c.Mentions = JSON(data)
+	return nil
 }

@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
+	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	"github.com/google/uuid"
@@ -31,15 +32,19 @@ const maxCommentBodyLen = 10000
 type commentService struct {
 	repo  interfaces.CommentRepository
 	audit interfaces.AuditLogService
-	now   func() time.Time
+	// mentions validates and delivers @ mentions (§5.1). Optional: nil means
+	// mentions are parsed and stored but nobody is notified.
+	mentions interfaces.MentionResolver
+	now      func() time.Time
 }
 
 // NewCommentService constructs the comment service.
 func NewCommentService(
 	repo interfaces.CommentRepository,
 	audit interfaces.AuditLogService,
+	mentions interfaces.MentionResolver,
 ) interfaces.CommentService {
-	return &commentService{repo: repo, audit: audit, now: time.Now}
+	return &commentService{repo: repo, audit: audit, mentions: mentions, now: time.Now}
 }
 
 // commentDetailsJSON marshals an audit detail payload, falling back to an
@@ -97,8 +102,37 @@ func (s *commentService) AddComment(
 			return nil, apperrors.NewBadRequestError("replies to replies are not allowed (one level of nesting)")
 		}
 	}
+	// @提及（§5.1）：先解析再校验。前端可以直接给结构化的 mentions，也可
+	// 以只在正文里写 `@[label](id)`；两种来源合并去重。校验在服务端做，
+	// 因为"这个人是不是本工作区成员""作者能不能看这篇文档"只有服务端知道。
+	// 结构化 mentions（handler 传入）与正文内联写法合并去重。
+	requested := types.MergeMentions(comment.CommentMentions(), comment.Body)
+	resolved := requested
+	if s.mentions != nil && len(requested) > 0 {
+		validated, resolveErr := s.mentions.Resolve(
+			ctx, comment.TenantID, comment.AuthorID, requested)
+		if resolveErr != nil {
+			// 提及列表本身格式坏了是调用方错误；解析/校验出错则保留原文而
+			// 不阻断评论（评论的价值高于提示）。
+			if len(validated) == 0 {
+				logger.Warnf(ctx, "comment %s mention resolution failed: %v", comment.ID, resolveErr)
+			}
+		}
+		resolved = validated
+	}
+	if err := comment.SetMentions(resolved); err != nil {
+		return nil, apperrors.NewBadRequestError("mentions payload is malformed")
+	}
+	if comment.Mentions == nil {
+		comment.Mentions = types.JSON("[]")
+	}
 	if err := s.repo.CreateComment(ctx, comment); err != nil {
 		return nil, err
+	}
+	// 通知在落库之后发：评论已经成立，通知失败不回滚。
+	if s.mentions != nil && len(resolved) > 0 {
+		s.mentions.Notify(ctx, comment.TenantID, comment.AuthorID,
+			comment.KnowledgeID, comment.ID, resolved)
 	}
 	hasAnchor := len(comment.Anchor) > 0
 	s.logAudit(ctx, comment.TenantID, comment.AuthorID, auditActionCommentCreated,

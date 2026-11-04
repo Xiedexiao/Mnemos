@@ -6650,6 +6650,179 @@ const docTemplate = `{
                 }
             }
         },
+        "/drafts": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "读取本人某一份草稿；不存在时返回 null 而不是 404（编辑器据此判断是新建还是续写）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "草稿"
+                ],
+                "summary": "读取草稿",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "knowledge/comment/answer",
+                        "name": "kind",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "范围 ID",
+                        "name": "scope_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "自动保存编辑中的内容（KnowAxis V3.0 §5.4）。带 expected_revision 时若服务端已前进则返回 409 与双方内容，由前端合并——不做静默覆盖。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "草稿"
+                ],
+                "summary": "自动保存草稿",
+                "parameters": [
+                    {
+                        "description": "草稿",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.saveDraftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: Draft}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "{success:false, data:{current, submitted}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/drafts/list": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出本人的草稿（按更新时间倒序）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "草稿"
+                ],
+                "summary": "我的草稿",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "类型过滤",
+                        "name": "kind",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "条数（默认 50）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/drafts/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除一份草稿（提交后清理，或用户主动丢弃）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "草稿"
+                ],
+                "summary": "删除草稿",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "草稿 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/embed/push/events": {
             "post": {
                 "security": [
@@ -38010,20 +38183,6 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "aipre.completed",
-                "aipre.failed",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -38037,6 +38196,10 @@ const docTemplate = `{
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -38099,6 +38262,15 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "parse_quality.computed",
+                "share.created",
+                "share.revoked",
+                "share.visited",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -38112,30 +38284,17 @@ const docTemplate = `{
                 "ontology.relation_created",
                 "ontology.relation_updated",
                 "ontology.relation_deleted",
-                "parse_quality.computed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "share.created",
-                "share.revoked",
-                "share.visited"
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "aipre.completed",
+                "aipre.failed",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated"
             ],
             "x-enum-varnames": [
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -38149,6 +38308,10 @@ const docTemplate = `{
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -38211,6 +38374,15 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "ParseQualityAuditActionComputed",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -38224,14 +38396,15 @@ const docTemplate = `{
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
                 "OntologyActionRelationDeleted",
-                "ParseQualityAuditActionComputed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited"
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -43720,6 +43893,40 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "github_com_Tencent_WeKnora_internal_types.Mention": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "ID is the referenced entity.",
+                    "type": "string"
+                },
+                "label": {
+                    "description": "Label is the text the author typed (display only).",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type is user / knowledge / expert.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.MentionType"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.MentionType": {
+            "type": "string",
+            "enum": [
+                "user",
+                "knowledge",
+                "expert"
+            ],
+            "x-enum-varnames": [
+                "MentionTypeUser",
+                "MentionTypeKnowledge",
+                "MentionTypeExpert"
+            ]
         },
         "github_com_Tencent_WeKnora_internal_types.MentionedItem": {
             "type": "object",
@@ -56013,6 +56220,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.saveDraftRequest": {
+            "type": "object",
+            "properties": {
+                "anchor": {
+                    "type": "object"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "expected_revision": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "mentions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.Mention"
+                    }
+                },
+                "scope_id": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }

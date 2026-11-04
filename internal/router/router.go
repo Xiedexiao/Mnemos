@@ -94,6 +94,7 @@ type RouterParams struct {
 	ACLSubjectGroupHandler       *handler.ACLSubjectGroupHandler
 	DiscoveryHandler             *handler.DiscoveryHandler
 	KnowledgeMapHandler          *handler.KnowledgeMapHandler
+	DraftHandler                 *handler.DraftHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
@@ -368,6 +369,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterACLSubjectGroupRoutes(v1, params.ACLSubjectGroupHandler, rbacGuards)
 		RegisterDiscoveryRoutes(v1, params.DiscoveryHandler, rbacGuards)
 		RegisterKnowledgeMapRoutes(v1, params.KnowledgeMapHandler, rbacGuards)
+		RegisterDraftRoutes(v1, params.DraftHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)

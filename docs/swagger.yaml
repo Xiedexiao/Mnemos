@@ -1639,20 +1639,6 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - aipre.completed
-    - aipre.failed
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1666,6 +1652,10 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1728,6 +1718,15 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - parse_quality.computed
+    - share.created
+    - share.revoked
+    - share.visited
     - ontology.schema_created
     - ontology.schema_updated
     - ontology.schema_published
@@ -1741,30 +1740,17 @@ definitions:
     - ontology.relation_created
     - ontology.relation_updated
     - ontology.relation_deleted
-    - parse_quality.computed
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
-    - share.created
-    - share.revoked
-    - share.visited
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
+    - aipre.completed
+    - aipre.failed
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
     type: string
     x-enum-varnames:
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1778,6 +1764,10 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1840,6 +1830,15 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - ParseQualityAuditActionComputed
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
     - OntologyActionSchemaCreated
     - OntologyActionSchemaUpdated
     - OntologyActionSchemaPublished
@@ -1853,14 +1852,15 @@ definitions:
     - OntologyActionRelationCreated
     - OntologyActionRelationUpdated
     - OntologyActionRelationDeleted
-    - ParseQualityAuditActionComputed
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -6299,6 +6299,29 @@ definitions:
       topic:
         type: string
     type: object
+  github_com_Tencent_WeKnora_internal_types.Mention:
+    properties:
+      id:
+        description: ID is the referenced entity.
+        type: string
+      label:
+        description: Label is the text the author typed (display only).
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.MentionType'
+        description: Type is user / knowledge / expert.
+    type: object
+  github_com_Tencent_WeKnora_internal_types.MentionType:
+    enum:
+    - user
+    - knowledge
+    - expert
+    type: string
+    x-enum-varnames:
+    - MentionTypeUser
+    - MentionTypeKnowledge
+    - MentionTypeExpert
   github_com_Tencent_WeKnora_internal_types.MentionedItem:
     properties:
       id:
@@ -15575,6 +15598,25 @@ definitions:
       updated_at:
         type: string
     type: object
+  internal_handler.saveDraftRequest:
+    properties:
+      anchor:
+        type: object
+      body:
+        type: string
+      expected_revision:
+        type: integer
+      kind:
+        type: string
+      mentions:
+        items:
+          $ref: '#/definitions/github_com_Tencent_WeKnora_internal_types.Mention'
+        type: array
+      scope_id:
+        type: string
+      title:
+        type: string
+    type: object
   internal_handler.savePromptVersionRequest:
     properties:
       change_note:
@@ -20705,6 +20747,113 @@ paths:
       summary: 注册自定义 DLP 规则
       tags:
       - DLP
+  /drafts:
+    get:
+      description: 读取本人某一份草稿；不存在时返回 null 而不是 404（编辑器据此判断是新建还是续写）。
+      parameters:
+      - description: knowledge/comment/answer
+        in: query
+        name: kind
+        required: true
+        type: string
+      - description: 范围 ID
+        in: query
+        name: scope_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 读取草稿
+      tags:
+      - 草稿
+    put:
+      consumes:
+      - application/json
+      description: 自动保存编辑中的内容（KnowAxis V3.0 §5.4）。带 expected_revision 时若服务端已前进则返回
+        409 与双方内容，由前端合并——不做静默覆盖。
+      parameters:
+      - description: 草稿
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.saveDraftRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: Draft}'
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: '{success:false, data:{current, submitted}}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 自动保存草稿
+      tags:
+      - 草稿
+  /drafts/{id}:
+    delete:
+      description: 删除一份草稿（提交后清理，或用户主动丢弃）。
+      parameters:
+      - description: 草稿 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 删除草稿
+      tags:
+      - 草稿
+  /drafts/list:
+    get:
+      description: 列出本人的草稿（按更新时间倒序）。
+      parameters:
+      - description: 类型过滤
+        in: query
+        name: kind
+        type: string
+      - description: 条数（默认 50）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 我的草稿
+      tags:
+      - 草稿
   /embed/push/events:
     post:
       consumes:
