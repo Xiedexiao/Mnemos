@@ -215,31 +215,31 @@ func (p *ProposalPayload) Validate() error {
 // SchemaProposal 本体建模提案（表 schema_proposals）。提案是治理对象，不是
 // 生效结构；只有 Apply 通过后才由 OntologyService 落成本体 Schema。
 type SchemaProposal struct {
-	ID       string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID       string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent"`
 	TenantID uint64 `json:"tenant_id" gorm:"type:integer;not null"`
 	// Name 是提案名，同时也是 Apply 时目标 schema 的名字（同名 schema 已
 	// 存在则追加到其 draft 版本）。
-	Name   string `json:"name" gorm:"type:varchar(128);not null"`
-	Domain string `json:"domain" gorm:"type:varchar(64);not null;default:''"`
+	Name   string `json:"name" gorm:"type:varchar(128);not null" extensions:"x-agent"`
+	Domain string `json:"domain" gorm:"type:varchar(64);not null;default:''" extensions:"x-agent"`
 	// SourceKnowledgeIDs 输入文档 ID 数组（服务层限制 ≤8 篇）。
 	SourceKnowledgeIDs JSON `json:"source_knowledge_ids" gorm:"column:source_knowledge_ids;type:jsonb;not null;default:'[]'"`
 	// Proposal 结构化的类型/关系提案（ProposalPayload 的 JSONB 形态）。
 	Proposal JSON `json:"proposal" gorm:"type:jsonb;not null;default:'{}'"`
 	// Rationale 提案动机（AI 生成时说明"哪些文档出现了当前 schema 无法表达
 	// 的概念"；人工提交时由提交人填写）。
-	Rationale string               `json:"rationale" gorm:"type:text;not null;default:''"`
-	Status    SchemaProposalStatus `json:"status" gorm:"type:varchar(16);not null;default:'pending'"`
+	Rationale string               `json:"rationale" gorm:"type:text;not null;default:''" extensions:"x-agent,x-agent-max-runes=800"`
+	Status    SchemaProposalStatus `json:"status" gorm:"type:varchar(16);not null;default:'pending'" extensions:"x-agent"`
 	// ReviewedBy 审批人（四眼：必须 != CreatedBy，服务层强制）。
 	ReviewedBy    string `json:"reviewed_by" gorm:"type:varchar(36);not null;default:''"`
 	ReviewComment string `json:"review_comment" gorm:"type:text;not null;default:''"`
 	// AppliedSchemaID Apply 成功后回填的 ontology_schemas.id。
-	AppliedSchemaID string `json:"applied_schema_id" gorm:"type:varchar(36);not null;default:''"`
+	AppliedSchemaID string `json:"applied_schema_id" gorm:"type:varchar(36);not null;default:''" extensions:"x-agent,x-agent-response"`
 	// CompatibilityReport CheckCompatibility 的结果（CompatibilityReport
 	// 的 JSONB 形态）；尚未检查时为空对象，Apply 要求 compatible。
 	CompatibilityReport JSON      `json:"compatibility_report" gorm:"type:jsonb;not null;default:'{}'"`
 	CreatedBy           string    `json:"created_by" gorm:"type:varchar(36);not null"`
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at"`
+	CreatedAt           time.Time `json:"created_at" extensions:"x-agent"`
+	UpdatedAt           time.Time `json:"updated_at" extensions:"x-agent"`
 }
 
 // TableName pins the GORM table name.

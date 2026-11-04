@@ -54,6 +54,11 @@ func registerOperationAreas(v1 *gin.RouterGroup, g *rbacGuards) {
 	// experience exists are lookups; publishing and reviewing are not.
 	RegisterEvidenceRoutes(v1, g, &handler.EvidencePackHandler{})
 	RegisterKnowledgeCandidateRoutes(v1, g, &handler.KnowledgeCandidateHandler{})
+	// Ontology proposals (§8.2) and governance approvals (§6.2) join them
+	// read-only: explaining a proposed schema change and reporting what blocks
+	// a governance action are lookups; approving and voting are not.
+	RegisterSchemaProposalRoutes(v1, &handler.SchemaProposalHandler{}, g)
+	RegisterGovernanceApprovalRoutes(v1, &handler.GovernanceApprovalHandler{}, g)
 }
 
 // TestBuiltinOperationsMatchRegisteredRoutes requires every operation to

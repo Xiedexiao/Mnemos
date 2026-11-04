@@ -8866,11 +8866,32 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: [ApprovalTask]}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.PageResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ApprovalTask"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "approval_task.list",
+                    "max_items": 20,
+                    "risk": "read",
+                    "role": "admin"
+                },
+                "x-agent-hint": "Lists governance approval tasks: what is waiting, its subject type, risk and SLA due time. Use it to report what is blocking a governance action; deciding a task is not available."
             },
             "post": {
                 "security": [
@@ -25616,6 +25637,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "x-agent": "proposal_id",
                         "description": "提案ID",
                         "name": "id",
                         "in": "path",
@@ -25626,8 +25648,19 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: 提案}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SchemaProposal"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "401": {
@@ -25642,7 +25675,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "ontology_proposal.get",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Reads one ontology change proposal: the proposed schema name, its domain, why it was proposed and its review status. Use it to explain what a schema change would do before it is applied."
             }
         },
         "/ontology/proposals/{id}/apply": {
@@ -40622,6 +40660,97 @@ const docTemplate = `{
                 "AnswerStrategyRandom"
             ]
         },
+        "github_com_Tencent_WeKnora_internal_types.ApprovalTask": {
+            "type": "object",
+            "properties": {
+                "assignee_ids": {
+                    "type": "object"
+                },
+                "baseline": {
+                    "type": "object"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "content_hash": {
+                    "description": "ContentHash 提交时刻的内容指纹（sha256_hex）。",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "decided_by": {
+                    "type": "string"
+                },
+                "decided_history": {
+                    "description": "DecidedHistory 全部表决记录 [{by,decision,at}]；dual 模式据此攒票。",
+                    "type": "object"
+                },
+                "decision_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "x-agent": "approval_task_id"
+                },
+                "kb_id": {
+                    "type": "string",
+                    "x-agent": "knowledge_base_id"
+                },
+                "knowledge_id": {
+                    "type": "string",
+                    "x-agent": "knowledge_id"
+                },
+                "mode": {
+                    "description": "Mode 冻结提交时刻的流配置（single|dual），避免 submit→decide 之间\nflow 配置漂移导致表决口径不一致。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "reason_code": {
+                    "type": "string"
+                },
+                "receipt_id": {
+                    "type": "string"
+                },
+                "requested_by": {
+                    "type": "string"
+                },
+                "risk_level": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "sla_due": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "status": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "subject_id": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "subject_type": {
+                    "description": "SubjectType/SubjectID identify what is under review (§6.2 十四类审核对象).\nKnowledge publishing uses type \"knowledge\" and mirrors KnowledgeID, so\nexisting queries and historical rows keep working unchanged.",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "Title is a human label for the review workbench (the knowledge title, the\nofficial answer's question, the export request's purpose, …).",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "updated_at": {
+                    "type": "string",
+                    "x-agent": true
+                }
+            }
+        },
         "github_com_Tencent_WeKnora_internal_types.ArtifactLibraryItem": {
             "type": "object",
             "properties": {
@@ -40797,6 +40926,12 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "parse_quality.computed",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "aipre.completed",
+                "aipre.failed",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -40810,11 +40945,22 @@ const docTemplate = `{
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
-                "aipre.completed",
-                "aipre.failed",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "share.created",
+                "share.revoked",
+                "share.visited",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -40890,26 +41036,15 @@ const docTemplate = `{
                 "ontology.property_deleted",
                 "ontology.relation_created",
                 "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "parse_quality.computed"
+                "ontology.relation_deleted"
             ],
             "x-enum-varnames": [
+                "ParseQualityAuditActionComputed",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -40923,11 +41058,22 @@ const docTemplate = `{
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -41003,24 +41149,7 @@ const docTemplate = `{
                 "OntologyActionPropertyDeleted",
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "ParseQualityAuditActionComputed"
+                "OntologyActionRelationDeleted"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -49776,6 +49905,92 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SchemaProposal": {
+            "type": "object",
+            "properties": {
+                "applied_schema_id": {
+                    "description": "AppliedSchemaID Apply 成功后回填的 ontology_schemas.id。",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-response": true
+                },
+                "compatibility_report": {
+                    "description": "CompatibilityReport CheckCompatibility 的结果（CompatibilityReport\n的 JSONB 形态）；尚未检查时为空对象，Apply 要求 compatible。",
+                    "type": "object"
+                },
+                "created_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "id": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "name": {
+                    "description": "Name 是提案名，同时也是 Apply 时目标 schema 的名字（同名 schema 已\n存在则追加到其 draft 版本）。",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "proposal": {
+                    "description": "Proposal 结构化的类型/关系提案（ProposalPayload 的 JSONB 形态）。",
+                    "type": "object"
+                },
+                "rationale": {
+                    "description": "Rationale 提案动机（AI 生成时说明\"哪些文档出现了当前 schema 无法表达\n的概念\"；人工提交时由提交人填写）。",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-max-runes": "800"
+                },
+                "review_comment": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "description": "ReviewedBy 审批人（四眼：必须 != CreatedBy，服务层强制）。",
+                    "type": "string"
+                },
+                "source_knowledge_ids": {
+                    "description": "SourceKnowledgeIDs 输入文档 ID 数组（服务层限制 ≤8 篇）。",
+                    "type": "object"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SchemaProposalStatus"
+                        }
+                    ],
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "x-agent": true
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SchemaProposalStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "applied"
+            ],
+            "x-enum-varnames": [
+                "SchemaProposalStatusPending",
+                "SchemaProposalStatusApproved",
+                "SchemaProposalStatusRejected",
+                "SchemaProposalStatusApplied"
+            ]
         },
         "github_com_Tencent_WeKnora_internal_types.SearchParams": {
             "type": "object",

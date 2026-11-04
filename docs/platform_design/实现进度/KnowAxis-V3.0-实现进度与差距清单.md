@@ -334,7 +334,7 @@
 | 推荐协同过滤 | **未实现，数据依赖阻塞** | 全仓无协同过滤实现（`collaborative` 命中两处与评论无关的字符串）。协同过滤需要用户-物品交互矩阵，冷启动期没有可用信号 |
 | 性能/容灾演练 | **未实现，环境依赖阻塞** | 无压测脚本与基线、无演练记录。需要真实环境与容量基线 |
 | 业务连接器 ×7 | **按约定保持占位** | 用户已明确允许；`business_api` 只读一个列表端点，任何同步失败都会说明缺什么 |
-| Agent 目录 50 端点 DTO 化 | **进行中：3 个端点已交付，其余待续** | 变更单（第二十六批）、证据包与经验候选（第二十七批）已按同一形状完成：类型标签 + 目录注解 + 只读区域白名单 + 契约测试。其余约 47 个端点同样推进——每个都需补带 `x-agent` 标签的响应字段、审慎评估是否可进只读区域；自由格式 JSON 字段需先摊平 |
+| Agent 目录 50 端点 DTO 化 | **进行中：5 个端点已交付，其余待续** | 变更单（26）、证据包与经验候选（27）、本体提案与审批待办（28）已按同一形状完成：类型标签 + 目录注解 + 只读区域白名单 + 契约测试。其余约 45 个端点同样推进——每个都需判断哪些字段可给模型、是否可进只读区域、角色是否与守卫一致；自由格式 JSON 字段需先摊平 |
 | §16.5 chat 生成侧降级 | **未实现，可在本会话交付** | embedding 侧已接入调用点；`chat_pipeline/prepareChatModel` 仍只取单一模型，主力不可用即整条回答失败 |
 | 灰度发布 / 回滚 | **未实现，外部依赖阻塞** | 无 canary 流量切分（`canary` 仅在 SSRF 测试里出现）。灰度需要多版本并存与流量网关，属部署形态问题 |
 
@@ -367,6 +367,15 @@
 | 证据包内部字段可能外泄 | §2.10 | `hash_chain_prev/row`、`permission_snapshot`、原始 `candidates` 快照**不加标签**，契约测试断言它们不出现。哈希链与权限基线是审计数据，不是模型上下文 | 本批 |
 | 候选卡片读面进不了目录 | §10.4 | `KnowledgeCandidate` 补标签（title/level/status/confidence/dedup_status/source_type），`GET /knowledge-candidates/{id}` → `knowledge_candidate.get`（read）。`requested_by`/`review_comment`/`card` 保持内部 | 本批 |
 | 写操作被误纳入 | §10.4 | 测试断言 `knowledge_candidate.create/confirm/publish/reject/withdraw` 都不可达——审核与发布是人的决策 | 本批 |
+
+### 第二十八批：2026-11 收口（目录 DTO：本体提案与审批任务）
+
+| 事项 | 文档 | 落点 | 提交 |
+|---|---|---|---|
+| 本体提案读面进不了目录 | §8.2 | `SchemaProposal` 补标签（id/name/domain/status/rationale/created_at/applied_schema_id），`GET /ontology/proposals/{id}` → `ontology_proposal.get`（read）。`source_knowledge_ids`、原始 `proposal`、`compatibility_report`、`reviewed_by` 保持内部——模型只需能解释"这个 schema 变更要做什么" | 本批 |
+| 审批待办读面进不了目录 | §6.2 | `ApprovalTask` 补标签（id/title/subject_type/subject_id/knowledge_id/kb_id/risk_level/status/mode/sla_due/时间戳），`GET /governance-approvals` → `approval_task.list`（read，**role=admin**）。`requested_by`、`baseline`、`content_hash`、`decided_history`、`receipt_id` 保持内部 | 本批 |
+| 审批列表的角色声明必须匹配路由守卫 | §16.2 | 路由契约测试抓到：该路由守卫要求 admin，而目录按 risk=read 默认声明 viewer。已在注解里显式写 `"role":"admin"`——目录声明的角色必须等于守卫实际放行的最低角色，否则模型会按 viewer 去调用并 403 | 本批 |
+| 投票与批准不能给模型 | §6.2 四眼原则 | 测试断言 `approval_task.decide/submit` 与 `ontology_proposal.create/approve/reject/apply` 全部不可达。允许模型对自己的动作请求投票会让四眼原则失效 | 本批 |
 
 ---
 

@@ -234,26 +234,26 @@ type ApprovalDecisionRecord struct {
 // ApprovalTask 一次审核提交。baseline/content_hash 冻结提交时刻的内容，
 // 决策时可对照"内容是否中途变过"。
 type ApprovalTask struct {
-	ID          string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID          string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent=approval_task_id"`
 	TenantID    uint64 `json:"tenant_id" gorm:"not null;index:idx_approval_tasks_tenant_status,priority:1"`
-	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;index:idx_approval_tasks_knowledge"`
-	KBID        string `json:"kb_id" gorm:"type:varchar(36);not null"`
+	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;index:idx_approval_tasks_knowledge" extensions:"x-agent=knowledge_id"`
+	KBID        string `json:"kb_id" gorm:"type:varchar(36);not null" extensions:"x-agent=knowledge_base_id"`
 	// SubjectType/SubjectID identify what is under review (§6.2 十四类审核对象).
 	// Knowledge publishing uses type "knowledge" and mirrors KnowledgeID, so
 	// existing queries and historical rows keep working unchanged.
-	SubjectType string `json:"subject_type" gorm:"type:varchar(32);not null;default:'knowledge'"`
-	SubjectID   string `json:"subject_id" gorm:"type:varchar(64);not null;default:''"`
+	SubjectType string `json:"subject_type" gorm:"type:varchar(32);not null;default:'knowledge'" extensions:"x-agent"`
+	SubjectID   string `json:"subject_id" gorm:"type:varchar(64);not null;default:''" extensions:"x-agent"`
 	// Title is a human label for the review workbench (the knowledge title, the
 	// official answer's question, the export request's purpose, …).
-	Title string `json:"title" gorm:"type:varchar(255);not null;default:''"`
+	Title string `json:"title" gorm:"type:varchar(255);not null;default:''" extensions:"x-agent"`
 	// Mode 冻结提交时刻的流配置（single|dual），避免 submit→decide 之间
 	// flow 配置漂移导致表决口径不一致。
-	Mode     string `json:"mode" gorm:"type:varchar(16);not null;default:'single'"`
+	Mode     string `json:"mode" gorm:"type:varchar(16);not null;default:'single'" extensions:"x-agent"`
 	Baseline JSON   `json:"baseline" gorm:"type:json;not null;default:'{}'"`
 	// ContentHash 提交时刻的内容指纹（sha256_hex）。
 	ContentHash string `json:"content_hash" gorm:"type:varchar(128);not null"`
-	RiskLevel   string `json:"risk_level" gorm:"type:varchar(16);not null"`
-	Status      string `json:"status" gorm:"type:varchar(16);not null;default:'pending';index:idx_approval_tasks_tenant_status,priority:2"`
+	RiskLevel   string `json:"risk_level" gorm:"type:varchar(16);not null" extensions:"x-agent"`
+	Status      string `json:"status" gorm:"type:varchar(16);not null;default:'pending';index:idx_approval_tasks_tenant_status,priority:2" extensions:"x-agent"`
 	AssigneeIDs JSON   `json:"assignee_ids" gorm:"type:json;not null;default:'[]'"`
 	RequestedBy string `json:"requested_by" gorm:"type:varchar(36);not null"`
 	DecidedBy   string `json:"decided_by" gorm:"type:varchar(36);not null;default:''"`
@@ -262,10 +262,10 @@ type ApprovalTask struct {
 	DecisionAt     *time.Time `json:"decision_at"`
 	ReasonCode     string     `json:"reason_code" gorm:"type:varchar(32);not null;default:''"`
 	Comment        string     `json:"comment" gorm:"type:text;not null;default:''"`
-	SLADue         *time.Time `json:"sla_due"`
+	SLADue         *time.Time `json:"sla_due" extensions:"x-agent"`
 	ReceiptID      string     `json:"receipt_id" gorm:"type:varchar(64);not null;default:''"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedAt      time.Time  `json:"created_at" extensions:"x-agent"`
+	UpdatedAt      time.Time  `json:"updated_at" extensions:"x-agent"`
 }
 
 // TableName 固定 GORM 表名。

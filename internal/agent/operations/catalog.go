@@ -367,6 +367,15 @@ var allowedRouteAreas = map[string]bool{
 	// experience was already captured before proposing one. Confirming,
 	// publishing and rejecting are review decisions and stay out.
 	"knowledge-candidates": true,
+	// §8.2 ontology change proposals, read-only: an agent can explain what a
+	// proposed schema change would do. Approving and applying it is a modelling
+	// decision with a compatibility gate behind it.
+	"ontology": true,
+	// §6.2 governance approval tasks, read-only: an agent can report what is
+	// blocking a governance action. Deciding stays with the approver — a model
+	// that could vote on its own action requests would make the four-eyes rule
+	// meaningless.
+	"governance-approvals": true,
 }
 
 // readOnlyRouteAreas admit only operations that change nothing. Deleting,
@@ -381,6 +390,8 @@ var readOnlyRouteAreas = map[string]bool{
 	"impact-tasks":         true,
 	"evidence-packs":       true,
 	"knowledge-candidates": true,
+	"ontology":             true,
+	"governance-approvals": true,
 	"system":               true, // Only info and parser-engines are reachable; see parseRoute.
 }
 

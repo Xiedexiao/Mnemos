@@ -151,9 +151,11 @@ func (h *GovernanceApprovalHandler) GetGovernanceApprovalStatus(c *gin.Context) 
 // @Produce      json
 // @Param        subject_type  query  string  false  "主体类型（缺省为全部）"
 // @Param        limit         query  int     false  "返回条数（默认 100，上限 200）"
-// @Success      200  {object}  map[string]interface{}  "{success, data: [ApprovalTask]}"
+// @Success      200  {object}  handler.PageResponse{data=[]types.ApprovalTask}  "{success, data: [ApprovalTask]}"
 // @Security     Bearer
 // @Security     ApiKeyAuth
+// @x-agent      {"id":"approval_task.list","risk":"read","max_items":20,"role":"admin"}
+// @x-agent-hint "Lists governance approval tasks: what is waiting, its subject type, risk and SLA due time. Use it to report what is blocking a governance action; deciding a task is not available."
 // @Router       /governance-approvals [get]
 func (h *GovernanceApprovalHandler) ListGovernanceApprovals(c *gin.Context) {
 	ctx := c.Request.Context()

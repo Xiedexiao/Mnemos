@@ -225,11 +225,13 @@ func (h *SchemaProposalHandler) ListSchemaProposals(c *gin.Context) {
 // @Description  按提案 ID 返回提案（租户隔离），含结构化 proposal 与 compatibility_report。
 // @Tags         本体建模提案
 // @Produce      json
-// @Param        id  path  string  true  "提案ID"
-// @Success      200  {object}  map[string]interface{}  "{success, data: 提案}"
+// @Param        id  path  string  true  "提案ID"  extensions(x-agent=proposal_id)
+// @Success      200  {object}  handler.DataResponse{data=types.SchemaProposal}  "{success, data: 提案}"
 // @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Failure      404  {object}  apperrors.AppError  "提案不存在"
 // @Security     Bearer
+// @x-agent      {"id":"ontology_proposal.get","risk":"read"}
+// @x-agent-hint "Reads one ontology change proposal: the proposed schema name, its domain, why it was proposed and its review status. Use it to explain what a schema change would do before it is applied."
 // @Router       /ontology/proposals/{id} [get]
 func (h *SchemaProposalHandler) GetSchemaProposal(c *gin.Context) {
 	ctx := c.Request.Context()
