@@ -203,6 +203,138 @@
           <template #rank="{ row }">#{{ row.rank }}</template>
         </t-table>
       </t-tab-panel>
+
+      <t-tab-panel value="discovery" :label="t('personalCenter.tabDiscovery')">
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.digestTitle') }}</h4>
+        <p class="personal-center__switch-desc">{{ t('personalCenter.digestDesc') }}</p>
+        <t-table
+          row-key="knowledge_id"
+          :data="digest?.items || []"
+          :columns="digestColumns"
+          size="small"
+          :empty="t('personalCenter.emptyDigest')"
+        >
+          <template #label="{ row }">
+            <div class="personal-center__cell">
+              <span class="personal-center__cell-title">{{ row.title }}</span>
+              <span class="personal-center__cell-meta">{{ row.subscription_label }}</span>
+            </div>
+          </template>
+          <template #changed_at="{ row }">{{ formatTime(row.changed_at) }}</template>
+        </t-table>
+        <p v-if="digest && digest.hidden_count > 0" class="personal-center__switch-desc">
+          {{ t('personalCenter.digestHidden', { count: digest.hidden_count }) }}
+        </p>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.forYouTitle') }}</h4>
+        <t-table
+          row-key="knowledge_id"
+          :data="home?.for_you || []"
+          :columns="recommendationColumns"
+          size="small"
+          :empty="t('personalCenter.emptyRecommendations')"
+        >
+          <template #label="{ row }">
+            <div class="personal-center__cell">
+              <span class="personal-center__cell-title">{{ row.title }}</span>
+              <span class="personal-center__cell-meta">{{ reasonLabel(row.reason) }}</span>
+            </div>
+          </template>
+        </t-table>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.latestTitle') }}</h4>
+        <t-table
+          row-key="knowledge_id"
+          :data="home?.latest || []"
+          :columns="recommendationColumns"
+          size="small"
+          :empty="t('personalCenter.emptyRecommendations')"
+        >
+          <template #label="{ row }">
+            <div class="personal-center__cell">
+              <span class="personal-center__cell-title">{{ row.title }}</span>
+              <span class="personal-center__cell-meta">{{ reasonLabel(row.reason) }}</span>
+            </div>
+          </template>
+          <template #updated_at="{ row }">{{ formatTime(row.updated_at) }}</template>
+        </t-table>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.hotTitle') }}</h4>
+        <t-table
+          row-key="knowledge_id"
+          :data="home?.hot || []"
+          :columns="recommendationColumns"
+          size="small"
+          :empty="t('personalCenter.emptyRecommendations')"
+        >
+          <template #label="{ row }">
+            <div class="personal-center__cell">
+              <span class="personal-center__cell-title">{{ row.title }}</span>
+              <span class="personal-center__cell-meta">{{ reasonLabel(row.reason) }}</span>
+            </div>
+          </template>
+        </t-table>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.historyTitle') }}</h4>
+        <t-table
+          row-key="knowledge_id"
+          :data="viewHistory"
+          :columns="historyColumns"
+          size="small"
+          :empty="t('personalCenter.emptyHistory')"
+        >
+          <template #title="{ row }">
+            <span :class="{ 'is-hidden': !row.visible }">
+              {{ row.visible ? row.title : t('personalCenter.historyHidden') }}
+            </span>
+          </template>
+          <template #viewed_at="{ row }">{{ formatTime(row.viewed_at) }}</template>
+        </t-table>
+
+        <h4 class="personal-center__subtitle">{{ t('personalCenter.subscriptionsTitle') }}</h4>
+        <div class="personal-center__toolbar">
+          <t-select v-model="subscribeForm.subject_type" class="personal-center__select">
+            <t-option value="space" :label="t('personalCenter.subjectSpace')" />
+            <t-option value="folder" :label="t('personalCenter.subjectFolder')" />
+            <t-option value="knowledge" :label="t('personalCenter.subjectKnowledge')" />
+            <t-option value="tag" :label="t('personalCenter.subjectTag')" />
+            <t-option value="author" :label="t('personalCenter.subjectAuthor')" />
+          </t-select>
+          <t-input v-model="subscribeForm.subject_id"
+            :placeholder="t('personalCenter.subjectIdPlaceholder')" />
+          <t-input v-model="subscribeForm.space_id"
+            :placeholder="t('personalCenter.spaceIdPlaceholder')" />
+          <t-button theme="primary" size="small" :loading="subscribeBusy" @click="addSubscription">
+            {{ t('personalCenter.subscribe') }}
+          </t-button>
+        </div>
+        <t-table
+          row-key="id"
+          :data="subscriptions"
+          :columns="subscriptionColumns"
+          size="small"
+          :empty="t('personalCenter.emptySubscriptions')"
+        >
+          <template #subject="{ row }">
+            <div class="personal-center__cell">
+              <span class="personal-center__cell-title">
+                {{ row.label || row.subject_id }}
+              </span>
+              <span class="personal-center__cell-meta">{{ subjectLabel(row.subject_type) }}</span>
+            </div>
+          </template>
+          <template #enabled="{ row }">
+            <t-switch size="small" :value="row.enabled"
+              @change="(value: any) => toggleSubscription(row, Boolean(value))" />
+          </template>
+          <template #op="{ row }">
+            <t-button theme="danger" variant="text" size="small"
+              :loading="busyId === row.id" @click="removeSubscription(row)">
+              {{ t('personalCenter.unsubscribe') }}
+            </t-button>
+          </template>
+        </t-table>
+      </t-tab-panel>
     </t-tabs>
   </div>
 </template>
@@ -213,6 +345,13 @@ import { useI18n } from 'vue-i18n';
 import { MessagePlugin } from 'tdesign-vue-next';
 import {
   cancelRedemption,
+  getDigest,
+  getHomeRecommendations,
+  listSubscriptions,
+  listViewHistory,
+  setSubscriptionEnabled,
+  subscribe,
+  unsubscribe,
   completeLearningTask,
   getEmbedPushPreference,
   getMyPoints,
@@ -228,6 +367,10 @@ import {
   type LearningCertificate,
   type LearningTask,
   type PersonalCenter,
+  type Digest,
+  type RecommendationBoard,
+  type Subscription,
+  type ViewHistoryItem,
   type PointsSummary,
   type RewardCatalogItem,
   type RewardRedemption,
@@ -249,7 +392,7 @@ const learningTasks = ref<LearningTask[]>([]);
 const busyId = ref<string | null>(null);
 const loading = ref(false);
 const activeTab = ref<
-  'reviews' | 'favorites' | 'knowledge' | 'tasks' | 'certificates' | 'rewards'
+  'reviews' | 'favorites' | 'knowledge' | 'tasks' | 'certificates' | 'rewards' | 'discovery'
 >('reviews');
 
 // ---- 积分与激励（§15.4） ----
@@ -259,6 +402,14 @@ const redemptions = ref<RewardRedemption[]>([]);
 const stars = ref<KnowledgeStarAward[]>([]);
 const pushEnabled = ref(true);
 const pushBusy = ref(false);
+
+// ---- 发现（§15.3） ----
+const digest = ref<Digest | null>(null);
+const home = ref<RecommendationBoard | null>(null);
+const viewHistory = ref<ViewHistoryItem[]>([]);
+const subscriptions = ref<Subscription[]>([]);
+const subscribeBusy = ref(false);
+const subscribeForm = ref({ subject_type: 'space', subject_id: '', space_id: '' });
 
 const statusTheme = (status: string): 'default' | 'success' | 'warning' | 'danger' => {
   switch (status) {
@@ -319,6 +470,27 @@ const starColumns = computed(() => [
   { colKey: 'reason', title: t('personalCenter.colReason'), ellipsis: true, minWidth: 180 },
 ]);
 
+const digestColumns = computed(() => [
+  { colKey: 'label', title: t('personalCenter.colTitle'), ellipsis: true, minWidth: 240 },
+  { colKey: 'changed_at', title: t('personalCenter.colUpdated'), width: 180 },
+]);
+
+const recommendationColumns = computed(() => [
+  { colKey: 'label', title: t('personalCenter.colTitle'), ellipsis: true, minWidth: 240 },
+  { colKey: 'updated_at', title: t('personalCenter.colUpdated'), width: 180 },
+]);
+
+const historyColumns = computed(() => [
+  { colKey: 'title', title: t('personalCenter.colTitle'), ellipsis: true, minWidth: 240 },
+  { colKey: 'viewed_at', title: t('personalCenter.colViewedAt'), width: 180 },
+]);
+
+const subscriptionColumns = computed(() => [
+  { colKey: 'subject', title: t('personalCenter.colSubject'), ellipsis: true, minWidth: 220 },
+  { colKey: 'enabled', title: t('personalCenter.colEnabled'), width: 100 },
+  { colKey: 'op', title: t('personalCenter.colAction'), width: 120 },
+]);
+
 const certificateColumns = computed(() => [
   { colKey: 'serial', title: t('personalCenter.colSerial'), width: 160 },
   { colKey: 'stage', title: t('personalCenter.colStage'), width: 110 },
@@ -352,7 +524,8 @@ const load = async () => {
   loading.value = true;
   try {
     const [centerResponse, certificateResponse, taskResponse, pointsResponse,
-      catalogResponse, redemptionResponse, starResponse, pushResponse] = await Promise.all([
+      catalogResponse, redemptionResponse, starResponse, pushResponse,
+      digestResponse, recommendationResponse, historyResponse, subscriptionResponse] = await Promise.all([
       getPersonalCenter(),
       // 认证与学习任务是辅助信息：取不到时页面其余部分仍然可用。
       listLearningCertificates().catch(() => ({ data: [] as LearningCertificate[] })),
@@ -362,6 +535,10 @@ const load = async () => {
       listMyRedemptions().catch(() => ({ data: [] as RewardRedemption[] })),
       listKnowledgeStars().catch(() => ({ data: [] as KnowledgeStarAward[] })),
       getEmbedPushPreference().catch(() => null),
+      getDigest().catch(() => null),
+      getHomeRecommendations().catch(() => null),
+      listViewHistory().catch(() => ({ data: [] as ViewHistoryItem[] })),
+      listSubscriptions().catch(() => ({ data: [] as Subscription[] })),
     ]);
     center.value = centerResponse?.data || null;
     certificates.value = (certificateResponse as any)?.data || [];
@@ -371,6 +548,10 @@ const load = async () => {
     redemptions.value = (redemptionResponse as any)?.data || [];
     stars.value = (starResponse as any)?.data || [];
     pushEnabled.value = (pushResponse as any)?.data?.enabled ?? true;
+    digest.value = (digestResponse as any)?.data || null;
+    home.value = (recommendationResponse as any)?.data || null;
+    viewHistory.value = (historyResponse as any)?.data || [];
+    subscriptions.value = (subscriptionResponse as any)?.data || [];
   } catch (error: any) {
     MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
   } finally {
@@ -429,6 +610,63 @@ const togglePush = async (enabled: boolean) => {
     MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
   } finally {
     pushBusy.value = false;
+  }
+};
+
+const reasonLabel = (reason: string) => t(`personalCenter.reason_${reason}`);
+const subjectLabel = (subjectType: string) => t(`personalCenter.subject_${subjectType}`);
+
+const reloadDiscovery = async () => {
+  const [digestResponse, recommendationResponse, historyResponse, subscriptionResponse] =
+    await Promise.all([
+      getDigest().catch(() => null),
+      getHomeRecommendations().catch(() => null),
+      listViewHistory().catch(() => ({ data: [] as ViewHistoryItem[] })),
+      listSubscriptions().catch(() => ({ data: [] as Subscription[] })),
+    ]);
+  digest.value = (digestResponse as any)?.data || digest.value;
+  home.value = (recommendationResponse as any)?.data || home.value;
+  viewHistory.value = (historyResponse as any)?.data || [];
+  subscriptions.value = (subscriptionResponse as any)?.data || [];
+};
+
+const addSubscription = async () => {
+  const subjectID = subscribeForm.value.subject_id.trim();
+  if (!subjectID) return;
+  subscribeBusy.value = true;
+  try {
+    await subscribe({
+      subject_type: subscribeForm.value.subject_type,
+      subject_id: subjectID,
+      space_id: subscribeForm.value.space_id.trim() || undefined,
+    });
+    subscribeForm.value.subject_id = '';
+    await reloadDiscovery();
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
+  } finally {
+    subscribeBusy.value = false;
+  }
+};
+
+const toggleSubscription = async (row: Subscription, enabled: boolean) => {
+  try {
+    await setSubscriptionEnabled(row.id, enabled);
+    await reloadDiscovery();
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
+  }
+};
+
+const removeSubscription = async (row: Subscription) => {
+  busyId.value = row.id;
+  try {
+    await unsubscribe(row.id);
+    await reloadDiscovery();
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('personalCenter.loadFailed'));
+  } finally {
+    busyId.value = null;
   }
 };
 
@@ -510,6 +748,33 @@ onMounted(load);
 .personal-center__value {
   font-size: var(--app-text-4xl);
   font-weight: 600;
+}
+
+.personal-center__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.personal-center__select {
+  width: 160px;
+}
+
+.personal-center__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.personal-center__cell-title {
+  font-weight: 500;
+}
+
+.personal-center__cell-meta {
+  font-size: var(--app-text-sm);
+  color: var(--td-text-color-secondary);
 }
 
 .personal-center__switch-row {

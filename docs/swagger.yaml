@@ -1639,10 +1639,52 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
+    - ontology.schema_proposal_created
+    - ontology.schema_proposal_checked
+    - ontology.schema_proposal_approved
+    - ontology.schema_proposal_rejected
+    - ontology.schema_proposal_applied
+    - cr.created
+    - cr.item_added
+    - cr.item_removed
+    - cr.analyzed
+    - cr.submitted
+    - cr.scheduled
+    - cr.publish_started
+    - cr.publish_finished
+    - cr.closed
+    - cr.rolled_back
+    - cr.impact_task_updated
+    - cr.verified
+    - cr.notified
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
+    - share.created
+    - share.revoked
+    - share.visited
+    - ontology.schema_created
+    - ontology.schema_updated
+    - ontology.schema_published
+    - ontology.schema_deleted
+    - ontology.type_created
+    - ontology.type_updated
+    - ontology.type_deleted
+    - ontology.property_created
+    - ontology.property_updated
+    - ontology.property_deleted
+    - ontology.relation_created
+    - ontology.relation_updated
+    - ontology.relation_deleted
     - review.submitted
     - review.approved
     - review.rejected
     - review.receipt_issued
+    - parse_quality.computed
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1705,56 +1747,56 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - ontology.schema_proposal_created
-    - ontology.schema_proposal_checked
-    - ontology.schema_proposal_approved
-    - ontology.schema_proposal_rejected
-    - ontology.schema_proposal_applied
-    - share.created
-    - share.revoked
-    - share.visited
-    - cr.created
-    - cr.item_added
-    - cr.item_removed
-    - cr.analyzed
-    - cr.submitted
-    - cr.scheduled
-    - cr.publish_started
-    - cr.publish_finished
-    - cr.closed
-    - cr.rolled_back
-    - cr.impact_task_updated
-    - cr.verified
-    - cr.notified
     - aipre.completed
     - aipre.failed
-    - ontology.schema_created
-    - ontology.schema_updated
-    - ontology.schema_published
-    - ontology.schema_deleted
-    - ontology.type_created
-    - ontology.type_updated
-    - ontology.type_deleted
-    - ontology.property_created
-    - ontology.property_updated
-    - ontology.property_deleted
-    - ontology.relation_created
-    - ontology.relation_updated
-    - ontology.relation_deleted
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
-    - parse_quality.computed
     type: string
     x-enum-varnames:
+    - OntologyActionSchemaProposalCreated
+    - OntologyActionSchemaProposalChecked
+    - OntologyActionSchemaProposalApproved
+    - OntologyActionSchemaProposalRejected
+    - OntologyActionSchemaProposalApplied
+    - AuditActionCRCreated
+    - AuditActionCRItemAdded
+    - AuditActionCRItemRemoved
+    - AuditActionCRAnalyzed
+    - AuditActionCRSubmitted
+    - AuditActionCRScheduled
+    - AuditActionCRPublishStarted
+    - AuditActionCRPublishFinished
+    - AuditActionCRClosed
+    - AuditActionCRRolledBack
+    - AuditActionCRImpactTaskUpdated
+    - AuditActionCRVerified
+    - AuditActionCRNotified
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
+    - OntologyActionSchemaCreated
+    - OntologyActionSchemaUpdated
+    - OntologyActionSchemaPublished
+    - OntologyActionSchemaDeleted
+    - OntologyActionTypeCreated
+    - OntologyActionTypeUpdated
+    - OntologyActionTypeDeleted
+    - OntologyActionPropertyCreated
+    - OntologyActionPropertyUpdated
+    - OntologyActionPropertyDeleted
+    - OntologyActionRelationCreated
+    - OntologyActionRelationUpdated
+    - OntologyActionRelationDeleted
     - AuditActionReviewSubmitted
     - AuditActionReviewApproved
     - AuditActionReviewRejected
     - AuditActionReviewReceiptIssued
+    - ParseQualityAuditActionComputed
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1817,50 +1859,8 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - OntologyActionSchemaProposalCreated
-    - OntologyActionSchemaProposalChecked
-    - OntologyActionSchemaProposalApproved
-    - OntologyActionSchemaProposalRejected
-    - OntologyActionSchemaProposalApplied
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
-    - AuditActionCRCreated
-    - AuditActionCRItemAdded
-    - AuditActionCRItemRemoved
-    - AuditActionCRAnalyzed
-    - AuditActionCRSubmitted
-    - AuditActionCRScheduled
-    - AuditActionCRPublishStarted
-    - AuditActionCRPublishFinished
-    - AuditActionCRClosed
-    - AuditActionCRRolledBack
-    - AuditActionCRImpactTaskUpdated
-    - AuditActionCRVerified
-    - AuditActionCRNotified
     - AuditActionAIPreReviewCompleted
     - AuditActionAIPreReviewFailed
-    - OntologyActionSchemaCreated
-    - OntologyActionSchemaUpdated
-    - OntologyActionSchemaPublished
-    - OntologyActionSchemaDeleted
-    - OntologyActionTypeCreated
-    - OntologyActionTypeUpdated
-    - OntologyActionTypeDeleted
-    - OntologyActionPropertyCreated
-    - OntologyActionPropertyUpdated
-    - OntologyActionPropertyDeleted
-    - OntologyActionRelationCreated
-    - OntologyActionRelationUpdated
-    - OntologyActionRelationDeleted
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
-    - ParseQualityAuditActionComputed
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -15429,6 +15429,11 @@ definitions:
           type: string
         type: array
     type: object
+  internal_handler.recordViewRequest:
+    properties:
+      knowledge_id:
+        type: string
+    type: object
   internal_handler.redeemRequest:
     properties:
       note:
@@ -15674,6 +15679,11 @@ definitions:
           type: string
         type: array
     type: object
+  internal_handler.setSubscriptionRequest:
+    properties:
+      enabled:
+        type: boolean
+    type: object
   internal_handler.shareLinkListResponse:
     properties:
       data:
@@ -15823,6 +15833,17 @@ definitions:
           type: integer
         description: Choices maps question_id → selected option index.
         type: object
+    type: object
+  internal_handler.subscribeRequest:
+    properties:
+      label:
+        type: string
+      space_id:
+        type: string
+      subject_id:
+        type: string
+      subject_type:
+        type: string
     type: object
   internal_handler.templateFieldRequest:
     properties:
@@ -20402,6 +20423,202 @@ paths:
       summary: Test connection with raw credentials (no persistence)
       tags:
       - DataSource
+  /discovery/digest:
+    get:
+      description: 我的关注摘要（KnowAxis V3.0 §15.3）：窗口内被订阅对象下发生变更的知识。每条都经过权限过滤，无权条目只计入隐藏数量。
+      parameters:
+      - description: 起始时间（RFC3339，缺省最近 7 天）
+        in: query
+        name: since
+        type: string
+      - description: 条数（默认 100）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: Digest}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 订阅摘要
+      tags:
+      - 发现
+  /discovery/history:
+    get:
+      description: 本人的浏览历史（后端版，跨设备，KnowAxis V3.0 §15.3）。无权访问的条目只保留占位而不显示标题。
+      parameters:
+      - description: 条数（默认 50）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: [ViewHistoryItem]}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 浏览历史
+      tags:
+      - 发现
+  /discovery/recommendations:
+    get:
+      description: 个人首页的猜你想学、最新动态与热门知识（KnowAxis V3.0 §15.3）。
+      parameters:
+      - description: 每类条数（默认 5，上限 20）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: RecommendationBoard}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 首页推荐
+      tags:
+      - 发现
+  /discovery/subscriptions:
+    get:
+      description: 列出本人的订阅。
+      parameters:
+      - description: 只看启用的
+        in: query
+        name: enabled_only
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: [Subscription]}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 我的订阅
+      tags:
+      - 发现
+    post:
+      consumes:
+      - application/json
+      description: 订阅空间、目录、单篇知识、标签或作者（KnowAxis V3.0 §15.3 我的关注）。订阅不授予访问权，摘要会逐条过权限。
+      parameters:
+      - description: 订阅
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.subscribeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: Subscription}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 订阅
+      tags:
+      - 发现
+  /discovery/subscriptions/{id}:
+    delete:
+      description: 删除一条订阅。
+      parameters:
+      - description: 订阅 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 取消订阅
+      tags:
+      - 发现
+    patch:
+      consumes:
+      - application/json
+      description: 暂停后不再进入摘要，订阅本身保留。
+      parameters:
+      - description: 订阅 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 开关
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.setSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 暂停/恢复订阅
+      tags:
+      - 发现
+  /discovery/views:
+    post:
+      consumes:
+      - application/json
+      description: 记录阅读事件（用于浏览历史与热门统计，KnowAxis V3.0 §15.3/§16.1）。同一篇 30 分钟内重复提交只记一次。
+      parameters:
+      - description: 阅读
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.recordViewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 记录一次阅读
+      tags:
+      - 发现
   /dlp/findings:
     get:
       description: 返回本租户最近的 DLP 扫描命中记录（最新在前，limit 默认 50、硬上限 200）。matched_sample 是脱敏后的样本（只留前后
@@ -26704,6 +26921,34 @@ paths:
       summary: 预览知识文件
       tags:
       - 知识管理
+  /knowledge/{id}/recommendations:
+    get:
+      description: 返回一篇知识的推荐看板（KnowAxis V3.0 §15.3）：相关知识、猜你想学、最新动态与热门知识。每一条都已经过生命周期、密级与文档
+        ACL 过滤——推荐位不会泄露无权内容的存在。
+      parameters:
+      - description: 知识ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 每类条数（默认 5，上限 20）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: RecommendationBoard}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 相关知识 / 猜你想学 / 最新 / 热门
+      tags:
+      - 发现
   /knowledge/{id}/relations:
     delete:
       description: 删除一条有类型的关联（双向同时移除）。

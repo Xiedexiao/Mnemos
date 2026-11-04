@@ -42,6 +42,9 @@ type KnowledgeHandler struct {
 	asynqClient       interfaces.TaskEnqueuer
 	spanRepo          repository.KnowledgeSpanRepository
 	backlog           backlogProbe
+	// discovery records the read so browse history and the hot list are real
+	// (§15.3/§16.1). Optional: nil disables view recording only.
+	discovery interfaces.RecommendationService
 }
 
 // backlogProbe tells a backlogged document (work still queued) from a stuck
@@ -99,6 +102,7 @@ func NewKnowledgeHandler(
 	spanRepo repository.KnowledgeSpanRepository,
 	housekeeping *service.HousekeepingService,
 	aclService interfaces.KnowledgeACLService,
+	discovery interfaces.RecommendationService,
 ) *KnowledgeHandler {
 	var backlog backlogProbe
 	if housekeeping != nil {
@@ -117,6 +121,7 @@ func NewKnowledgeHandler(
 		userSvc:           userSvc,
 		asynqClient:       asynqClient,
 		spanRepo:          spanRepo,
+		discovery:         discovery,
 	}
 }
 
@@ -776,6 +781,15 @@ func (h *KnowledgeHandler) GetKnowledge(c *gin.Context) {
 
 	logger.Infof(ctx, "Knowledge retrieved successfully, ID: %s, title: %s",
 		secutils.SanitizeForLog(knowledge.ID), secutils.SanitizeForLog(knowledge.Title))
+	// 阅读即记一次事件（§15.3 浏览历史 / §16.1 热门）。只在权限判定通过之后
+	// 记录：把被拒绝的访问也记成"读过"会让热度与历史都失真。失败不影响响应。
+	if h.discovery != nil {
+		if caller := types.CallerFromContext(ctx); caller.UserID != "" {
+			if tenantID, ok := types.TenantIDFromContext(ctx); ok && tenantID != 0 {
+				_ = h.discovery.RecordView(ctx, tenantID, caller.UserID, knowledge.ID)
+			}
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    knowledge,

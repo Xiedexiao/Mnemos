@@ -1889,3 +1889,161 @@ export function removeACLGroupMember(id: string, userId: string) {
     `/api/v1/acl/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
   )
 }
+
+// ============================================================================
+// §15.3 discovery: recommendations, history, follow subscriptions
+// ============================================================================
+
+export type RecommendationReason =
+  | 'related_relation'
+  | 'same_tag'
+  | 'same_space'
+  | 'interest'
+  | 'latest'
+  | 'hot'
+
+export interface RecommendationItem {
+  knowledge_id: string
+  knowledge_base_id: string
+  title: string
+  summary?: string
+  lifecycle_status: string
+  classification: string
+  reason: RecommendationReason | string
+  matched_tag?: string
+  score: number
+  updated_at: string
+}
+
+export interface RecommendationBoard {
+  knowledge_id?: string
+  related: RecommendationItem[]
+  for_you: RecommendationItem[]
+  latest: RecommendationItem[]
+  hot: RecommendationItem[]
+}
+
+export interface ViewHistoryItem {
+  knowledge_id: string
+  knowledge_base_id: string
+  title: string
+  visible: boolean
+  viewed_at: string
+}
+
+export interface Subscription {
+  id: string
+  subject_type: 'space' | 'folder' | 'knowledge' | 'tag' | 'author' | string
+  subject_id: string
+  space_id: string
+  label: string
+  enabled: boolean
+  last_digest_at?: string | null
+  created_at: string
+}
+
+export interface DigestItem {
+  subscription_id: string
+  subscription_label: string
+  subject_type: string
+  subject_id: string
+  knowledge_id: string
+  knowledge_base_id: string
+  title: string
+  change_kind: string
+  lifecycle_status: string
+  changed_at: string
+}
+
+export interface Digest {
+  generated_at: string
+  since: string
+  items: DigestItem[]
+  hidden_count: number
+  truncated: boolean
+}
+
+interface RecommendationBoardResponse {
+  success: boolean
+  data: RecommendationBoard
+}
+
+interface ViewHistoryResponse {
+  success: boolean
+  data: ViewHistoryItem[]
+}
+
+interface SubscriptionListResponse {
+  success: boolean
+  data: Subscription[]
+}
+
+interface SubscriptionResponse {
+  success: boolean
+  data: Subscription
+}
+
+interface DigestResponse {
+  success: boolean
+  data: Digest
+}
+
+// GET /api/v1/discovery/recommendations — the personal home board.
+export function getHomeRecommendations(limit = 5) {
+  return get<RecommendationBoardResponse>(`/api/v1/discovery/recommendations?limit=${limit}`)
+}
+
+// GET /api/v1/knowledge/:id/recommendations — the reading-page board.
+export function getKnowledgeRecommendations(knowledgeId: string, limit = 5) {
+  return get<RecommendationBoardResponse>(
+    `/api/v1/knowledge/${encodeURIComponent(knowledgeId)}/recommendations?limit=${limit}`,
+  )
+}
+
+// POST /api/v1/discovery/views
+export function recordKnowledgeView(knowledgeId: string) {
+  return post<{ success: boolean }>('/api/v1/discovery/views', { knowledge_id: knowledgeId })
+}
+
+// GET /api/v1/discovery/history
+export function listViewHistory(limit = 50) {
+  return get<ViewHistoryResponse>(`/api/v1/discovery/history?limit=${limit}`)
+}
+
+// POST /api/v1/discovery/subscriptions
+export function subscribe(payload: {
+  subject_type: string
+  subject_id: string
+  space_id?: string
+  label?: string
+}) {
+  return post<SubscriptionResponse>('/api/v1/discovery/subscriptions', payload)
+}
+
+// GET /api/v1/discovery/subscriptions
+export function listSubscriptions(enabledOnly = false) {
+  const query = enabledOnly ? '?enabled_only=true' : ''
+  return get<SubscriptionListResponse>(`/api/v1/discovery/subscriptions${query}`)
+}
+
+// PATCH /api/v1/discovery/subscriptions/:id
+export function setSubscriptionEnabled(id: string, enabled: boolean) {
+  return patch<{ success: boolean }>(
+    `/api/v1/discovery/subscriptions/${encodeURIComponent(id)}`,
+    { enabled },
+  )
+}
+
+// DELETE /api/v1/discovery/subscriptions/:id
+export function unsubscribe(id: string) {
+  return del<{ success: boolean }>(
+    `/api/v1/discovery/subscriptions/${encodeURIComponent(id)}`,
+  )
+}
+
+// GET /api/v1/discovery/digest
+export function getDigest(since = '', limit = 100) {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (since) params.set('since', since)
+  return get<DigestResponse>(`/api/v1/discovery/digest?${params.toString()}`)
+}
