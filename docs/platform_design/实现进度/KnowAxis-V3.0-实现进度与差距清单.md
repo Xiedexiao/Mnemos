@@ -329,7 +329,7 @@
 
 | 剩余项 | 核实结论 | 依据 |
 |---|---|---|
-| SAML SP | **未实现，外部依赖阻塞** | 全仓 `saml` 仅出现在 `types/scim.go` 的一行注释里；只有 OIDC。SP 实现必须与真实 IdP 联调才能验证断言签名/属性映射，无外部环境时交付的是未经验证的代码 |
+| SAML SP | **校验核心已实现（第三十一批）；接 IdP 需联调** | 解析/验签/时间窗/受众/签发者/InResponseTo/重放键均已实现并有真实签名测试。**Enveloped XML 签名与加密断言被代码明确拒绝**（需 C14N，未实现）——生产接入需 IdP 改 detached 签名或引入 SAML 库 |
 | 备份恢复 | **未实现，外部依赖阻塞** | `backup` 只出现在 Docker 引擎、日志滚动与 skill 安装的注释里，没有租户级备份/恢复任务或表结构。备份目标、RPO/RTO、加密策略属于运维决策 |
 | 推荐协同过滤 | **未实现，数据依赖阻塞** | 全仓无协同过滤实现（`collaborative` 命中两处与评论无关的字符串）。协同过滤需要用户-物品交互矩阵，冷启动期没有可用信号 |
 | 性能/容灾演练 | **未实现，环境依赖阻塞** | 无压测脚本与基线、无演练记录。需要真实环境与容量基线 |
@@ -393,6 +393,20 @@
 | 保存视图读面进不了目录 | §12.2 | `SavedKnowledgeView` 补标签（id/name/knowledge_base_id/is_default），`GET /saved-views/{view_id}` → `saved_view.get`（read）。`filter` 是 JSON blob（目录无法扁平化），`user_id` 已由"本人的视图"隐含，均不投影 | 本批 |
 | 术语治理与视图编辑留在 UI | §4.4/§12.2 | 测试断言 `glossary_term.create/update/delete/merge` 与 `saved_view.create/update/delete/set_default` 八条写操作全部不可达——词表治理是 Admin 动作，视图是个人偏好 | 本批 |
 | Swagger 注解的包别名必须与文件导入一致 | §16.2 | 本次踩到：`glossary.go` 导入的是 `errors`（未别名），注解写成 `apperrors.AppError` 导致 swag 解析失败。注解里的类型名按文件实际导入名写，否则文档生成静默丢字段 | 本批 |
+
+### 第三十一批：2026-11 收口（SAML SP 可行性核实）
+
+上一批把 SAML SP 标为"外部依赖阻塞"。这个判断**不成立**，本轮用可运行的代码纠正了它，并把核实过程记在下面。
+
+| 事项 | 核实结论 | 证据 |
+|---|---|---|
+| 需要引入第三方 SAML 库？ | **不需要** | 验证只需标准库 + 已在依赖里的 `golang.org/x/crypto`：`crypto/rsa`（PKCS1v15）+ `crypto/sha256` + `encoding/xml`。本地模块缓存里没有任何 SAML 库（`ls /root/go/pkg/mod/github.com/ \| grep -i saml` 为空），但也不需要 |
+| 无外网是否阻塞？ | **不阻塞** | `curl https://proxy.golang.org` 超时（无网络），但既然不引库就不受影响 |
+| 实现范围 | `internal/types/saml.go` | Response/Assertion 解析、RSA-SHA256 / 可选 RSA-SHA1 验签、NotBefore/NotOnOrAfter（含 2 分钟时钟偏移）、Audience、Issuer（**先于时间检查**，否则来自错误 IdP 的过期断言会被误报为"过期"）、InResponseTo（CSRF）、NameID/email 必填、断言 ID 重放键 |
+| 能力边界（代码强制，不是文档承诺） | `SAMLErrEnvelopedSignature` / `SAMLErrEncrypted` | **不支持 Enveloped XML 签名**（需要 XML-DSig C14N 规范化）与加密断言：解析时**明确返回错误**而不是跳过校验。绝大多数 IdP 默认就是 enveloped 形态，因此生产接入仍需真正的 SAML 库或 IdP 侧改成 detached 签名——但这条边界现在由代码拒绝，调用方不可能误以为验过签 |
+| 测试 | `internal/types/saml_test.go` | 自签证书生成真实签名：有效签名通过、篡改字节被拒、SHA-1 默认拒绝（显式允许时用真正的 SHA-1 签名通过）、无证书/空签名拒绝、enveloped/加密断言拒绝、时间窗与偏移、受众与签发者、InResponseTo、重放键 |
+
+**结论**：SAML SP 的**校验核心已交付并测试**；剩下的"接真实 IdP"需要的是 IdP 元数据与联调，而那一层现在是一个明确的接缝（`SAMLSignatureInput` 接收"被签名的字节"，验签逻辑本身已完成）。
 
 ---
 
