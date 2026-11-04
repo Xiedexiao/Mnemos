@@ -48,11 +48,22 @@ type PipelineRequest struct {
 	ChatModelTenantID uint64 `json:"-"`
 
 	// Chat model parameters
-	ChatModelID      string           `json:"chat_model_id"`
-	SummaryConfig    SummaryConfig    `json:"summary_config"`
-	FallbackStrategy FallbackStrategy `json:"fallback_strategy"`
-	FallbackResponse string           `json:"fallback_response"`
-	FallbackPrompt   string           `json:"fallback_prompt"`
+	ChatModelID string `json:"chat_model_id"`
+	// ChatFallbackTrace records which model actually served the answer
+	// (§16.5). Nil when the requested model served it — a degrade is an
+	// exception worth surfacing, not a field every reply carries.
+	ChatFallbackTrace *ChatFallbackTrace `json:"chat_fallback_trace,omitempty"`
+	// ChatFallbackModelIDs is the ordered candidate list for this turn, resolved
+	// by the caller from the §16.5 chain. Empty means "no chain configured":
+	// only the requested model is tried, exactly as before the feature.
+	ChatFallbackModelIDs []string `json:"-" gorm:"-"`
+	// ChatFallbackModelIDsDone makes the resolution idempotent so a retried
+	// stage does not re-query the chain on every call.
+	ChatFallbackModelIDsDone bool             `json:"-" gorm:"-"`
+	SummaryConfig            SummaryConfig    `json:"summary_config"`
+	FallbackStrategy         FallbackStrategy `json:"fallback_strategy"`
+	FallbackResponse         string           `json:"fallback_response"`
+	FallbackPrompt           string           `json:"fallback_prompt"`
 	// RefusalMarker records which §13.5 refusal case this turn hit (empty when
 	// the answer is normal). Written to the Evidence Pack so an audit can tell
 	// "refused because every source was expired" from "answered normally".

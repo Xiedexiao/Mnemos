@@ -2,6 +2,7 @@ package chatpipeline
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"slices"
 	"sort"
@@ -37,7 +38,7 @@ func pipelineError(ctx context.Context, stage, action string, fields map[string]
 func prepareChatModel(ctx context.Context, modelService interfaces.ModelService,
 	chatManage *types.ChatManage,
 ) (chat.Chat, *chat.ChatOptions, error) {
-	chatModel, err := modelService.GetChatModel(chatManage.ChatModelContext(ctx), chatManage.ChatModelID)
+	chatModel, err := prepareChatModelWithFallback(ctx, modelService, chatManage)
 	if err != nil {
 		logger.Errorf(ctx, "Failed to get chat model: %v", err)
 		return nil, nil, err
@@ -262,4 +263,68 @@ func ParallelMap[T, R any](items []T, maxWorkers int, fn func(int, T) R) []R {
 	}
 	wg.Wait()
 	return results
+}
+
+// prepareChatModelWithFallback resolves the chat model, degrading when the
+// requested one cannot be loaded (§16.5 chat-side fallback).
+//
+// 为什么只在**建立流之前**降级：流式回答一旦开始输出，换模型会把两段不同
+// 模型的文本拼成一条回答——读者看不出拼接点，但质量与责任都断了。因此这里
+// 只处理"模型加载失败"这种零副作用的失败；流中途的失败必须如实报错。
+// 判定逻辑在 types.CanFallbackChat 里，避免调用点各自实现一套。
+//
+// 候选由 chatManage.ChatFallbackModelIDs 提供（调用方从降级链解析，空表示
+// 未配置）。未配置时只尝试请求的模型，行为与改动前一致。
+func prepareChatModelWithFallback(
+	ctx context.Context, modelService interfaces.ModelService,
+	chatManage *types.ChatManage,
+) (chat.Chat, error) {
+	requested := strings.TrimSpace(chatManage.ChatModelID)
+	candidates := types.NormalizeChatFallbackCandidates(requested, chatManage.ChatFallbackModelIDs)
+	if len(candidates) == 0 {
+		// 空模型 ID 仍然交给 modelService 判定：它比这里更清楚"空 ID 是否
+		// 有默认值可用"，而提前报错会把"调用方没填"变成"实现不可用"。
+		// 未配置降级链的部署保持改动前同样的调用序列。
+		candidates = []string{requested}
+	}
+
+	trace := &types.ChatFallbackTrace{RequestedModelID: requested}
+	var lastErr error
+	for level, modelID := range candidates {
+		chatModel, err := modelService.GetChatModel(chatManage.ChatModelContext(ctx), modelID)
+		if err != nil {
+			trace.Attempts = append(trace.Attempts, types.ChatFallbackAttempt{
+				ModelID: modelID, Level: level,
+				Phase: types.ChatFallbackBeforeStream, Err: err.Error(),
+			})
+			lastErr = err
+			// 加载失败没有副作用：按判定逻辑必然允许换下一级，这里仍然走
+			// 一次判定，让"什么时候可以换"只有一处定义。
+			if decision := types.CanFallbackChat(types.ChatFallbackBeforeStream, false); !decision.Allowed {
+				return nil, fmt.Errorf("chat model %s unavailable and fallback refused: %s",
+					modelID, decision.Reason)
+			}
+			logger.Warnf(ctx, "chat model %s unavailable at level %d: %v", modelID, level, err)
+			continue
+		}
+
+		trace.ServedBy = modelID
+		trace.Attempts = append(trace.Attempts,
+			types.ChatFallbackAttempt{ModelID: modelID, Level: level})
+		trace.Degraded = modelID != requested
+		if trace.Degraded {
+			// 降级是成本与质量事件：留痕，事后能解释"为什么这次答案风格变了"。
+			logger.Warnf(ctx, "answer served by a fallback model: %s",
+				types.DescribeChatFallback(*trace))
+			chatManage.ChatFallbackTrace = trace
+		} else {
+			// 正常路径不携带 trace：它不是每次回答都需要的字段。
+			chatManage.ChatFallbackTrace = nil
+		}
+		return chatModel, nil
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no chat model is available")
+	}
+	return nil, lastErr
 }
