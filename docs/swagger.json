@@ -16234,6 +16234,55 @@
                 "x-agent-hint": "Replaces the whole Markdown of a document created as manual knowledge. Send the complete content, not a diff. status draft keeps it out of search; publish indexes it. Uploaded files cannot be edited this way."
             }
         },
+        "/knowledge/migrate": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按清单批量导入知识（KnowAxis V3.0 §16.3 迁移工具）。支持目录映射、密级、标签与源版本号；逐条独立成败并如实返回每条结果；相同 external_id 重跑时更新而非重复创建；dry_run 只校验不写入。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识管理"
+                ],
+                "summary": "批量迁移导入",
+                "parameters": [
+                    {
+                        "description": "迁移清单",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.MigrationManifest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: MigrationReport}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge/move": {
             "post": {
                 "security": [
@@ -39595,6 +39644,27 @@
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "aipre.completed",
+                "aipre.failed",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -39608,28 +39678,6 @@
                 "ontology.relation_created",
                 "ontology.relation_updated",
                 "ontology.relation_deleted",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "parse_quality.computed",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "aipre.completed",
-                "aipre.failed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "share.created",
-                "share.revoked",
-                "share.visited",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -39704,9 +39752,31 @@
                 "cr.rolled_back",
                 "cr.impact_task_updated",
                 "cr.verified",
-                "cr.notified"
+                "cr.notified",
+                "parse_quality.computed"
             ],
             "x-enum-varnames": [
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -39720,28 +39790,6 @@
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
                 "OntologyActionRelationDeleted",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "ParseQualityAuditActionComputed",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -39816,7 +39864,8 @@
                 "AuditActionCRRolledBack",
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
-                "AuditActionCRNotified"
+                "AuditActionCRNotified",
+                "ParseQualityAuditActionComputed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -42470,6 +42519,19 @@
                 "FallbackStrategyFixed",
                 "FallbackStrategyModel"
             ]
+        },
+        "github_com_Tencent_WeKnora_internal_types.FolderMapping": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "description": "From is the source path prefix (\"sop/\").",
+                    "type": "string"
+                },
+                "to": {
+                    "description": "To is the target folder (\"工艺/SOP\").",
+                    "type": "string"
+                }
+            }
         },
         "github_com_Tencent_WeKnora_internal_types.FollowUpSuggestionConfig": {
             "type": "object",
@@ -45793,6 +45855,81 @@
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.RetrievalMetrics"
                         }
                     ]
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.MigrationItem": {
+            "type": "object",
+            "properties": {
+                "classification": {
+                    "description": "Classification is the target classification; empty keeps the space\ndefault.",
+                    "type": "string"
+                },
+                "content_hash": {
+                    "description": "ContentHash lets a re-run skip an item whose content did not change.",
+                    "type": "string"
+                },
+                "external_id": {
+                    "description": "ExternalID is the source system's identifier, used for idempotent\nre-runs: an existing row with the same external id is updated in place.",
+                    "type": "string"
+                },
+                "folder_path": {
+                    "description": "FolderPath is the explicit target directory. Empty means \"derive from\nSourcePath through the manifest's folder mapping\".",
+                    "type": "string"
+                },
+                "source_path": {
+                    "description": "SourcePath is the path in the source system (\"sop/e45/changeover.md\").",
+                    "type": "string"
+                },
+                "source_updated_at": {
+                    "description": "SourceUpdatedAt is the source system's last-modified timestamp (RFC3339).\n\n保留它，迁移后的知识才不会被全部显示成\"今天更新\"——否则整个空间的\n新鲜度信号在导入那一刻被抹平。",
+                    "type": "string"
+                },
+                "source_version": {
+                    "description": "SourceVersion is the source system's version label (e.g. \"3.2\").\nPreserved verbatim in the import result and the knowledge metadata.",
+                    "type": "string"
+                },
+                "tags": {
+                    "description": "Tags are the tag names to attach.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "description": "Title overrides the derived title (defaults to the file name).",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.MigrationManifest": {
+            "type": "object",
+            "properties": {
+                "default_classification": {
+                    "description": "DefaultClassification applies when an item names none.",
+                    "type": "string"
+                },
+                "dry_run": {
+                    "description": "DryRun resolves and validates the manifest without writing anything.",
+                    "type": "boolean"
+                },
+                "folder_mappings": {
+                    "description": "FolderMappings rewrite source path prefixes onto target folders.\nThe longest matching prefix wins.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.FolderMapping"
+                    }
+                },
+                "items": {
+                    "description": "Items are the entries to import.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.MigrationItem"
+                    }
+                },
+                "knowledge_base_id": {
+                    "description": "KnowledgeBaseID is the destination space.",
+                    "type": "string"
                 }
             }
         },

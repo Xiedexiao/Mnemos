@@ -104,6 +104,7 @@ type RouterParams struct {
 	WebhookHandler               *handler.WebhookHandler
 	ReadingHandler               *handler.ReadingHandler
 	NetworkAccessHandler         *handler.NetworkAccessHandler
+	KnowledgeMigrationHandler    *handler.KnowledgeMigrationHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
 	FeedbackHandler              *handler.FeedbackHandler
@@ -391,6 +392,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterWebhookRoutes(v1, params.WebhookHandler, rbacGuards)
 		RegisterReadingRoutes(v1, params.ReadingHandler, rbacGuards)
 		RegisterNetworkAccessRoutes(v1, params.NetworkAccessHandler, rbacGuards)
+		RegisterKnowledgeMigrationRoutes(v1, params.KnowledgeMigrationHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
 		RegisterGraphFactRoutes(v1, rbacGuards, params.GraphFactHandler)
