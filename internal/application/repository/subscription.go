@@ -139,6 +139,10 @@ func (r *subscriptionRepository) ListDigestSources(
 const digestColumns = "k.id AS knowledge_id, k.knowledge_base_id, k.title, " +
 	"COALESCE(NULLIF(k.lifecycle_status, ''), 'valid') AS lifecycle_status, k.updated_at AS changed_at"
 
+// digestGroupBy is the GROUP BY counterpart of digestColumns (the projection
+// carries `AS` aliases, which cannot be used as grouping expressions).
+const digestGroupBy = "k.id, k.knowledge_base_id, k.title, k.lifecycle_status, k.updated_at"
+
 // digestQuery applies the shared visibility + window filters.
 func digestQuery(query *gorm.DB, tenantID uint64, since time.Time) *gorm.DB {
 	return query.Where("k.tenant_id = ? AND k.deleted_at IS NULL", tenantID).
@@ -183,7 +187,7 @@ func (r *subscriptionRepository) TagChangesSince(
 		Joins("JOIN knowledge_tags t ON t.id = r.tag_id").
 		Where("t.tenant_id = ? AND LOWER(t.name) = ?", tenantID, tagName)
 	if err := digestQuery(query, tenantID, since).
-		Group(digestColumns).Order("k.updated_at DESC").Limit(limit).Find(&items).Error; err != nil {
+		Group(digestGroupBy).Order("k.updated_at DESC").Limit(limit).Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil
@@ -209,7 +213,7 @@ func (r *subscriptionRepository) AuthorChangesSince(
 		Joins("JOIN knowledge_versions v ON v.knowledge_id = k.id").
 		Where("v.tenant_id = ? AND v.published_by = ?", tenantID, authorID)
 	if err := digestQuery(query, tenantID, since).
-		Group(digestColumns).Order("k.updated_at DESC").Limit(limit).Find(&items).Error; err != nil {
+		Group(digestGroupBy).Order("k.updated_at DESC").Limit(limit).Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil

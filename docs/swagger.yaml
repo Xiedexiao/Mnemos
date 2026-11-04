@@ -1644,6 +1644,15 @@ definitions:
     - ontology.schema_proposal_approved
     - ontology.schema_proposal_rejected
     - ontology.schema_proposal_applied
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
+    - aipre.completed
+    - aipre.failed
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1657,34 +1666,6 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
-    - share.created
-    - share.revoked
-    - share.visited
-    - ontology.schema_created
-    - ontology.schema_updated
-    - ontology.schema_published
-    - ontology.schema_deleted
-    - ontology.type_created
-    - ontology.type_updated
-    - ontology.type_deleted
-    - ontology.property_created
-    - ontology.property_updated
-    - ontology.property_deleted
-    - ontology.relation_created
-    - ontology.relation_updated
-    - ontology.relation_deleted
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
-    - parse_quality.computed
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
     - rbac.member_added
     - rbac.member_removed
     - rbac.member_role_changed
@@ -1747,8 +1728,27 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
-    - aipre.completed
-    - aipre.failed
+    - ontology.schema_created
+    - ontology.schema_updated
+    - ontology.schema_published
+    - ontology.schema_deleted
+    - ontology.type_created
+    - ontology.type_updated
+    - ontology.type_deleted
+    - ontology.property_created
+    - ontology.property_updated
+    - ontology.property_deleted
+    - ontology.relation_created
+    - ontology.relation_updated
+    - ontology.relation_deleted
+    - parse_quality.computed
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
+    - share.created
+    - share.revoked
+    - share.visited
     type: string
     x-enum-varnames:
     - OntologyActionSchemaProposalCreated
@@ -1756,6 +1756,15 @@ definitions:
     - OntologyActionSchemaProposalApproved
     - OntologyActionSchemaProposalRejected
     - OntologyActionSchemaProposalApplied
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
+    - AuditActionAIPreReviewCompleted
+    - AuditActionAIPreReviewFailed
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1769,34 +1778,6 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
-    - OntologyActionSchemaCreated
-    - OntologyActionSchemaUpdated
-    - OntologyActionSchemaPublished
-    - OntologyActionSchemaDeleted
-    - OntologyActionTypeCreated
-    - OntologyActionTypeUpdated
-    - OntologyActionTypeDeleted
-    - OntologyActionPropertyCreated
-    - OntologyActionPropertyUpdated
-    - OntologyActionPropertyDeleted
-    - OntologyActionRelationCreated
-    - OntologyActionRelationUpdated
-    - OntologyActionRelationDeleted
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
-    - ParseQualityAuditActionComputed
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
     - AuditActionMemberAdded
     - AuditActionMemberRemoved
     - AuditActionMemberRoleChanged
@@ -1859,8 +1840,27 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
-    - AuditActionAIPreReviewCompleted
-    - AuditActionAIPreReviewFailed
+    - OntologyActionSchemaCreated
+    - OntologyActionSchemaUpdated
+    - OntologyActionSchemaPublished
+    - OntologyActionSchemaDeleted
+    - OntologyActionTypeCreated
+    - OntologyActionTypeUpdated
+    - OntologyActionTypeDeleted
+    - OntologyActionPropertyCreated
+    - OntologyActionPropertyUpdated
+    - OntologyActionPropertyDeleted
+    - OntologyActionRelationCreated
+    - OntologyActionRelationUpdated
+    - OntologyActionRelationDeleted
+    - ParseQualityAuditActionComputed
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -20493,6 +20493,34 @@ paths:
       summary: 首页推荐
       tags:
       - 发现
+  /discovery/role-map:
+    get:
+      description: 以标签定义岗位，返回该岗位的知识地图与本人的学习覆盖率（KnowAxis V3.0 §15.5）。覆盖率只统计与本岗位文档相交的学习任务，"无需学习"不计为
+        100%。
+      parameters:
+      - description: 岗位标签，逗号分隔
+        in: query
+        name: tags
+        required: true
+        type: string
+      - description: 节点上限（默认 300，上限 1000）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: RoleKnowledgeMap}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 岗位知识地图
+      tags:
+      - 知识地图
   /discovery/subscriptions:
     get:
       description: 列出本人的订阅。
@@ -24638,6 +24666,37 @@ paths:
         risk: read
       x-agent-hint: Use parse_status=failed to find documents that failed to parse;
         meta.total counts every match.
+  /knowledge-bases/{id}/knowledge-map:
+    get:
+      description: 按目录树或知识关联图聚合一个空间的知识结构（KnowAxis V3.0 §4.6）。所有节点与边都已过生命周期与文档 ACL：边只在两端都可见时保留，隐藏数量只返回聚合值。
+      parameters:
+      - description: 知识库ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 聚合视角：folder（默认）/relation/topic
+        in: query
+        name: view
+        type: string
+      - description: 节点上限（默认 300，上限 1000）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: KnowledgeMap}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 空间知识地图
+      tags:
+      - 知识地图
   /knowledge-bases/{id}/knowledge/batch-download:
     post:
       consumes:

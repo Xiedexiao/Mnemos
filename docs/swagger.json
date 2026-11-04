@@ -6300,6 +6300,50 @@
                 }
             }
         },
+        "/discovery/role-map": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "以标签定义岗位，返回该岗位的知识地图与本人的学习覆盖率（KnowAxis V3.0 §15.5）。覆盖率只统计与本岗位文档相交的学习任务，\"无需学习\"不计为 100%。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识地图"
+                ],
+                "summary": "岗位知识地图",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "岗位标签，逗号分隔",
+                        "name": "tags",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "节点上限（默认 300，上限 1000）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: RoleKnowledgeMap}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/discovery/subscriptions": {
             "get": {
                 "security": [
@@ -12979,6 +13023,56 @@
                         "description": "权限不足",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-bases/{id}/knowledge-map": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按目录树或知识关联图聚合一个空间的知识结构（KnowAxis V3.0 §4.6）。所有节点与边都已过生命周期与文档 ACL：边只在两端都可见时保留，隐藏数量只返回聚合值。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "知识地图"
+                ],
+                "summary": "空间知识地图",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "聚合视角：folder（默认）/relation/topic",
+                        "name": "view",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "节点上限（默认 300，上限 1000）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: KnowledgeMap}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -37914,6 +38008,15 @@
                 "ontology.schema_proposal_approved",
                 "ontology.schema_proposal_rejected",
                 "ontology.schema_proposal_applied",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "aipre.completed",
+                "aipre.failed",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -37927,34 +38030,6 @@
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "parse_quality.computed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -38017,8 +38092,27 @@
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "aipre.completed",
-                "aipre.failed"
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
+                "parse_quality.computed",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "share.created",
+                "share.revoked",
+                "share.visited"
             ],
             "x-enum-varnames": [
                 "OntologyActionSchemaProposalCreated",
@@ -38026,6 +38120,15 @@
                 "OntologyActionSchemaProposalApproved",
                 "OntologyActionSchemaProposalRejected",
                 "OntologyActionSchemaProposalApplied",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -38039,34 +38142,6 @@
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "ParseQualityAuditActionComputed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -38129,8 +38204,27 @@
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed"
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
+                "ParseQualityAuditActionComputed",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
