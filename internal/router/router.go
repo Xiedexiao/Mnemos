@@ -107,6 +107,7 @@ type RouterParams struct {
 	KnowledgeMigrationHandler    *handler.KnowledgeMigrationHandler
 	WatermarkHandler             *handler.WatermarkHandler
 	SamplingHandler              *handler.SamplingHandler
+	GraphAnalysisHandler         *handler.GraphAnalysisHandler
 	QualityMetricsHandler        *handler.QualityMetricsHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
@@ -398,6 +399,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterKnowledgeMigrationRoutes(v1, params.KnowledgeMigrationHandler, rbacGuards)
 		RegisterWatermarkRoutes(v1, params.WatermarkHandler, rbacGuards)
 		RegisterSamplingRoutes(v1, params.SamplingHandler, rbacGuards)
+		RegisterGraphAnalysisRoutes(v1, params.GraphAnalysisHandler, rbacGuards)
 		RegisterQualityMetricsRoutes(v1, params.QualityMetricsHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)
