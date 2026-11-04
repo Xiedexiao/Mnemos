@@ -47,7 +47,10 @@ type knowledgeLifecycleService struct {
 	// nil means the deployment has no quality gate configured, which is the
 	// correct reading for installs that never created a set.
 	goldenSets interfaces.GoldenSetService
-	now        func() time.Time
+	// webhooks emits outbound events (§16.4). Optional: nil means the
+	// deployment configured no subscribers, which is also the normal state.
+	webhooks interfaces.WebhookService
+	now      func() time.Time
 }
 
 // NewKnowledgeLifecycleService constructs the lifecycle service.
@@ -59,6 +62,7 @@ func NewKnowledgeLifecycleService(
 	receipts interfaces.ApprovalReceiptRepository,
 	versions interfaces.PermissionVersionService,
 	goldenSets interfaces.GoldenSetService,
+	webhooks interfaces.WebhookService,
 ) interfaces.KnowledgeLifecycleService {
 	return &knowledgeLifecycleService{
 		kgRepo:       kgRepo,
@@ -67,6 +71,7 @@ func NewKnowledgeLifecycleService(
 		gamification: gamification,
 		receipts:     receipts,
 		goldenSets:   goldenSets,
+		webhooks:     webhooks,
 		versions:     versions,
 		now:          time.Now,
 	}
@@ -266,6 +271,7 @@ func (s *knowledgeLifecycleService) Transition(
 	}
 
 	s.logTransition(ctx, knowledge, updated, input)
+	s.publishLifecycleWebhook(ctx, updated, input)
 
 	// 密级变更与撤权同样推进权限版本（§2.4 升密"即时生效"、§2.6 撤权传播）：
 	// 升密之后，旧缓存里的答案摘要与派生内容都必须立刻不可用。
@@ -574,4 +580,43 @@ func (s *knowledgeLifecycleService) logGoldenGateBlocked(
 			"reason": reason,
 		}),
 	})
+}
+
+// publishLifecycleWebhook emits the §16.4 outbound event for a lifecycle change.
+//
+// 只在"发布 / 下架"两类动作上发事件：其余的中间状态（提交审核、标记降级）
+// 是内部流程，推给业务系统只会制造噪声——它们关心的是"现在能不能用"。
+//
+// 发送失败只记日志：webhook 是附加能力，不能让一次下游不可用回滚一次已经
+// 审批通过的生命周期变更。
+func (s *knowledgeLifecycleService) publishLifecycleWebhook(
+	ctx context.Context, knowledge *types.Knowledge,
+	input *types.KnowledgeLifecycleTransitionInput,
+) {
+	if s.webhooks == nil || knowledge == nil || input == nil {
+		return
+	}
+	var eventType types.WebhookEventType
+	switch input.Action {
+	case types.KnowledgeLifecycleActionPublish:
+		eventType = types.WebhookEventKnowledgePublished
+	case types.KnowledgeLifecycleActionMarkStale, types.KnowledgeLifecycleActionDelist:
+		eventType = types.WebhookEventKnowledgeDelisted
+	default:
+		return
+	}
+	payload := map[string]interface{}{
+		"knowledge_id":      knowledge.ID,
+		"knowledge_base_id": knowledge.KnowledgeBaseID,
+		"title":             knowledge.Title,
+		"lifecycle_status":  knowledge.LifecycleStatus,
+		"classification":    knowledge.Classification,
+		"version":           knowledge.CurrentVersion,
+		"actor_id":          input.ActorID,
+		"change_note":       input.ChangeNote,
+		"occurred_at":       s.now().UTC().Format(time.RFC3339),
+	}
+	if err := s.webhooks.Publish(ctx, knowledge.TenantID, eventType, payload); err != nil {
+		logger.Warnf(ctx, "[lifecycle] webhook publish failed for %s: %v", knowledge.ID, err)
+	}
 }

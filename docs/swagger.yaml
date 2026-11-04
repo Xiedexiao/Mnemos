@@ -1639,6 +1639,13 @@ definitions:
     type: object
   github_com_Tencent_WeKnora_internal_types.AuditAction:
     enum:
+    - share.created
+    - share.revoked
+    - share.visited
+    - review.submitted
+    - review.approved
+    - review.rejected
+    - review.receipt_issued
     - cr.created
     - cr.item_added
     - cr.item_removed
@@ -1652,10 +1659,6 @@ definitions:
     - cr.impact_task_updated
     - cr.verified
     - cr.notified
-    - review.submitted
-    - review.approved
-    - review.rejected
-    - review.receipt_issued
     - ontology.schema_created
     - ontology.schema_updated
     - ontology.schema_published
@@ -1731,26 +1734,30 @@ definitions:
     - faq.import_started
     - faq.import_completed
     - faq.import_failed
+    - parse_quality.computed
     - aipre.completed
     - aipre.failed
-    - candidate.created
-    - candidate.confirmed
-    - candidate.published
-    - candidate.rejected
-    - feedback.recorded
-    - quality_task.created
-    - quality_task.updated
     - ontology.schema_proposal_created
     - ontology.schema_proposal_checked
     - ontology.schema_proposal_approved
     - ontology.schema_proposal_rejected
     - ontology.schema_proposal_applied
-    - share.created
-    - share.revoked
-    - share.visited
-    - parse_quality.computed
+    - feedback.recorded
+    - quality_task.created
+    - quality_task.updated
+    - candidate.created
+    - candidate.confirmed
+    - candidate.published
+    - candidate.rejected
     type: string
     x-enum-varnames:
+    - AuditActionShareLinkCreated
+    - AuditActionShareLinkRevoked
+    - AuditActionShareLinkVisited
+    - AuditActionReviewSubmitted
+    - AuditActionReviewApproved
+    - AuditActionReviewRejected
+    - AuditActionReviewReceiptIssued
     - AuditActionCRCreated
     - AuditActionCRItemAdded
     - AuditActionCRItemRemoved
@@ -1764,10 +1771,6 @@ definitions:
     - AuditActionCRImpactTaskUpdated
     - AuditActionCRVerified
     - AuditActionCRNotified
-    - AuditActionReviewSubmitted
-    - AuditActionReviewApproved
-    - AuditActionReviewRejected
-    - AuditActionReviewReceiptIssued
     - OntologyActionSchemaCreated
     - OntologyActionSchemaUpdated
     - OntologyActionSchemaPublished
@@ -1843,24 +1846,21 @@ definitions:
     - AuditActionFAQImportStarted
     - AuditActionFAQImportCompleted
     - AuditActionFAQImportFailed
+    - ParseQualityAuditActionComputed
     - AuditActionAIPreReviewCompleted
     - AuditActionAIPreReviewFailed
-    - AuditActionCandidateCreated
-    - AuditActionCandidateConfirmed
-    - AuditActionCandidatePublished
-    - AuditActionCandidateRejected
-    - AuditActionFeedbackRecorded
-    - AuditActionQualityTaskCreated
-    - AuditActionQualityTaskUpdated
     - OntologyActionSchemaProposalCreated
     - OntologyActionSchemaProposalChecked
     - OntologyActionSchemaProposalApproved
     - OntologyActionSchemaProposalRejected
     - OntologyActionSchemaProposalApplied
-    - AuditActionShareLinkCreated
-    - AuditActionShareLinkRevoked
-    - AuditActionShareLinkVisited
-    - ParseQualityAuditActionComputed
+    - AuditActionFeedbackRecorded
+    - AuditActionQualityTaskCreated
+    - AuditActionQualityTaskUpdated
+    - AuditActionCandidateCreated
+    - AuditActionCandidateConfirmed
+    - AuditActionCandidatePublished
+    - AuditActionCandidateRejected
   github_com_Tencent_WeKnora_internal_types.AuditLog:
     properties:
       action:
@@ -16330,6 +16330,21 @@ definitions:
       values:
         additionalProperties: true
         type: object
+    type: object
+  internal_handler.webhookEndpointRequest:
+    properties:
+      description:
+        type: string
+      enabled:
+        type: boolean
+      events:
+        items:
+          type: string
+        type: array
+      secret:
+        type: string
+      url:
+        type: string
     type: object
   internal_handler_session.AttachmentUpload:
     properties:
@@ -40144,6 +40159,172 @@ paths:
       summary: 获取可用网络搜索 Provider 列表
       tags:
       - 网络搜索
+  /webhooks/deliveries:
+    get:
+      description: 查看出站事件投递记录与状态（pending/delivered/dead）。
+      parameters:
+      - description: 订阅 ID
+        in: query
+        name: endpoint_id
+        type: string
+      - description: 状态
+        in: query
+        name: state
+        type: string
+      - description: 条数（默认 50）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 投递记录
+      tags:
+      - Webhook
+  /webhooks/deliveries/{id}/replay:
+    post:
+      description: 把一条已放弃的投递重新排入队列（订阅方修复后使用）。
+      parameters:
+      - description: 投递 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 重投死信事件
+      tags:
+      - Webhook
+  /webhooks/endpoints:
+    get:
+      description: 列出本工作区的出站 Webhook 订阅。签名密钥永不返回，只给出 has_secret。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: Webhook 订阅列表
+      tags:
+      - Webhook
+    post:
+      consumes:
+      - application/json
+      description: 订阅一个出站事件接收方（KnowAxis V3.0 §16.4）。签名密钥至少 16 位，AES-GCM 加密存储；没有 SYSTEM_AES_KEY
+        时拒绝而不是明文入库。
+      parameters:
+      - description: 订阅
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.webhookEndpointRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 新增 Webhook 订阅
+      tags:
+      - Webhook
+  /webhooks/endpoints/{id}:
+    delete:
+      description: 删除订阅并清理未投递的事件；已投递与已死信的行保留供排查。
+      parameters:
+      - description: 订阅 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 删除 Webhook 订阅
+      tags:
+      - Webhook
+    put:
+      consumes:
+      - application/json
+      description: 修改订阅。空字段表示不修改；secret 传 "-" 清除已存的签名密钥。
+      parameters:
+      - description: 订阅 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 订阅
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.webhookEndpointRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: 修改 Webhook 订阅
+      tags:
+      - Webhook
+  /webhooks/events:
+    get:
+      description: 返回可订阅的出站事件目录（知识发布/更新/下架、审批完成、权限变更）。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      - ApiKeyAuth: []
+      summary: Webhook 事件类型
+      tags:
+      - Webhook
   /wechat/qrcode:
     post:
       description: 申请一个用于扫码登录绑定的微信二维码（无请求体）

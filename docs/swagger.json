@@ -36650,6 +36650,278 @@
                 }
             }
         },
+        "/webhooks/deliveries": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "查看出站事件投递记录与状态（pending/delivered/dead）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "投递记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订阅 ID",
+                        "name": "endpoint_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "条数（默认 50）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/deliveries/{id}/replay": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把一条已放弃的投递重新排入队列（订阅方修复后使用）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "重投死信事件",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "投递 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/endpoints": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "列出本工作区的出站 Webhook 订阅。签名密钥永不返回，只给出 has_secret。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "Webhook 订阅列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "订阅一个出站事件接收方（KnowAxis V3.0 §16.4）。签名密钥至少 16 位，AES-GCM 加密存储；没有 SYSTEM_AES_KEY 时拒绝而不是明文入库。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "新增 Webhook 订阅",
+                "parameters": [
+                    {
+                        "description": "订阅",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.webhookEndpointRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/endpoints/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "修改订阅。空字段表示不修改；secret 传 \"-\" 清除已存的签名密钥。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "修改 Webhook 订阅",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订阅 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "订阅",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.webhookEndpointRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除订阅并清理未投递的事件；已投递与已死信的行保留供排查。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "删除 Webhook 订阅",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订阅 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/events": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回可订阅的出站事件目录（知识发布/更新/下架、审批完成、权限变更）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "Webhook 事件类型",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/wechat/qrcode": {
             "post": {
                 "security": [
@@ -39099,6 +39371,13 @@
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -39112,10 +39391,6 @@
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -39191,26 +39466,30 @@
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
+                "parse_quality.computed",
                 "aipre.completed",
                 "aipre.failed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
                 "ontology.schema_proposal_created",
                 "ontology.schema_proposal_checked",
                 "ontology.schema_proposal_approved",
                 "ontology.schema_proposal_rejected",
                 "ontology.schema_proposal_applied",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "parse_quality.computed"
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected"
             ],
             "x-enum-varnames": [
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -39224,10 +39503,6 @@
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -39303,24 +39578,21 @@
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
+                "ParseQualityAuditActionComputed",
                 "AuditActionAIPreReviewCompleted",
                 "AuditActionAIPreReviewFailed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
                 "OntologyActionSchemaProposalCreated",
                 "OntologyActionSchemaProposalChecked",
                 "OntologyActionSchemaProposalApproved",
                 "OntologyActionSchemaProposalRejected",
                 "OntologyActionSchemaProposalApplied",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "ParseQualityAuditActionComputed"
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -58205,6 +58477,29 @@
                 "values": {
                     "type": "object",
                     "additionalProperties": true
+                }
+            }
+        },
+        "internal_handler.webhookEndpointRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },

@@ -219,6 +219,9 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewOrgDepartmentRepository))
 	must(container.Provide(service.NewOrgDepartmentService))
 	must(container.Provide(service.NewSCIMService))
+	must(container.Provide(repository.NewWebhookRepository))
+	must(container.Provide(service.NewWebhookService))
+	must(container.Provide(service.NewWebhookDeliveryScheduler))
 	must(container.Provide(repository.NewEmbedPushRepository))
 	must(container.Provide(service.NewEmbedPushService))
 	must(container.Provide(service.NewLearningTaskService))
@@ -667,6 +670,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Invoke(startAuditLogRetention))
 	must(container.Invoke(startFreshnessReviewScheduler))
 	must(container.Invoke(startExternalSubscriptionScheduler))
+	must(container.Invoke(startWebhookDeliveryScheduler))
 	logger.Debugf(ctx, "[Container] Audit log retention runner registered")
 	must(container.Invoke(startHousekeepingService))
 	logger.Debugf(ctx, "[Container] Knowledge housekeeping runner registered")
@@ -835,6 +839,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewKnowledgeVersionHandler))
 	must(container.Provide(handler.NewOrgDepartmentHandler))
 	must(container.Provide(handler.NewSCIMHandler))
+	must(container.Provide(handler.NewWebhookHandler))
 	must(container.Provide(handler.NewLearningTaskHandler))
 	must(container.Provide(handler.NewOntologyHandler))
 	must(container.Provide(handler.NewGraphFactHandler))
@@ -2570,6 +2575,17 @@ func startFreshnessReviewScheduler(
 ) {
 	scheduler.Start(context.Background())
 	cleaner.RegisterWithName("FreshnessReviewScheduler", func() error {
+		scheduler.StopWithin(cleanupStepTimeout)
+		return nil
+	})
+}
+
+// startWebhookDeliveryScheduler boots the §16.4 outbound delivery loop.
+func startWebhookDeliveryScheduler(
+	scheduler *service.WebhookDeliveryScheduler, cleaner interfaces.ResourceCleaner,
+) {
+	scheduler.Start(context.Background())
+	cleaner.RegisterWithName("WebhookDeliveryScheduler", func() error {
 		scheduler.StopWithin(cleanupStepTimeout)
 		return nil
 	})
