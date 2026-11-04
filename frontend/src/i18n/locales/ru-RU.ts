@@ -3197,7 +3197,10 @@ export default {
       sessionsByTitle: 'Диалоги (по названию)',
       commands: 'Команды',
       recent: 'Недавние',
-      quickActions: 'Быстрые действия'
+      quickActions: 'Быстрые действия',
+      hot: 'Популярные запросы',
+      glossary: 'Термины',
+      titles: 'Документы (по названию)',
     },
     scope: {
       placeholder: 'Поиск в этой базе знаний…',

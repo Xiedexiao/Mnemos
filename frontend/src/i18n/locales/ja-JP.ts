@@ -7062,7 +7062,10 @@ export default {
       sessionsByTitle: 'チャット（タイトル）',
       commands: 'コマンド',
       recent: '最近',
-      quickActions: 'クイックアクション'
+      quickActions: 'クイックアクション',
+      hot: '人気の検索',
+      glossary: '用語',
+      titles: 'ドキュメント（タイトル）',
     },
     match: {
       vector: 'ベクトル',

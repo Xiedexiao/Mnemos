@@ -7062,7 +7062,10 @@ export default {
       sessionsByTitle: 'Chats (by title)',
       commands: 'Commands',
       recent: 'Recent',
-      quickActions: 'Quick actions'
+      quickActions: 'Quick actions',
+      hot: 'Trending searches',
+      glossary: 'Terms',
+      titles: 'Documents (by title)',
     },
     match: {
       vector: 'Vector',

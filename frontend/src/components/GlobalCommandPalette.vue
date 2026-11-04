@@ -54,6 +54,15 @@
               @hover="selectItemAt($event)" />
           </ResultGroup>
 
+          <!-- 服务端热门搜索（§12.1）。与"最近"分开：热门是租户级行为聚合，
+               最近是本人历史，混在一起就无法解释某一条为什么出现。 -->
+          <ResultGroup v-if="hotSuggestions.length" :label="t('commandPalette.group.hot')">
+            <ResultItem v-for="(item, i) in hotSuggestions" :key="'h-' + item.text"
+              :index="flatIndexFor('hot', i)" :selected="selectedIndex === flatIndexFor('hot', i)"
+              :shortcut="shortcutFor(flatIndexFor('hot', i))" icon-name="chart-bubble" :title="item.text"
+              @primary="query = item.text" @hover="selectItemAt($event)" />
+          </ResultGroup>
+
           <ResultGroup :label="t('commandPalette.group.quickActions')">
             <ResultItem v-for="(c, i) in allCommands" :key="'cmd-' + c.id" :index="flatIndexFor('commands', i)"
               :selected="selectedIndex === flatIndexFor('commands', i)"
@@ -126,6 +135,25 @@
               @primary="openSession(s.id)" @hover="selectItemAt($event)" />
           </ResultGroup>
 
+          <!-- 术语联想（§12.1）：受控词表命中时先给术语，再去命中内容 -->
+          <ResultGroup v-if="isGroupVisible('glossary') && glossarySuggestions.length"
+            :label="t('commandPalette.group.glossary')">
+            <ResultItem v-for="(item, i) in glossarySuggestions" :key="'g-' + item.text"
+              :index="flatIndexFor('glossary', i)" :selected="selectedIndex === flatIndexFor('glossary', i)"
+              :shortcut="shortcutFor(flatIndexFor('glossary', i))" icon-name="book" :title="item.text"
+              :subtitle="item.label" @primary="query = item.text" @hover="selectItemAt($event)" />
+          </ResultGroup>
+
+          <!-- 标题联想（§12.1 实时联想）：服务端已按文档 ACL 过滤；
+               点一下直接打开文档，而不是拿标题再搜一次 -->
+          <ResultGroup v-if="isGroupVisible('titles') && titleSuggestions.length"
+            :label="t('commandPalette.group.titles')">
+            <ResultItem v-for="(item, i) in titleSuggestions" :key="'t-' + (item.knowledge_id || item.text)"
+              :index="flatIndexFor('titles', i)" :selected="selectedIndex === flatIndexFor('titles', i)"
+              :shortcut="shortcutFor(flatIndexFor('titles', i))" icon-name="file" :title="item.text"
+              @primary="openTitleSuggestion(item)" @hover="selectItemAt($event)" />
+          </ResultGroup>
+
           <!-- Commands matching the query -->
           <ResultGroup v-if="isGroupVisible('commands') && filteredCommands.length"
             :label="t('commandPalette.group.commands')">
@@ -172,6 +200,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useCommandPaletteStore } from '@/stores/commandPalette'
+import { emptySuggestionBundle, type SuggestionBundle } from '@/api/search-suggestion'
 import { useAuthStore } from '@/stores/auth'
 import { useDeploymentCapabilitiesStore } from '@/stores/deploymentCapabilities'
 import { useCmdkSearch, type CmdkFileGroup, type CmdkChunk, type CmdkMsgGroup } from './GlobalCommandPalette/useSearch'
@@ -189,7 +218,15 @@ const router = useRouter()
 const commandPaletteStore = useCommandPaletteStore()
 const authStore = useAuthStore()
 const deploymentCapabilities = useDeploymentCapabilitiesStore()
-const { open, initialQuery, recentQueries } = storeToRefs(commandPaletteStore)
+const { open, initialQuery, recentQueries, suggestions } = storeToRefs(commandPaletteStore)
+
+// 服务端建议（§12.1）。两个来源分工明确：
+//  - 空闲态（没有输入）用 store 里那份 prefix 为空的 bundle：打开面板时
+//    取一次，热门词在那儿；
+//  - 有输入时用 prefixSuggestions：按当前前缀取，含术语与标题。
+const hotSuggestions = computed(() => suggestions.value.hot || [])
+const glossarySuggestions = computed(() => prefixSuggestions.value.glossary_terms || [])
+const titleSuggestions = computed(() => prefixSuggestions.value.titles || [])
 const { startChat } = useStartChat()
 
 // Per-group display caps — keep the palette compact.
@@ -286,18 +323,22 @@ const filteredCommands = computed(() => filterCommands(allCommands.value, query.
 // empty headers.
 const groupOrder = computed<readonly string[]>(() => {
   if (!query.value.trim()) {
-    // Empty state: recents + full command list.
-    return ['recent', 'commands'] as const
+    // Empty state: recents + hot + full command list.
+    return ['recent', 'hot', 'commands'] as const
   }
   if (activeKbScope.value) {
     // Scoped to one KB: only chunks make sense (messages disabled in useSearch).
-    return ['chunks'] as const
+    // 标题联想也随范围收窄：它按全局可见集合生成，与"只看这个空间"不一致。
+    return ['chunks', 'glossary'] as const
   }
-  return ['chunks', 'messages', 'kbs', 'agents', 'sessions', 'commands'] as const
+  return ['chunks', 'messages', 'kbs', 'agents', 'sessions', 'glossary', 'titles', 'commands'] as const
 })
 
 const groupSizes = computed<Record<string, number>>(() => ({
   recent: recentQueries.value.length,
+  hot: query.value.trim() ? 0 : hotSuggestions.value.length,
+  glossary: query.value.trim() ? glossarySuggestions.value.length : 0,
+  titles: query.value.trim() && !activeKbScope.value ? titleSuggestions.value.length : 0,
   commands: query.value.trim() ? filteredCommands.value.length : allCommands.value.length,
   chunks: flatChunkItems.value.length,
   messages: flatMessageItems.value.length,
@@ -335,6 +376,22 @@ const flatItems = computed<FlatItem[]>(() => {
           key: `recent:${i}:${q}`,
           group: g,
           run: () => { query.value = q },
+        })
+      })
+    } else if (g === 'hot') {
+      hotSuggestions.value.forEach((item, i) => {
+        out.push({ key: `hot:${i}:${item.text}`, group: g, run: () => { query.value = item.text } })
+      })
+    } else if (g === 'glossary') {
+      glossarySuggestions.value.forEach((item, i) => {
+        out.push({ key: `glossary:${i}:${item.text}`, group: g, run: () => { query.value = item.text } })
+      })
+    } else if (g === 'titles') {
+      titleSuggestions.value.forEach((item, i) => {
+        out.push({
+          key: `title:${item.knowledge_id || item.text}`,
+          group: g,
+          run: () => openTitleSuggestion(item),
         })
       })
     } else if (g === 'commands') {
@@ -440,6 +497,35 @@ const openMessage = (item: FlatMsgItem) => {
   if (item.group.sessionId) {
     router.push(`/platform/chat/${item.group.sessionId}`)
   }
+}
+
+/**
+ * openTitleSuggestion 直接打开联想命中的文档。
+ *
+ * 点标题再拿标题搜一次是浪费：服务端已经告诉我们是哪一篇了。走与点检索结果
+ * 相同的路径（同空间用事件、跨空间用路由），保证两处的跳转行为一致。
+ */
+const openTitleSuggestion = (item: { text: string; knowledge_id?: string; knowledge_base_id?: string }) => {
+  commandPaletteStore.pushRecent(item.text)
+  commandPaletteStore.closePalette()
+  const kbId = item.knowledge_base_id || ''
+  const knowledgeId = item.knowledge_id || ''
+  if (!kbId || !knowledgeId) {
+    // 没有 ID 的联想（理论上不会出现）退化为把它填进搜索框。
+    query.value = item.text
+    commandPaletteStore.openPalette(item.text)
+    return
+  }
+  const currentKbId = typeof route.params.kbId === 'string' ? route.params.kbId : ''
+  if (currentKbId === kbId) {
+    window.dispatchEvent(
+      new CustomEvent('weknora:open-knowledge', {
+        detail: { kbId, knowledgeId },
+      }),
+    )
+    return
+  }
+  router.push({ path: `/platform/knowledge-bases/${kbId}`, query: { knowledge_id: knowledgeId } })
 }
 
 const openKb = (kbId: string) => {
@@ -657,12 +743,43 @@ const clearKbScope = () => {
   nextTick(() => inputRef.value?.focus())
 }
 
+// ─── 服务端联想（§12.1）───
+//
+// 与 useCmdkSearch 的 350ms 防抖共用同一个节奏：两次请求都由"输入变了"
+// 触发，节奏不同会让搜索结果与联想结果在视觉上互相追赶。
+const SUGGEST_DEBOUNCE_MS = 350
+const SUGGEST_MIN_RUNES = 2
+
+let suggestTimer: ReturnType<typeof setTimeout> | null = null
+// 单调请求号：迟到的响应必须丢弃，否则慢请求会把旧前缀的联想盖在
+// 新前缀上（用户会看到"输入了但列表还是上一轮的内容"）。
+let suggestSeq = 0
+const prefixSuggestions = ref<SuggestionBundle>(emptySuggestionBundle())
+
+watch([query, () => activeKbScope.value?.id], () => {
+  if (suggestTimer) clearTimeout(suggestTimer)
+  const trimmed = query.value.trim()
+  const runes = Array.from(trimmed)
+  if (!trimmed || runes.length < SUGGEST_MIN_RUNES) {
+    suggestSeq++
+    prefixSuggestions.value = emptySuggestionBundle()
+    return
+  }
+  suggestTimer = setTimeout(async () => {
+    const seq = ++suggestSeq
+    const bundle = await commandPaletteStore.fetchPrefixSuggestions(trimmed, { limit: 6 })
+    if (seq !== suggestSeq) return
+    prefixSuggestions.value = bundle
+  }, SUGGEST_DEBOUNCE_MS)
+})
+
 onMounted(() => {
   window.addEventListener('keydown', onGlobalKey)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKey)
+  if (suggestTimer) clearTimeout(suggestTimer)
 })
 </script>
 

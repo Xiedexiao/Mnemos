@@ -3199,7 +3199,10 @@ export default {
       sessionsByTitle: '对话（按标题）',
       commands: '命令',
       recent: '最近搜索',
-      quickActions: '快捷操作'
+      quickActions: '快捷操作',
+      hot: '热门搜索',
+      glossary: '术语',
+      titles: '文档（按标题）',
     },
     scope: {
       placeholder: '在本知识库中搜索…',

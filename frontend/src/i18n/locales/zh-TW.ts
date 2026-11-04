@@ -3199,7 +3199,10 @@ export default {
       sessionsByTitle: '對話（按標題）',
       commands: '命令',
       recent: '最近搜尋',
-      quickActions: '快捷操作'
+      quickActions: '快捷操作',
+      hot: '熱門搜尋',
+      glossary: '術語',
+      titles: '文件（按標題）',
     },
     scope: {
       placeholder: '在本知識庫中搜尋…',

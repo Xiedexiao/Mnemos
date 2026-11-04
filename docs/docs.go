@@ -12509,6 +12509,144 @@ const docTemplate = `{
                 }
             }
         },
+        "/knowledge-bases/{id}/graph-analysis/centrality": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按加权 PageRank 排出被依赖最多的知识（重点维护清单，KnowAxis V3.0 §11.1）。权重来自生命周期：有效文档的依赖算整票，待复审/疑似过期算半票。只统计有权查看的文档，隐藏数量不对外暴露（§11.3 计数保护）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图分析"
+                ],
+                "summary": "知识中心度",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "节点上限（默认 500，上限 2000）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: CentralityReport}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-bases/{id}/graph-analysis/communities": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按关联图的连通分量划分知识领域，并列出没有任何关联的孤岛文档（KnowAxis V3.0 §11.1 社区检测）。用连通分量而非 Louvain：同一张图每次得到同样的划分，复盘时能解释\"为什么这两块被划到一起\"。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图分析"
+                ],
+                "summary": "知识社区检测",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "节点上限（默认 500，上限 2000）",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: AnalysisCommunityReport}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-bases/{id}/graph-analysis/experts": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按贡献、被采纳答案、有用评价与引用聚合出\"这个领域谁最懂\"（KnowAxis V3.0 §11.1 专家发现）。分数与权重随响应回显，可复核；未达最小证据量（3 项信号）的人不会出现在结果里——列出来本身就会泄露他参与过这个领域（§11.3）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图分析"
+                ],
+                "summary": "领域专家发现",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "参与统计的文档上限（默认 500，上限 2000）",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "信号窗口天数（默认 90，上限 365）",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: ExpertReport}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge-bases/{id}/graph-search": {
             "post": {
                 "security": [
@@ -30818,6 +30956,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/search/history": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除本人（且仅本人）的搜索历史（KnowAxis V3.0 §12.1 历史搜索）。历史是 search_logs 的投影，删除只影响该用户自己的行；已聚合成知识缺口的记录不受影响。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "搜索建议"
+                ],
+                "summary": "清空搜索历史",
+                "responses": {
+                    "200": {
+                        "description": "{success}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/search/suggestions": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "搜索框联想（KnowAxis V3.0 §12.1）：历史搜索（本人）、热门搜索（本租户窗口内高频词）、实时联想（标题，已按 ACL 过滤）、术语联想。建议只来自调用者可见集合；标题联想在 ACL 查询失败时整体为空而不是放行（§12.6 建议不泄露）。q 为空时只返回历史与热门，即\"搜索框刚打开\"的状态。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "搜索建议"
+                ],
+                "summary": "搜索建议",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "已输入的前缀（可空）",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每个来源的条数（默认 8，上限 30）",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "热门榜窗口天数（默认 30，上限 365）",
+                        "name": "hot_days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SuggestionBundle}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/sessions": {
             "get": {
                 "security": [
@@ -39919,32 +40136,12 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "parse_quality.computed",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
                 "aipre.completed",
                 "aipre.failed",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -40007,15 +40204,17 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "parse_quality.computed",
+                "share.created",
+                "share.revoked",
+                "share.visited",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -40028,35 +40227,33 @@ const docTemplate = `{
                 "cr.rolled_back",
                 "cr.impact_task_updated",
                 "cr.verified",
-                "cr.notified"
+                "cr.notified",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted"
             ],
             "x-enum-varnames": [
-                "ParseQualityAuditActionComputed",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
                 "AuditActionAIPreReviewCompleted",
                 "AuditActionAIPreReviewFailed",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -40119,15 +40316,17 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "ParseQualityAuditActionComputed",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -40140,7 +40339,25 @@ const docTemplate = `{
                 "AuditActionCRRolledBack",
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
-                "AuditActionCRNotified"
+                "AuditActionCRNotified",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {

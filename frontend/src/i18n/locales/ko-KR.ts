@@ -3197,7 +3197,10 @@ export default {
       sessionsByTitle: '대화（제목별）',
       commands: '명령',
       recent: '최근 검색',
-      quickActions: '빠른 작업'
+      quickActions: '빠른 작업',
+      hot: '인기 검색',
+      glossary: '용어',
+      titles: '문서(제목별)',
     },
     scope: {
       placeholder: '이 지식베이스에서 검색…',
