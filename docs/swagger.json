@@ -30419,6 +30419,236 @@
                 }
             }
         },
+        "/saved-views": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回调用者本人的保存视图（KnowAxis V3.0 §12.2 \"筛选条件可保存为我的视图\"），并标出该空间下要自动套用的默认视图。视图恒为本人所有：接口不接受 user_id，也不存在\"列出同事视图\"的路径。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "保存的视图"
+                ],
+                "summary": "我的视图列表",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SavedViewList}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把一组筛选与排序条件保存成个人视图（KnowAxis V3.0 §12.2）。名称在同一用户内唯一（重名返回 409）；每个筛选维度按白名单校验，写错的枚举值直接报错而不是静默返回空列表；视图不保存权限结论（拒绝集与密级上限在每次读取时按当前权限重新计算）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "保存的视图"
+                ],
+                "summary": "保存为我的视图",
+                "parameters": [
+                    {
+                        "description": "{name, knowledge_base_id, filter, is_default}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SavedViewInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SavedKnowledgeView}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/saved-views/{view_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回一条保存视图（KnowAxis V3.0 §12.2）。不存在与无权访问返回同一个 404。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "保存的视图"
+                ],
+                "summary": "我的视图详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "视图ID",
+                        "name": "view_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SavedKnowledgeView}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "替换一条保存视图的名称与筛选条件（KnowAxis V3.0 §12.2）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "保存的视图"
+                ],
+                "summary": "更新我的视图",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "视图ID",
+                        "name": "view_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{name, knowledge_base_id, filter, is_default}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SavedViewInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SavedKnowledgeView}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除一条保存视图（KnowAxis V3.0 §12.2）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "保存的视图"
+                ],
+                "summary": "删除我的视图",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "视图ID",
+                        "name": "view_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/saved-views/{view_id}/default": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把一条保存视图设为其所属空间的默认视图，并取消该空间原有的默认（KnowAxis V3.0 §12.2）。同一 (用户, 空间) 恒只有一个默认。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "保存的视图"
+                ],
+                "summary": "设为我在此空间的默认视图",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "视图ID",
+                        "name": "view_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: SavedKnowledgeView}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/scim/v2/Groups": {
             "get": {
                 "description": "SCIM 2.0 Group 资源列表；组即平台的 ACL 主体组，成员变动立即影响文档授权。",
@@ -40173,15 +40403,23 @@
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "aipre.completed",
-                "aipre.failed",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "share.created",
-                "share.revoked",
-                "share.visited",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -40195,14 +40433,24 @@
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "aipre.completed",
+                "aipre.failed",
+                "parse_quality.computed",
+                "share.created",
+                "share.revoked",
+                "share.visited",
                 "ontology.schema_proposal_created",
                 "ontology.schema_proposal_checked",
                 "ontology.schema_proposal_approved",
                 "ontology.schema_proposal_rejected",
                 "ontology.schema_proposal_applied",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -40264,36 +40512,26 @@
                 "wiki.content_changed",
                 "faq.import_started",
                 "faq.import_completed",
-                "faq.import_failed",
-                "parse_quality.computed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted"
+                "faq.import_failed"
             ],
             "x-enum-varnames": [
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -40307,14 +40545,24 @@
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "ParseQualityAuditActionComputed",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
                 "OntologyActionSchemaProposalCreated",
                 "OntologyActionSchemaProposalChecked",
                 "OntologyActionSchemaProposalApproved",
                 "OntologyActionSchemaProposalRejected",
                 "OntologyActionSchemaProposalApplied",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -40376,25 +40624,7 @@
                 "AuditActionWikiContentChanged",
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
-                "AuditActionFAQImportFailed",
-                "ParseQualityAuditActionComputed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted"
+                "AuditActionFAQImportFailed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -48590,6 +48820,80 @@
                     "items": {
                         "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.E2BHostRule"
                     }
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SavedViewFilter": {
+            "type": "object",
+            "properties": {
+                "file_type": {
+                    "description": "FileType filters the file type (\"pdf\", \"manual\", \"url\", ...).",
+                    "type": "string"
+                },
+                "folder_path": {
+                    "description": "FolderPath / FolderScope reproduce the sidebar folder selection.",
+                    "type": "string"
+                },
+                "folder_scope": {
+                    "type": "string"
+                },
+                "keyword": {
+                    "description": "Keyword is a title/filename substring.",
+                    "type": "string"
+                },
+                "lifecycle_statuses": {
+                    "description": "LifecycleStatuses restricts to these governance states.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parse_status": {
+                    "description": "ParseStatus filters the ingestion state.",
+                    "type": "string"
+                },
+                "sort_by": {
+                    "description": "SortBy / SortOrder reproduce the list ordering.",
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "string"
+                },
+                "source": {
+                    "description": "Source filters the ingestion channel.",
+                    "type": "string"
+                },
+                "tag_ids": {
+                    "description": "TagIDs match any of the given tags (OR).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updated_from": {
+                    "description": "UpdatedFrom / UpdatedTo are RFC3339 bounds, empty for unbounded.",
+                    "type": "string"
+                },
+                "updated_to": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SavedViewInput": {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SavedViewFilter"
+                },
+                "is_default": {
+                    "description": "IsDefault promotes this view to the space default. Promoted here rather\nthan through a separate endpoint because \"make it my default\" is only\nmeaningful together with the view it points at.",
+                    "type": "boolean"
+                },
+                "knowledge_base_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
