@@ -376,6 +376,14 @@ var allowedRouteAreas = map[string]bool{
 	// that could vote on its own action requests would make the four-eyes rule
 	// meaningless.
 	"governance-approvals": true,
+	// §4.4 controlled vocabulary, read-only: a term's standard definition is
+	// what makes an answer use the organisation's meaning. Creating, merging
+	// and deprecating terms is vocabulary governance.
+	"glossary": true,
+	// §12.2 the caller's own saved views, read-only. A view belongs to one
+	// user; an agent may read the user's own filters, never another's, and
+	// creating or deleting them stays in the UI.
+	"saved-views": true,
 }
 
 // readOnlyRouteAreas admit only operations that change nothing. Deleting,
@@ -392,6 +400,8 @@ var readOnlyRouteAreas = map[string]bool{
 	"knowledge-candidates": true,
 	"ontology":             true,
 	"governance-approvals": true,
+	"glossary":             true,
+	"saved-views":          true,
 	"system":               true, // Only info and parser-engines are reachable; see parseRoute.
 }
 

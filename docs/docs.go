@@ -8142,6 +8142,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "x-agent": "term_id",
                         "description": "术语ID",
                         "name": "id",
                         "in": "path",
@@ -8152,8 +8153,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.GlossaryTerm"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -8162,7 +8174,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "glossary_term.get",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Reads the workspace's controlled vocabulary entry for one term: its standard name, definition and domain. Use it when a question hinges on what a business term means, so the answer uses the organisation's definition rather than a generic one."
             },
             "put": {
                 "security": [
@@ -30871,6 +30888,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "x-agent": "view_id",
                         "description": "视图ID",
                         "name": "view_id",
                         "in": "path",
@@ -30881,11 +30899,27 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: SavedKnowledgeView}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.SavedKnowledgeView"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "saved_view.get",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Reads one of the caller's saved filter views: a named set of list filters for a knowledge space. Use it to reuse the user's own filter rather than guessing one."
             },
             "put": {
                 "security": [
@@ -40942,54 +40976,6 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "cr.created",
-                "cr.item_added",
-                "cr.item_removed",
-                "cr.analyzed",
-                "cr.submitted",
-                "cr.scheduled",
-                "cr.publish_started",
-                "cr.publish_finished",
-                "cr.closed",
-                "cr.rolled_back",
-                "cr.impact_task_updated",
-                "cr.verified",
-                "cr.notified",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "parse_quality.computed",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "aipre.completed",
-                "aipre.failed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -41052,57 +41038,57 @@ const docTemplate = `{
                 "wiki.content_changed",
                 "faq.import_started",
                 "faq.import_completed",
-                "faq.import_failed"
+                "faq.import_failed",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "parse_quality.computed",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "cr.created",
+                "cr.item_added",
+                "cr.item_removed",
+                "cr.analyzed",
+                "cr.submitted",
+                "cr.scheduled",
+                "cr.publish_started",
+                "cr.publish_finished",
+                "cr.closed",
+                "cr.rolled_back",
+                "cr.impact_task_updated",
+                "cr.verified",
+                "cr.notified",
+                "aipre.completed",
+                "aipre.failed"
             ],
             "x-enum-varnames": [
-                "AuditActionCRCreated",
-                "AuditActionCRItemAdded",
-                "AuditActionCRItemRemoved",
-                "AuditActionCRAnalyzed",
-                "AuditActionCRSubmitted",
-                "AuditActionCRScheduled",
-                "AuditActionCRPublishStarted",
-                "AuditActionCRPublishFinished",
-                "AuditActionCRClosed",
-                "AuditActionCRRolledBack",
-                "AuditActionCRImpactTaskUpdated",
-                "AuditActionCRVerified",
-                "AuditActionCRNotified",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "ParseQualityAuditActionComputed",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -41165,7 +41151,55 @@ const docTemplate = `{
                 "AuditActionWikiContentChanged",
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
-                "AuditActionFAQImportFailed"
+                "AuditActionFAQImportFailed",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "ParseQualityAuditActionComputed",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionCRCreated",
+                "AuditActionCRItemAdded",
+                "AuditActionCRItemRemoved",
+                "AuditActionCRAnalyzed",
+                "AuditActionCRSubmitted",
+                "AuditActionCRScheduled",
+                "AuditActionCRPublishStarted",
+                "AuditActionCRPublishFinished",
+                "AuditActionCRClosed",
+                "AuditActionCRRolledBack",
+                "AuditActionCRImpactTaskUpdated",
+                "AuditActionCRVerified",
+                "AuditActionCRNotified",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -44310,6 +44344,71 @@ const docTemplate = `{
                 "rougel": {
                     "description": "ROUGE-L score",
                     "type": "number"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.GlossaryTerm": {
+            "type": "object",
+            "properties": {
+                "aliases": {
+                    "description": "Aliases is a JSONB string array: 别名/缩写/英文名. Marshalled with the\nlocal service helper, never inline structs.",
+                    "type": "object"
+                },
+                "counter_examples": {
+                    "description": "CounterExamples records what the term does NOT mean (约束模型幻觉).",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "CreatedAt of the term.",
+                    "type": "string"
+                },
+                "created_by": {
+                    "description": "CreatedBy records who created the term (audit identity).",
+                    "type": "string"
+                },
+                "definition": {
+                    "description": "Definition is the standard definition (what it IS).",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-max-runes": "600"
+                },
+                "domain": {
+                    "description": "Domain groups terms by subject area (e.g. \"合规\", \"风控\"); empty means\nunclassified.",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "id": {
+                    "description": "ID of the term.",
+                    "type": "string",
+                    "x-agent": "term_id"
+                },
+                "owner_id": {
+                    "description": "OwnerID is the accountable owner (术语责任人; informational in v1).",
+                    "type": "string"
+                },
+                "standard_name": {
+                    "description": "StandardName is the canonical form (tenant-unique, paired with\nTenantID; the UNIQUE constraint lives in migration 000143).",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "status": {
+                    "description": "Status: active or deprecated (deprecated rows keep the mapping).",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "superseded_by_id": {
+                    "description": "SupersededByID points at the replacing term once deprecated (删除=置\ndeprecated+superseded_by，不物理删).",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-response": true
+                },
+                "tenant_id": {
+                    "description": "TenantID owning the term.",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "description": "UpdatedAt of the term (touched by GORM on Updates).",
+                    "type": "string"
                 }
             }
         },
@@ -49887,6 +49986,46 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.E2BHostRule"
                     }
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.SavedKnowledgeView": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "filter": {
+                    "description": "Filter is the frozen filter set (see SavedViewFilter). Stored as a JSON\ncolumn, so the struct carries the raw form and the typed view is derived.",
+                    "type": "object"
+                },
+                "id": {
+                    "type": "string",
+                    "x-agent": "view_id"
+                },
+                "is_default": {
+                    "description": "IsDefault marks the view to apply when the space is opened.\nAt most one default per (user, knowledge base); enforced in the service\nbecause a partial unique index is not portable across the dialects.",
+                    "type": "boolean",
+                    "x-agent": true
+                },
+                "knowledge_base_id": {
+                    "description": "KnowledgeBaseID scopes the view. Empty means \"whichever space the\nreader opens it in\" — a saved view that only makes sense in one space\nshould say so.",
+                    "type": "string",
+                    "x-agent": "knowledge_base_id"
+                },
+                "name": {
+                    "description": "Name is the display label, unique per user.",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },

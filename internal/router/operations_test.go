@@ -62,6 +62,11 @@ func registerOperationAreas(v1 *gin.RouterGroup, g *rbacGuards) {
 	// Freshness (§7.9) is a per-document read: an agent can tell whether a
 	// document it is about to cite is still current.
 	RegisterFreshnessRoutes(v1, &handler.FreshnessHandler{}, g)
+	// Controlled vocabulary (§4.4) and the caller's own saved views (§12.2)
+	// join them read-only: reading a term's definition and reading one's own
+	// saved filter are lookups; editing either is not.
+	RegisterGlossaryRoutes(v1, &handler.GlossaryHandler{}, g)
+	RegisterSavedViewRoutes(v1, &handler.SavedViewHandler{}, g)
 }
 
 // TestBuiltinOperationsMatchRegisteredRoutes requires every operation to

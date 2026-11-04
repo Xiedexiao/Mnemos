@@ -46,22 +46,22 @@ const (
 
 // SavedKnowledgeView is one user's saved filter set on a knowledge base.
 type SavedKnowledgeView struct {
-	ID       string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID       string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent=view_id"`
 	TenantID uint64 `json:"tenant_id" gorm:"not null;uniqueIndex:uq_saved_view_user_name,priority:1"`
 	UserID   string `json:"user_id" gorm:"type:varchar(36);not null;uniqueIndex:uq_saved_view_user_name,priority:2"`
 	// Name is the display label, unique per user.
-	Name string `json:"name" gorm:"type:varchar(120);not null;uniqueIndex:uq_saved_view_user_name,priority:3"`
+	Name string `json:"name" gorm:"type:varchar(120);not null;uniqueIndex:uq_saved_view_user_name,priority:3" extensions:"x-agent"`
 	// KnowledgeBaseID scopes the view. Empty means "whichever space the
 	// reader opens it in" — a saved view that only makes sense in one space
 	// should say so.
-	KnowledgeBaseID string `json:"knowledge_base_id" gorm:"type:varchar(36);not null;default:''"`
+	KnowledgeBaseID string `json:"knowledge_base_id" gorm:"type:varchar(36);not null;default:''" extensions:"x-agent=knowledge_base_id"`
 	// Filter is the frozen filter set (see SavedViewFilter). Stored as a JSON
 	// column, so the struct carries the raw form and the typed view is derived.
 	Filter JSON `json:"filter" gorm:"column:filter;type:json;not null"`
 	// IsDefault marks the view to apply when the space is opened.
 	// At most one default per (user, knowledge base); enforced in the service
 	// because a partial unique index is not portable across the dialects.
-	IsDefault bool      `json:"is_default" gorm:"not null;default:false"`
+	IsDefault bool      `json:"is_default" gorm:"not null;default:false" extensions:"x-agent"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -46,10 +46,12 @@ func (h *SavedViewHandler) ListSavedViews(c *gin.Context) {
 // @Description  返回一条保存视图（KnowAxis V3.0 §12.2）。不存在与无权访问返回同一个 404。
 // @Tags         保存的视图
 // @Produce      json
-// @Param        view_id  path  string  true  "视图ID"
-// @Success      200  {object}  map[string]interface{}  "{success, data: SavedKnowledgeView}"
+// @Param        view_id  path  string  true  "视图ID"  extensions(x-agent=view_id)
+// @Success      200  {object}  handler.DataResponse{data=types.SavedKnowledgeView}  "{success, data: SavedKnowledgeView}"
 // @Security     Bearer
 // @Security     ApiKeyAuth
+// @x-agent      {"id":"saved_view.get","risk":"read"}
+// @x-agent-hint "Reads one of the caller's saved filter views: a named set of list filters for a knowledge space. Use it to reuse the user's own filter rather than guessing one."
 // @Router       /saved-views/{view_id} [get]
 func (h *SavedViewHandler) GetSavedView(c *gin.Context) {
 	ctx := c.Request.Context()

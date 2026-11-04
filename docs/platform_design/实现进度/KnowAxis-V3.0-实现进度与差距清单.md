@@ -334,7 +334,7 @@
 | 推荐协同过滤 | **未实现，数据依赖阻塞** | 全仓无协同过滤实现（`collaborative` 命中两处与评论无关的字符串）。协同过滤需要用户-物品交互矩阵，冷启动期没有可用信号 |
 | 性能/容灾演练 | **未实现，环境依赖阻塞** | 无压测脚本与基线、无演练记录。需要真实环境与容量基线 |
 | 业务连接器 ×7 | **按约定保持占位** | 用户已明确允许；`business_api` 只读一个列表端点，任何同步失败都会说明缺什么 |
-| Agent 目录 50 端点 DTO 化 | **进行中：6 个端点已交付，其余待续** | 变更单（26）、证据包与经验候选（27）、本体提案与审批待办（28）、新鲜度（29）已按同一形状完成：类型标签 + 目录注解 + 只读区域白名单 + 契约测试。其余约 44 个端点同样推进——每个都需判断哪些字段可给模型、是否可进只读区域、角色是否与守卫一致；自由格式 JSON 字段需先摊平 |
+| Agent 目录 50 端点 DTO 化 | **进行中：8 个端点已交付，其余待续** | 变更单（26）、证据包与经验候选（27）、本体提案与审批待办（28）、新鲜度（29）、术语与保存视图（30）已按同一形状完成：类型标签 + 目录注解 + 只读区域白名单 + 契约测试。其余约 42 个端点同样推进——每个都需判断哪些字段可给模型、是否可进只读区域、角色是否与守卫一致；自由格式 JSON 字段需先摊平 |
 | §16.5 chat 生成侧降级 | **未实现，可在本会话交付** | embedding 侧已接入调用点；`chat_pipeline/prepareChatModel` 仍只取单一模型，主力不可用即整条回答失败 |
 | 灰度发布 / 回滚 | **未实现，外部依赖阻塞** | 无 canary 流量切分（`canary` 仅在 SSRF 测试里出现）。灰度需要多版本并存与流量网关，属部署形态问题 |
 
@@ -384,6 +384,15 @@
 | 新鲜度读面进不了目录 | §7.9 | `FreshnessScore` 补标签（total/grade/top_signals），`GET /knowledge/{id}/freshness` → `knowledge.freshness`（read）。agent 在引用一份文档前可以判断它是否仍然有效 | 本批 |
 | 参数相关的权限无法被目录表达 | §16.2 | `GET /knowledge-health` **刻意不纳入目录**：其角色门槛取决于 query（`scope=tenant` 需 admin，其余只需 viewer）。目录只能声明一个角色，而模型不传参数时会落到默认口径——声明 viewer 会稳定 403，声明 admin 又把本可给 viewer 的读面伪装成管理接口。参数相关的权限无法被正确表达时，不纳入比给一个必然错一半的声明更安全 | 本批 |
 | 治理队列不进读面 | §7.7 | 测试断言 `review_queue.list`、`knowledge.health_compute` 不可达——待复审清单与强制重算是 Admin 治理面 | 本批 |
+
+### 第三十批：2026-11 收口（目录 DTO：术语与保存视图）
+
+| 事项 | 文档 | 落点 | 提交 |
+|---|---|---|---|
+| 术语读面进不了目录 | §4.4 | `GlossaryTerm` 补标签（id/standard_name/definition/domain/status/superseded_by_id），`GET /glossary/terms/{id}` → `glossary_term.get`（read）。agent 因此能用**组织的定义**而不是通用理解来回答术语相关问题。aliases（检索扩展用）、counter_examples（提示词用）、owner_id 保持内部 | 本批 |
+| 保存视图读面进不了目录 | §12.2 | `SavedKnowledgeView` 补标签（id/name/knowledge_base_id/is_default），`GET /saved-views/{view_id}` → `saved_view.get`（read）。`filter` 是 JSON blob（目录无法扁平化），`user_id` 已由"本人的视图"隐含，均不投影 | 本批 |
+| 术语治理与视图编辑留在 UI | §4.4/§12.2 | 测试断言 `glossary_term.create/update/delete/merge` 与 `saved_view.create/update/delete/set_default` 八条写操作全部不可达——词表治理是 Admin 动作，视图是个人偏好 | 本批 |
+| Swagger 注解的包别名必须与文件导入一致 | §16.2 | 本次踩到：`glossary.go` 导入的是 `errors`（未别名），注解写成 `apperrors.AppError` 导致 swag 解析失败。注解里的类型名按文件实际导入名写，否则文档生成静默丢字段 | 本批 |
 
 ---
 

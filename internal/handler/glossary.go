@@ -215,11 +215,13 @@ func (h *GlossaryHandler) ListTerms(c *gin.Context) {
 // @Description  按 ID 返回术语（含 deprecated 状态与 superseded_by_id 重定向）。
 // @Tags         术语表
 // @Produce      json
-// @Param        id  path  string  true  "术语ID"
-// @Success      200  {object}  map[string]interface{}
+// @Param        id  path  string  true  "术语ID"  extensions(x-agent=term_id)
+// @Success      200  {object}  handler.DataResponse{data=types.GlossaryTerm}
 // @Failure      404  {object}  errors.AppError
 // @Security     Bearer
 // @Security     ApiKeyAuth
+// @x-agent      {"id":"glossary_term.get","risk":"read"}
+// @x-agent-hint "Reads the workspace's controlled vocabulary entry for one term: its standard name, definition and domain. Use it when a question hinges on what a business term means, so the answer uses the organisation's definition rather than a generic one."
 // @Router       /glossary/terms/{id} [get]
 func (h *GlossaryHandler) GetTerm(c *gin.Context) {
 	ctx := c.Request.Context()

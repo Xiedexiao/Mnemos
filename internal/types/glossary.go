@@ -45,29 +45,29 @@ func (s GlossaryTermStatus) String() string { return string(s) }
 // GlossaryTerm is one controlled-vocabulary row (V3.0 §4.4).
 type GlossaryTerm struct {
 	// ID of the term.
-	ID string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent=term_id"`
 	// TenantID owning the term.
 	TenantID uint64 `json:"tenant_id" gorm:"not null"`
 	// StandardName is the canonical form (tenant-unique, paired with
 	// TenantID; the UNIQUE constraint lives in migration 000143).
-	StandardName string `json:"standard_name" gorm:"type:varchar(128);not null"`
+	StandardName string `json:"standard_name" gorm:"type:varchar(128);not null" extensions:"x-agent"`
 	// Aliases is a JSONB string array: 别名/缩写/英文名. Marshalled with the
 	// local service helper, never inline structs.
 	Aliases JSON `json:"aliases" gorm:"type:jsonb;not null;default:'[]'"`
 	// Definition is the standard definition (what it IS).
-	Definition string `json:"definition" gorm:"not null;default:''"`
+	Definition string `json:"definition" gorm:"not null;default:''" extensions:"x-agent,x-agent-max-runes=600"`
 	// CounterExamples records what the term does NOT mean (约束模型幻觉).
 	CounterExamples string `json:"counter_examples" gorm:"default:''"`
 	// Domain groups terms by subject area (e.g. "合规", "风控"); empty means
 	// unclassified.
-	Domain string `json:"domain" gorm:"type:varchar(64);default:''"`
+	Domain string `json:"domain" gorm:"type:varchar(64);default:''" extensions:"x-agent"`
 	// OwnerID is the accountable owner (术语责任人; informational in v1).
 	OwnerID string `json:"owner_id" gorm:"type:varchar(36);default:''"`
 	// Status: active or deprecated (deprecated rows keep the mapping).
-	Status string `json:"status" gorm:"type:varchar(16);not null;default:'active'"`
+	Status string `json:"status" gorm:"type:varchar(16);not null;default:'active'" extensions:"x-agent"`
 	// SupersededByID points at the replacing term once deprecated (删除=置
 	// deprecated+superseded_by，不物理删).
-	SupersededByID string `json:"superseded_by_id" gorm:"type:varchar(36);default:''"`
+	SupersededByID string `json:"superseded_by_id" gorm:"type:varchar(36);default:''" extensions:"x-agent,x-agent-response"`
 	// CreatedBy records who created the term (audit identity).
 	CreatedBy string `json:"created_by" gorm:"type:varchar(36);not null"`
 	// CreatedAt of the term.
