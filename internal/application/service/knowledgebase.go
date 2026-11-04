@@ -80,6 +80,10 @@ type knowledgeBaseService struct {
 	// aclSubjects expands a caller into the group/role subjects they hold so
 	// group-targeted ACL rows actually apply (§2.1).
 	aclSubjects aclSubjectResolver
+	// tokenBudgets resolves the embedding fallback chain (§16.5). Nil means
+	// "no chain configured": the query embedding uses the index model only,
+	// exactly as before the feature existed.
+	tokenBudgets interfaces.TokenBudgetService
 }
 
 // NewKnowledgeBaseService creates a new knowledge base service
@@ -109,6 +113,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 	gaps interfaces.KnowledgeGapService,
 	folderACL interfaces.FolderACLRepository,
 	subjectGroups interfaces.ACLSubjectGroupService,
+	tokenBudgets interfaces.TokenBudgetService,
 ) interfaces.KnowledgeBaseService {
 	return &knowledgeBaseService{
 		repo:            repo,
@@ -137,6 +142,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 		gaps:            gaps,
 		folderACL:       folderACL,
 		aclSubjects:     newACLSubjectResolver(subjectGroups),
+		tokenBudgets:    tokenBudgets,
 	}
 }
 

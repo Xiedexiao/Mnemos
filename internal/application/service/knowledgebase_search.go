@@ -27,33 +27,136 @@ const maxRetrievalPoolSize = 500
 // the result across multiple KBs that share the same embedding model and
 // configured vector dimension to avoid redundant embedding API calls.
 func (s *knowledgeBaseService) GetQueryEmbedding(ctx context.Context, kbID string, queryText string) ([]float32, error) {
+	vector, _, err := s.getQueryEmbeddingWithTrace(ctx, kbID, queryText)
+	return vector, err
+}
+
+// getQueryEmbeddingWithTrace computes the query vector and reports which model
+// served it.
+//
+// §16.5 降级链在这里落地时受一条**嵌入特有的**约束：换 embedding 模型会把
+// 查询编码到与索引不同的向量空间，余弦相似度仍算得出来但含义不存在——检索
+// 不报错，只是返回一批无关 chunk，然后模型拿它们编答案。因此：
+//   - 候选必须**维度相同**（唯一能机械判定的必要条件）；
+//   - 即使维度相同也标记为 Lossy 并写进审计，因为两个同维模型不共享空间；
+//   - 未配置降级链时行为与改动前逐字节一致。
+func (s *knowledgeBaseService) getQueryEmbeddingWithTrace(
+	ctx context.Context, kbID string, queryText string,
+) ([]float32, types.EmbeddingFallbackTrace, error) {
 	kb, err := s.repo.GetKnowledgeBaseByID(ctx, kbID)
 	if err != nil {
-		return nil, err
+		return nil, types.EmbeddingFallbackTrace{}, err
 	}
 
 	currentTenantID := types.MustTenantIDFromContext(ctx)
-	var embeddingModel embedding.Embedder
+	indexModelID := kb.EmbeddingModelID
 
-	if kb.TenantID != currentTenantID {
-		embeddingModel, err = s.modelService.GetEmbeddingModelForTenant(ctx, kb.EmbeddingModelID, kb.TenantID)
-	} else {
-		embeddingModel, err = s.modelService.GetEmbeddingModel(ctx, kb.EmbeddingModelID)
-	}
-	if err != nil {
-		logger.Errorf(ctx, "GetQueryEmbedding: failed to get embedding model %s: %v", kb.EmbeddingModelID, err)
-		return nil, err
-	}
+	// 候选顺序：主模型在前。未配置链时只有一个候选。
+	modelIDs := s.embeddingCandidates(ctx, currentTenantID, indexModelID)
 
-	vector, err := embeddingModel.Embed(types.WithEmbedQuery(ctx), queryText)
-	if err != nil {
-		return nil, err
+	trace := types.EmbeddingFallbackTrace{
+		IndexModelID: indexModelID,
+		Attempts:     make([]types.ModelFallbackAttempt, 0, len(modelIDs)),
 	}
-	if err := validateQueryEmbeddingDimension(embeddingModel, len(vector)); err != nil {
-		logger.Errorf(ctx, "GetQueryEmbedding: %v", err)
-		return nil, err
+	var lastErr error
+	// indexDimensions 在成功加载主模型后才有值；它用于判定后续候选是否兼容。
+	indexDimensions := 0
+	for level, modelID := range modelIDs {
+		embeddingModel, loadErr := s.loadEmbeddingModel(ctx, kb, currentTenantID, modelID)
+		if loadErr != nil {
+			trace.Attempts = append(trace.Attempts, types.ModelFallbackAttempt{
+				ModelID: modelID, Level: level, Err: loadErr.Error(),
+			})
+			lastErr = loadErr
+			logger.Warnf(ctx,
+				"GetQueryEmbedding: model %s unavailable at level %d: %v",
+				modelID, level, loadErr)
+			continue
+		}
+		if level == 0 {
+			indexDimensions = embeddingModel.GetDimensions()
+		} else {
+			// 降级候选必须通过兼容性检查；不通过就跳过并记下原因，
+			// 而不是带着可能错误的向量继续。
+			decision := types.CheckEmbeddingFallback(indexModelID, indexDimensions,
+				types.EmbeddingFallbackCandidate{
+					ModelID: modelID, Dimensions: embeddingModel.GetDimensions(),
+					Name: embeddingModel.GetModelName(),
+				})
+			if !decision.Allowed {
+				trace.Attempts = append(trace.Attempts, types.ModelFallbackAttempt{
+					ModelID: modelID, Level: level, Err: decision.Reason,
+				})
+				lastErr = fmt.Errorf("embedding fallback to %s refused: %s", modelID, decision.Reason)
+				logger.Warnf(ctx, "GetQueryEmbedding: %v", lastErr)
+				continue
+			}
+			trace.Lossy = decision.Lossy
+			trace.Reason = decision.Reason
+		}
+
+		vector, embedErr := embeddingModel.Embed(types.WithEmbedQuery(ctx), queryText)
+		if embedErr != nil {
+			trace.Attempts = append(trace.Attempts, types.ModelFallbackAttempt{
+				ModelID: modelID, Level: level, Err: embedErr.Error(),
+			})
+			lastErr = embedErr
+			continue
+		}
+		if dimErr := validateQueryEmbeddingDimension(embeddingModel, len(vector)); dimErr != nil {
+			trace.Attempts = append(trace.Attempts, types.ModelFallbackAttempt{
+				ModelID: modelID, Level: level, Err: dimErr.Error(),
+			})
+			lastErr = dimErr
+			logger.Errorf(ctx, "GetQueryEmbedding: %v", dimErr)
+			continue
+		}
+
+		trace.ServedBy = modelID
+		trace.Degraded = modelID != indexModelID
+		trace.Attempts = append(trace.Attempts, types.ModelFallbackAttempt{
+			ModelID: modelID, Level: level,
+		})
+		if trace.Degraded {
+			// 降级是成本/可用性事件，必须留痕：事后看到"这次检索结果不对"
+			// 时，能查到是换了 embedding 模型导致的。
+			logger.Warnf(ctx, "GetQueryEmbedding: %s",
+				types.DescribeEmbeddingFallback(trace))
+		}
+		return vector, trace, nil
 	}
-	return vector, nil
+	if lastErr == nil {
+		lastErr = apperrors.NewServiceUnavailableError("no embedding model is available")
+	}
+	return nil, trace, lastErr
+}
+
+// embeddingCandidates resolves the models to try for a query embedding.
+//
+// 未配置预算/降级服务、或该场景没有链时，返回单一主模型——这是绝大多数
+// 部署的路径，行为与改动前一致。
+func (s *knowledgeBaseService) embeddingCandidates(
+	ctx context.Context, tenantID uint64, indexModelID string,
+) []string {
+	if s.tokenBudgets == nil || indexModelID == "" {
+		return []string{indexModelID}
+	}
+	candidates := s.tokenBudgets.Candidates(ctx, tenantID,
+		types.EmbeddingFallbackScene, indexModelID)
+	if len(candidates) == 0 {
+		return []string{indexModelID}
+	}
+	return candidates
+}
+
+// loadEmbeddingModel resolves one embedding model for a knowledge base.
+func (s *knowledgeBaseService) loadEmbeddingModel(
+	ctx context.Context, kb *types.KnowledgeBase, callerTenantID uint64, modelID string,
+) (embedding.Embedder, error) {
+	if kb.TenantID != callerTenantID {
+		return s.modelService.GetEmbeddingModelForTenant(ctx, modelID, kb.TenantID)
+	}
+	return s.modelService.GetEmbeddingModel(ctx, modelID)
 }
 
 // GetQueryImageEmbedding computes the query embedding for an image using the
