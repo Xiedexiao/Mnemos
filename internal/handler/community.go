@@ -104,10 +104,12 @@ func (h *CommunityHandler) ListQuestions(c *gin.Context) {
 // @Description  返回问题及其全部回答（已采纳的排在最前）。
 // @Tags         知识问答社区
 // @Produce      json
-// @Param        id  path  string  true  "问题ID"
-// @Success      200  {object}  map[string]interface{}  "{success, data: CommunityQuestion}"
+// @Param        id  path  string  true  "问题ID"  extensions(x-agent=question_id)
+// @Success      200  {object}  handler.DataResponse{data=types.CommunityQuestion}  "{success, data: CommunityQuestion}"
 // @Security     Bearer
 // @Security     ApiKeyAuth
+// @x-agent      {"id":"community_question.get","risk":"read"}
+// @x-agent-hint "Reads one community question with its answers, the adopted answer first. Use it to surface how a question was actually answered in practice, including answers not yet in the knowledge base."
 // @Router       /community/questions/{id} [get]
 func (h *CommunityHandler) GetQuestion(c *gin.Context) {
 	ctx := c.Request.Context()

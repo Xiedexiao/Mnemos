@@ -5183,6 +5183,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "x-agent": "question_id",
                         "description": "问题ID",
                         "name": "id",
                         "in": "path",
@@ -5193,11 +5194,27 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: CommunityQuestion}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.DataResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.CommunityQuestion"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "community_question.get",
+                    "risk": "read"
+                },
+                "x-agent-hint": "Reads one community question with its answers, the adopted answer first. Use it to surface how a question was actually answered in practice, including answers not yet in the knowledge base."
             }
         },
         "/community/questions/{id}/accept": {
@@ -41048,7 +41065,24 @@ const docTemplate = `{
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "parse_quality.computed",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -41112,6 +41146,23 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
+                "aipre.completed",
+                "aipre.failed",
+                "parse_quality.computed",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -41124,44 +41175,27 @@ const docTemplate = `{
                 "cr.rolled_back",
                 "cr.impact_task_updated",
                 "cr.verified",
-                "cr.notified",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "aipre.completed",
-                "aipre.failed",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted"
+                "cr.notified"
             ],
             "x-enum-varnames": [
-                "ParseQualityAuditActionComputed",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -41225,6 +41259,23 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "ParseQualityAuditActionComputed",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -41237,41 +41288,7 @@ const docTemplate = `{
                 "AuditActionCRRolledBack",
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
-                "AuditActionCRNotified",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted"
+                "AuditActionCRNotified"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -42542,6 +42559,109 @@ const docTemplate = `{
                 "version": {
                     "description": "Version is the published version number (0 when unknown).",
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.CommunityAnswer": {
+            "type": "object",
+            "properties": {
+                "accepted": {
+                    "description": "Accepted marks the adopted answer; at most one per question.",
+                    "type": "boolean",
+                    "x-agent": true
+                },
+                "answered_by": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-max-runes": "800"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "x-agent": "answer_id"
+                },
+                "question_id": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "votes": {
+                    "description": "Votes is the \"this helped\" count (§15.6 答案评价).",
+                    "type": "integer",
+                    "x-agent": true
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.CommunityQuestion": {
+            "type": "object",
+            "properties": {
+                "accepted_answer_id": {
+                    "description": "AcceptedAnswerID is the answer the asker adopted.",
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-response": true
+                },
+                "answers": {
+                    "description": "Answers is filled by the service on read.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.CommunityAnswer"
+                    }
+                },
+                "asked_by": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "bounty": {
+                    "description": "Bounty is the points offered for a good answer (§15.6 悬赏).",
+                    "type": "integer"
+                },
+                "converted_knowledge_id": {
+                    "description": "ConvertedKnowledgeID is set when the Q\u0026A was promoted to knowledge\n(§15.6 一键转知识).",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "expert_id": {
+                    "description": "ExpertID is the person @-mentioned as the intended answerer (optional).",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "x-agent": "question_id"
+                },
+                "knowledge_id": {
+                    "description": "KnowledgeID links the question to the document it is about (optional).",
+                    "type": "string",
+                    "x-agent": "knowledge_id"
+                },
+                "status": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "updated_at": {
+                    "type": "string",
+                    "x-agent": true
                 }
             }
         },

@@ -47,25 +47,25 @@ func (s CommunityQuestionStatus) Valid() bool {
 
 // CommunityQuestion is one question posted in the community.
 type CommunityQuestion struct {
-	ID       string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID       string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent=question_id"`
 	TenantID uint64 `json:"tenant_id" gorm:"not null;index:idx_community_questions_tenant_status,priority:1"`
-	Title    string `json:"title" gorm:"type:varchar(255);not null"`
+	Title    string `json:"title" gorm:"type:varchar(255);not null" extensions:"x-agent"`
 	Body     string `json:"body" gorm:"type:text;not null;default:''"`
 	// KnowledgeID links the question to the document it is about (optional).
-	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;default:''"`
+	KnowledgeID string `json:"knowledge_id" gorm:"type:varchar(36);not null;default:''" extensions:"x-agent=knowledge_id"`
 	// ExpertID is the person @-mentioned as the intended answerer (optional).
 	ExpertID string `json:"expert_id" gorm:"type:varchar(36);not null;default:''"`
 	// Bounty is the points offered for a good answer (§15.6 悬赏).
 	Bounty int    `json:"bounty" gorm:"not null;default:0"`
-	Status string `json:"status" gorm:"type:varchar(16);not null;default:'open';index:idx_community_questions_tenant_status,priority:2"`
+	Status string `json:"status" gorm:"type:varchar(16);not null;default:'open';index:idx_community_questions_tenant_status,priority:2" extensions:"x-agent"`
 	// AcceptedAnswerID is the answer the asker adopted.
-	AcceptedAnswerID string `json:"accepted_answer_id" gorm:"type:varchar(36);not null;default:''"`
+	AcceptedAnswerID string `json:"accepted_answer_id" gorm:"type:varchar(36);not null;default:''" extensions:"x-agent,x-agent-response"`
 	// ConvertedKnowledgeID is set when the Q&A was promoted to knowledge
 	// (§15.6 一键转知识).
 	ConvertedKnowledgeID string    `json:"converted_knowledge_id" gorm:"type:varchar(36);not null;default:''"`
 	AskedBy              string    `json:"asked_by" gorm:"type:varchar(36);not null"`
-	CreatedAt            time.Time `json:"created_at"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	CreatedAt            time.Time `json:"created_at" extensions:"x-agent"`
+	UpdatedAt            time.Time `json:"updated_at" extensions:"x-agent"`
 	// Answers is filled by the service on read.
 	Answers []*CommunityAnswer `json:"answers,omitempty" gorm:"-"`
 }
@@ -83,15 +83,15 @@ func (q *CommunityQuestion) BeforeCreate(_ *gorm.DB) error {
 
 // CommunityAnswer is one answer to a question.
 type CommunityAnswer struct {
-	ID         string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID         string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent=answer_id"`
 	TenantID   uint64 `json:"tenant_id" gorm:"not null"`
 	QuestionID string `json:"question_id" gorm:"type:varchar(36);not null;index:idx_community_answers_question,priority:1"`
-	Body       string `json:"body" gorm:"type:text;not null"`
+	Body       string `json:"body" gorm:"type:text;not null" extensions:"x-agent,x-agent-max-runes=800"`
 	AnsweredBy string `json:"answered_by" gorm:"type:varchar(36);not null"`
 	// Votes is the "this helped" count (§15.6 答案评价).
-	Votes int `json:"votes" gorm:"not null;default:0"`
+	Votes int `json:"votes" gorm:"not null;default:0" extensions:"x-agent"`
 	// Accepted marks the adopted answer; at most one per question.
-	Accepted  bool      `json:"accepted" gorm:"not null;default:false"`
+	Accepted  bool      `json:"accepted" gorm:"not null;default:false" extensions:"x-agent"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

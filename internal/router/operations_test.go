@@ -67,6 +67,9 @@ func registerOperationAreas(v1 *gin.RouterGroup, g *rbacGuards) {
 	// saved filter are lookups; editing either is not.
 	RegisterGlossaryRoutes(v1, &handler.GlossaryHandler{}, g)
 	RegisterSavedViewRoutes(v1, &handler.SavedViewHandler{}, g)
+	// Community Q&A (§15.6), read-only: answers written by people are often the
+	// only record of how something is done in practice.
+	RegisterCommunityRoutes(v1, &handler.CommunityHandler{}, g)
 }
 
 // TestBuiltinOperationsMatchRegisteredRoutes requires every operation to

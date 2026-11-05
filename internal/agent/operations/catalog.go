@@ -380,6 +380,10 @@ var allowedRouteAreas = map[string]bool{
 	// what makes an answer use the organisation's meaning. Creating, merging
 	// and deprecating terms is vocabulary governance.
 	"glossary": true,
+	// §15.6 community Q&A, read-only: answers written by people are often the
+	// only record of how something is actually done. Asking and answering are
+	// participation, not retrieval, and stay in the UI.
+	"community": true,
 	// §12.2 the caller's own saved views, read-only. A view belongs to one
 	// user; an agent may read the user's own filters, never another's, and
 	// creating or deleting them stays in the UI.
@@ -402,6 +406,7 @@ var readOnlyRouteAreas = map[string]bool{
 	"governance-approvals": true,
 	"glossary":             true,
 	"saved-views":          true,
+	"community":            true,
 	"system":               true, // Only info and parser-engines are reachable; see parseRoute.
 }
 
