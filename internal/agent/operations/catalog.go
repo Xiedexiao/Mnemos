@@ -384,6 +384,10 @@ var allowedRouteAreas = map[string]bool{
 	// only record of how something is actually done. Asking and answering are
 	// participation, not retrieval, and stay in the UI.
 	"community": true,
+	// §16.4 outbound webhooks, read-only: the delivery ledger is what tells an
+	// operator why an integration stopped receiving events. Creating endpoints
+	// (which carry a signing secret) and replaying deliveries stay out.
+	"webhooks": true,
 	// §12.2 the caller's own saved views, read-only. A view belongs to one
 	// user; an agent may read the user's own filters, never another's, and
 	// creating or deleting them stays in the UI.
@@ -407,6 +411,7 @@ var readOnlyRouteAreas = map[string]bool{
 	"glossary":             true,
 	"saved-views":          true,
 	"community":            true,
+	"webhooks":             true,
 	"system":               true, // Only info and parser-engines are reachable; see parseRoute.
 }
 

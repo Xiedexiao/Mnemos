@@ -169,26 +169,26 @@ func (s WebhookDeliveryState) Valid() bool {
 // outbox 模式：写事件与业务变更在同一个事务里，投递在事务外做。这样"业务
 // 提交了但事件丢了"不会发生；反过来"事件投了但业务回滚"由事务保证。
 type WebhookDelivery struct {
-	ID         string `json:"id" gorm:"type:varchar(36);primaryKey"`
+	ID         string `json:"id" gorm:"type:varchar(36);primaryKey" extensions:"x-agent=delivery_id"`
 	TenantID   uint64 `json:"tenant_id" gorm:"not null;index:idx_webhook_deliveries_due,priority:1"`
-	EndpointID string `json:"endpoint_id" gorm:"type:varchar(36);not null;index:idx_webhook_deliveries_due,priority:2"`
+	EndpointID string `json:"endpoint_id" gorm:"type:varchar(36);not null;index:idx_webhook_deliveries_due,priority:2" extensions:"x-agent=endpoint_id"`
 	// EventID is the idempotency key the receiver should dedupe on.
-	EventID string `json:"event_id" gorm:"type:varchar(36);not null"`
+	EventID string `json:"event_id" gorm:"type:varchar(36);not null" extensions:"x-agent"`
 	// EventType is one of the catalogue.
-	EventType string `json:"event_type" gorm:"type:varchar(48);not null"`
+	EventType string `json:"event_type" gorm:"type:varchar(48);not null" extensions:"x-agent"`
 	// Payload is the JSON body sent.
 	Payload JSON `json:"payload" gorm:"type:json;not null"`
 	// State is pending/delivered/dead.
-	State string `json:"state" gorm:"type:varchar(16);not null;default:'pending';index:idx_webhook_deliveries_due,priority:3"`
+	State string `json:"state" gorm:"type:varchar(16);not null;default:'pending';index:idx_webhook_deliveries_due,priority:3" extensions:"x-agent"`
 	// Attempts counts attempted deliveries.
-	Attempts int `json:"attempts" gorm:"not null;default:0"`
+	Attempts int `json:"attempts" gorm:"not null;default:0" extensions:"x-agent"`
 	// NextAttemptAt is when the next try is due (exponential backoff).
-	NextAttemptAt time.Time `json:"next_attempt_at" gorm:"index:idx_webhook_deliveries_due,priority:4"`
+	NextAttemptAt time.Time `json:"next_attempt_at" gorm:"index:idx_webhook_deliveries_due,priority:4" extensions:"x-agent"`
 	// LastStatusCode / LastError describe the latest attempt.
-	LastStatusCode int        `json:"last_status_code" gorm:"not null;default:0"`
-	LastError      string     `json:"last_error" gorm:"type:text;not null;default:''"`
-	DeliveredAt    *time.Time `json:"delivered_at"`
-	CreatedAt      time.Time  `json:"created_at"`
+	LastStatusCode int        `json:"last_status_code" gorm:"not null;default:0" extensions:"x-agent"`
+	LastError      string     `json:"last_error" gorm:"type:text;not null;default:''" extensions:"x-agent,x-agent-max-runes=300"`
+	DeliveredAt    *time.Time `json:"delivered_at" extensions:"x-agent"`
+	CreatedAt      time.Time  `json:"created_at" extensions:"x-agent"`
 }
 
 // TableName pins the GORM table name.

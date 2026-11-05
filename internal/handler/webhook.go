@@ -177,9 +177,11 @@ func (h *WebhookHandler) DeleteWebhookEndpoint(c *gin.Context) {
 // @Param        endpoint_id  query  string  false  "订阅 ID"
 // @Param        state        query  string  false  "状态"
 // @Param        limit        query  int     false  "条数（默认 50）"
-// @Success      200  {object}  map[string]interface{}
+// @Success      200  {object}  handler.PageResponse{data=[]types.WebhookDelivery}
 // @Security     Bearer
 // @Security     ApiKeyAuth
+// @x-agent      {"id":"webhook_delivery.list","risk":"read","max_items":20,"role":"admin"}
+// @x-agent-hint "Lists outbound webhook deliveries with their state (pending/delivered/dead), attempt count, last status code and last error. Use it to report why an integration is not receiving events; replaying a delivery is not available to the model."
 // @Router       /webhooks/deliveries [get]
 func (h *WebhookHandler) ListWebhookDeliveries(c *gin.Context) {
 	ctx := c.Request.Context()

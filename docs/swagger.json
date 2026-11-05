@@ -38480,11 +38480,32 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.PageResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.WebhookDelivery"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "webhook_delivery.list",
+                    "max_items": 20,
+                    "risk": "read",
+                    "role": "admin"
+                },
+                "x-agent-hint": "Lists outbound webhook deliveries with their state (pending/delivered/dead), attempt count, last status code and last error. Use it to report why an integration is not receiving events; replaying a delivery is not available to the model."
             }
         },
         "/webhooks/deliveries/{id}/replay": {
@@ -41267,27 +41288,6 @@
         "github_com_Tencent_WeKnora_internal_types.AuditAction": {
             "type": "string",
             "enum": [
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "ontology.schema_created",
-                "ontology.schema_updated",
-                "ontology.schema_published",
-                "ontology.schema_deleted",
-                "ontology.type_created",
-                "ontology.type_updated",
-                "ontology.type_deleted",
-                "ontology.property_created",
-                "ontology.property_updated",
-                "ontology.property_deleted",
-                "ontology.relation_created",
-                "ontology.relation_updated",
-                "ontology.relation_deleted",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -41351,6 +41351,18 @@
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
+                "aipre.completed",
+                "aipre.failed",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -41364,43 +41376,31 @@
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
-                "parse_quality.computed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
                 "review.submitted",
                 "review.approved",
                 "review.rejected",
                 "review.receipt_issued",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "aipre.completed",
-                "aipre.failed"
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "parse_quality.computed",
+                "ontology.schema_created",
+                "ontology.schema_updated",
+                "ontology.schema_published",
+                "ontology.schema_deleted",
+                "ontology.type_created",
+                "ontology.type_updated",
+                "ontology.type_deleted",
+                "ontology.property_created",
+                "ontology.property_updated",
+                "ontology.property_deleted",
+                "ontology.relation_created",
+                "ontology.relation_updated",
+                "ontology.relation_deleted"
             ],
             "x-enum-varnames": [
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "OntologyActionSchemaCreated",
-                "OntologyActionSchemaUpdated",
-                "OntologyActionSchemaPublished",
-                "OntologyActionSchemaDeleted",
-                "OntologyActionTypeCreated",
-                "OntologyActionTypeUpdated",
-                "OntologyActionTypeDeleted",
-                "OntologyActionPropertyCreated",
-                "OntologyActionPropertyUpdated",
-                "OntologyActionPropertyDeleted",
-                "OntologyActionRelationCreated",
-                "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -41464,6 +41464,18 @@
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -41477,20 +41489,29 @@
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
-                "ParseQualityAuditActionComputed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
                 "AuditActionReviewSubmitted",
                 "AuditActionReviewApproved",
                 "AuditActionReviewRejected",
                 "AuditActionReviewReceiptIssued",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed"
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "ParseQualityAuditActionComputed",
+                "OntologyActionSchemaCreated",
+                "OntologyActionSchemaUpdated",
+                "OntologyActionSchemaPublished",
+                "OntologyActionSchemaDeleted",
+                "OntologyActionTypeCreated",
+                "OntologyActionTypeUpdated",
+                "OntologyActionTypeDeleted",
+                "OntologyActionPropertyCreated",
+                "OntologyActionPropertyUpdated",
+                "OntologyActionPropertyDeleted",
+                "OntologyActionRelationCreated",
+                "OntologyActionRelationUpdated",
+                "OntologyActionRelationDeleted"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -53394,6 +53415,69 @@
                 "supports_proxy": {
                     "description": "Whether optional proxy_url in parameters is honored for outbound requests",
                     "type": "boolean"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.WebhookDelivery": {
+            "type": "object",
+            "properties": {
+                "attempts": {
+                    "description": "Attempts counts attempted deliveries.",
+                    "type": "integer",
+                    "x-agent": true
+                },
+                "created_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "delivered_at": {
+                    "type": "string",
+                    "x-agent": true
+                },
+                "endpoint_id": {
+                    "type": "string",
+                    "x-agent": "endpoint_id"
+                },
+                "event_id": {
+                    "description": "EventID is the idempotency key the receiver should dedupe on.",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "event_type": {
+                    "description": "EventType is one of the catalogue.",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "id": {
+                    "type": "string",
+                    "x-agent": "delivery_id"
+                },
+                "last_error": {
+                    "type": "string",
+                    "x-agent": true,
+                    "x-agent-max-runes": "300"
+                },
+                "last_status_code": {
+                    "description": "LastStatusCode / LastError describe the latest attempt.",
+                    "type": "integer",
+                    "x-agent": true
+                },
+                "next_attempt_at": {
+                    "description": "NextAttemptAt is when the next try is due (exponential backoff).",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "payload": {
+                    "description": "Payload is the JSON body sent.",
+                    "type": "object"
+                },
+                "state": {
+                    "description": "State is pending/delivered/dead.",
+                    "type": "string",
+                    "x-agent": true
+                },
+                "tenant_id": {
+                    "type": "integer"
                 }
             }
         },

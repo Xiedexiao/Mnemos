@@ -70,6 +70,9 @@ func registerOperationAreas(v1 *gin.RouterGroup, g *rbacGuards) {
 	// Community Q&A (§15.6), read-only: answers written by people are often the
 	// only record of how something is done in practice.
 	RegisterCommunityRoutes(v1, &handler.CommunityHandler{}, g)
+	// Outbound webhook deliveries (§16.4), read-only: the ledger explains why
+	// an integration stopped receiving events.
+	RegisterWebhookRoutes(v1, &handler.WebhookHandler{}, g)
 }
 
 // TestBuiltinOperationsMatchRegisteredRoutes requires every operation to
