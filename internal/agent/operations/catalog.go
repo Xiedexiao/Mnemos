@@ -173,8 +173,22 @@ type Operation struct {
 	AlwaysConfirm bool
 }
 
-// defaultRole is the role the route guards usually ask of an operation:
-// reading or probing needs a viewer, changing content a contributor.
+// defaultRole guesses the role from the risk alone: reading or probing needs a
+// viewer, changing content a contributor.
+//
+// **It is a guess, and it is wrong often enough to matter.** A read of a
+// tenant-wide governance ledger — the approval queue, the webhook delivery
+// log, tenant-scope knowledge health — is served by a route whose guard asks
+// for admin. The catalog cannot see the guard: the required role lives in a
+// middleware chain, not in the Swagger document, so the only way to learn it is
+// to call the route (which is what
+// TestBuiltinOperationRolesMatchRouteGuards does).
+//
+// Three operations have already shipped with the wrong default and been caught
+// by that test. When it fails, do not "fix" the test: add "role" to the
+// operation's x-agent annotation. The test is the only thing standing between a
+// wrong declaration and a model that reliably gets 403 on a route the catalog
+// said it could use.
 func defaultRole(risk Risk) types.TenantRole {
 	if !risk.Mutates() {
 		return types.TenantRoleViewer
