@@ -92,9 +92,12 @@ func (h *KnowledgeCandidateHandler) Create(c *gin.Context) {
 // @Param        level   query  string  false  "层级过滤：L0|L1|L2|L3"
 // @Param        limit   query  int     false  "条数，默认50，上限200"
 // @Param        offset  query  int     false  "偏移量"
-// @Success      200  {object}  map[string]interface{}  "{success, data: {items, total}}"
+// @Success      200  {object}  handler.ItemsEnvelopeResponse{data=handler.ItemsEnvelopeData{items=[]types.KnowledgeCandidate}}  "{success, data: {items, total}}"
 // @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
+// @Security     ApiKeyAuth
+// @x-agent      {"id":"knowledge_candidate.list","risk":"read","max_items":20,"root":"data.items"}
+// @x-agent-hint "Lists experience candidates with their level, review status and dedup result. Use it to check whether an experience was already captured before proposing a new one; confirming and publishing stay with a reviewer."
 // @Router       /knowledge-candidates [get]
 func (h *KnowledgeCandidateHandler) List(c *gin.Context) {
 	ctx := c.Request.Context()

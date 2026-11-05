@@ -34,3 +34,22 @@ type MessageResponse struct {
 	Success bool   `json:"success" example:"true" extensions:"x-agent"`
 	Message string `json:"message"`
 }
+
+// ItemsEnvelopeResponse is a page whose rows live under data.items.
+//
+// 有些列表端点把 rows 与 total 一起放在 data 里（`{success, data:{items, total}}`），
+// 与 PageResponse（rows 直接在 data 下）不同。目录按 Swagger schema 校验
+// x-agent 的 root 路径，所以这两种信封必须是不同的类型——共用一个 any 会让
+// "root: data.items" 在校验时找不到该字段。
+type ItemsEnvelopeResponse struct {
+	Success bool              `json:"success" example:"true"`
+	Data    ItemsEnvelopeData `json:"data"`
+}
+
+// ItemsEnvelopeData is the inner object of ItemsEnvelopeResponse.
+type ItemsEnvelopeData struct {
+	// Items are the page's rows.
+	Items any `json:"items"`
+	// Total is the unpaged match count.
+	Total int64 `json:"total" extensions:"x-agent"`
+}

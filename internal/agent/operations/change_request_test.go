@@ -111,3 +111,53 @@ func TestChangeRequestWriteOperationsStayOut(t *testing.T) {
 		assert.False(t, ok, "%s must not be reachable by the model", id)
 	}
 }
+
+// TestChangeRequestListIsInTheCatalog covers the list read.
+func TestChangeRequestListIsInTheCatalog(t *testing.T) {
+	op, ok := Builtin().Get("change_request.list")
+	require.True(t, ok, "change_request.list must be reachable")
+	assert.Equal(t, "GET", op.Method)
+	assert.Equal(t, "/api/v1/change-requests", op.Route)
+	assert.Equal(t, RiskRead, op.Risk)
+	assert.True(t, op.Result.List)
+}
+
+// TestChangeRequestListProjectsItsFields is the "what is in flight" answer.
+func TestChangeRequestListProjectsItsFields(t *testing.T) {
+	op, ok := Builtin().Get("change_request.list")
+	require.True(t, ok)
+
+	raw, err := json.Marshal(map[string]any{
+		"success": true,
+		"total":   1,
+		"data": []any{map[string]any{
+			"id":          "cr-1",
+			"cr_number":   "CR-20261105-001",
+			"title":       "E45 报警阈值调整",
+			"status":      "draft",
+			"risk_level":  "mid",
+			"change_type": "param_change",
+			// Internal.
+			"tenant_id":           7,
+			"approval_receipt_id": "r-1",
+		}},
+	})
+	require.NoError(t, err)
+
+	projected, err := op.Project(raw)
+	require.NoError(t, err)
+	rows, ok := projected.Data.([]any)
+	require.True(t, ok)
+	require.Len(t, rows, 1)
+	row := rows[0].(map[string]any)
+
+	assert.Equal(t, "cr-1", row["id"])
+	assert.Equal(t, "CR-20261105-001", row["cr_number"])
+	assert.Equal(t, "draft", row["status"])
+	assert.Equal(t, "mid", row["risk_level"])
+	assert.NotContains(t, row, "tenant_id")
+	assert.NotContains(t, row, "approval_receipt_id")
+	// The total in the envelope is projected as meta when declared; either way
+	// the row itself must not carry it.
+	assert.NotContains(t, row, "total")
+}

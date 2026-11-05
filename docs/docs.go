@@ -3412,6 +3412,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
                     }
                 ],
                 "description": "分页返回本租户变更单（created_at 倒序，聚合 items 与影响任务）。可按 status 过滤。",
@@ -3448,8 +3451,22 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: [变更单], total}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.PageResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.ChangeRequest"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "401": {
@@ -3458,7 +3475,13 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "change_request.list",
+                    "max_items": 20,
+                    "risk": "read"
+                },
+                "x-agent-hint": "Lists change requests with their status and risk level. Use it to answer what changes are in flight; creating, scheduling and publishing a change stay with an administrator."
             },
             "post": {
                 "security": [
@@ -14933,6 +14956,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
                     }
                 ],
                 "description": "分页返回本租户候选卡片（created_at 倒序），可按 status/level 过滤。",
@@ -14973,8 +14999,34 @@ const docTemplate = `{
                     "200": {
                         "description": "{success, data: {items, total}}",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_handler.ItemsEnvelopeResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/internal_handler.ItemsEnvelopeData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "items": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.KnowledgeCandidate"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "401": {
@@ -14983,7 +15035,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
                         }
                     }
-                }
+                },
+                "x-agent": {
+                    "id": "knowledge_candidate.list",
+                    "max_items": 20,
+                    "risk": "read",
+                    "root": "data.items"
+                },
+                "x-agent-hint": "Lists experience candidates with their level, review status and dedup result. Use it to check whether an experience was already captured before proposing a new one; confirming and publishing stay with a reviewer."
             },
             "post": {
                 "security": [
@@ -41358,18 +41417,9 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "aipre.completed",
-                "aipre.failed",
-                "share.created",
-                "share.revoked",
-                "share.visited",
                 "feedback.recorded",
                 "quality_task.created",
                 "quality_task.updated",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -41383,16 +41433,13 @@ const docTemplate = `{
                 "cr.impact_task_updated",
                 "cr.verified",
                 "cr.notified",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
-                "ontology.schema_proposal_created",
-                "ontology.schema_proposal_checked",
-                "ontology.schema_proposal_approved",
-                "ontology.schema_proposal_rejected",
-                "ontology.schema_proposal_applied",
-                "parse_quality.computed",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
                 "ontology.schema_created",
                 "ontology.schema_updated",
                 "ontology.schema_published",
@@ -41405,7 +41452,19 @@ const docTemplate = `{
                 "ontology.property_deleted",
                 "ontology.relation_created",
                 "ontology.relation_updated",
-                "ontology.relation_deleted"
+                "ontology.relation_deleted",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "ontology.schema_proposal_created",
+                "ontology.schema_proposal_checked",
+                "ontology.schema_proposal_approved",
+                "ontology.schema_proposal_rejected",
+                "ontology.schema_proposal_applied",
+                "parse_quality.computed",
+                "aipre.completed",
+                "aipre.failed"
             ],
             "x-enum-varnames": [
                 "AuditActionMemberAdded",
@@ -41471,18 +41530,9 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
                 "AuditActionFeedbackRecorded",
                 "AuditActionQualityTaskCreated",
                 "AuditActionQualityTaskUpdated",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -41496,16 +41546,13 @@ const docTemplate = `{
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
                 "AuditActionCRNotified",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
-                "OntologyActionSchemaProposalCreated",
-                "OntologyActionSchemaProposalChecked",
-                "OntologyActionSchemaProposalApproved",
-                "OntologyActionSchemaProposalRejected",
-                "OntologyActionSchemaProposalApplied",
-                "ParseQualityAuditActionComputed",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
                 "OntologyActionSchemaCreated",
                 "OntologyActionSchemaUpdated",
                 "OntologyActionSchemaPublished",
@@ -41518,7 +41565,19 @@ const docTemplate = `{
                 "OntologyActionPropertyDeleted",
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
-                "OntologyActionRelationDeleted"
+                "OntologyActionRelationDeleted",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "OntologyActionSchemaProposalCreated",
+                "OntologyActionSchemaProposalChecked",
+                "OntologyActionSchemaProposalApproved",
+                "OntologyActionSchemaProposalRejected",
+                "OntologyActionSchemaProposalApplied",
+                "ParseQualityAuditActionComputed",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -55744,6 +55803,31 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        },
+        "internal_handler.ItemsEnvelopeData": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "description": "Items are the page's rows."
+                },
+                "total": {
+                    "description": "Total is the unpaged match count.",
+                    "type": "integer",
+                    "x-agent": true
+                }
+            }
+        },
+        "internal_handler.ItemsEnvelopeResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler.ItemsEnvelopeData"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },

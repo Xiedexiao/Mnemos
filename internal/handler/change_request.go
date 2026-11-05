@@ -121,9 +121,12 @@ func (h *ChangeRequestHandler) Create(c *gin.Context) {
 // @Param        status  query  string  false  "变更单状态过滤"
 // @Param        limit   query  int     false  "条数，1-200"  default(50)
 // @Param        offset  query  int     false  "偏移量"       default(0)
-// @Success      200  {object}  map[string]interface{}  "{success, data: [变更单], total}"
+// @Success      200  {object}  handler.PageResponse{data=[]types.ChangeRequest}  "{success, data: [变更单], total}"
 // @Failure      401  {object}  apperrors.AppError  "缺少租户上下文"
 // @Security     Bearer
+// @Security     ApiKeyAuth
+// @x-agent      {"id":"change_request.list","risk":"read","max_items":20}
+// @x-agent-hint "Lists change requests with their status and risk level. Use it to answer what changes are in flight; creating, scheduling and publishing a change stay with an administrator."
 // @Router       /change-requests [get]
 func (h *ChangeRequestHandler) List(c *gin.Context) {
 	ctx := c.Request.Context()

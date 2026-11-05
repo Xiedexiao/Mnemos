@@ -148,3 +148,49 @@ func TestCandidateWriteOperationsStayOut(t *testing.T) {
 		assert.False(t, ok, "%s must not be reachable by the model", id)
 	}
 }
+
+// TestKnowledgeCandidateListIsInTheCatalog covers the list read.
+func TestKnowledgeCandidateListIsInTheCatalog(t *testing.T) {
+	op, ok := Builtin().Get("knowledge_candidate.list")
+	require.True(t, ok, "knowledge_candidate.list must be reachable")
+	assert.Equal(t, "GET", op.Method)
+	assert.Equal(t, "/api/v1/knowledge-candidates", op.Route)
+	assert.Equal(t, RiskRead, op.Risk)
+	assert.True(t, op.Result.List)
+}
+
+// TestKnowledgeCandidateListProjectsItsFields keeps the review state readable.
+func TestKnowledgeCandidateListProjectsItsFields(t *testing.T) {
+	op, ok := Builtin().Get("knowledge_candidate.list")
+	require.True(t, ok)
+
+	raw, err := json.Marshal(map[string]any{
+		"success": true,
+		"data": map[string]any{
+			"total": 1,
+			"items": []any{map[string]any{
+				"title":        "E45 报警频发处理",
+				"level":        "L1",
+				"status":       "in_review",
+				"dedup_status": "unique",
+				"confidence":   "EXTRACTED",
+				"source_type":  "qa_answer",
+				// Internal.
+				"requested_by": "u-1",
+				"card":         map[string]any{"what": "raw"},
+				"tenant_id":    7,
+			}},
+		},
+	})
+	require.NoError(t, err)
+
+	projected, err := op.Project(raw)
+	require.NoError(t, err)
+	// The list result points at the items array.
+	rows, ok := projected.Data.([]any)
+	require.True(t, ok, "projection returns a list: %T", projected.Data)
+	require.Len(t, rows, 1)
+	row := rows[0].(map[string]any)
+	assert.Equal(t, "in_review", row["status"])
+	assert.NotContains(t, row, "requested_by")
+}
