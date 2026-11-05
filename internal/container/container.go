@@ -247,6 +247,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewTenantExportService))
 	must(container.Provide(repository.NewPromptRolloutRepository))
 	must(container.Provide(service.NewPromptRolloutService))
+	must(container.Provide(repository.NewCollaborativeFilteringRepository))
+	must(container.Provide(service.NewCollaborativeFilteringService))
 	must(container.Provide(repository.NewQualityMetricsRepository))
 	must(container.Provide(service.NewQualityMetricsService))
 	must(container.Provide(repository.NewEmbedPushRepository))
