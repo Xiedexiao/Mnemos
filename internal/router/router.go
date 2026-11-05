@@ -115,6 +115,7 @@ type RouterParams struct {
 	TokenBudgetHandler           *handler.TokenBudgetHandler
 	TenantExportHandler          *handler.TenantExportHandler
 	PromptRolloutHandler         *handler.PromptRolloutHandler
+	IndexCheckHandler            *handler.IndexCheckHandler
 	QualityMetricsHandler        *handler.QualityMetricsHandler
 	LearningTaskHandler          *handler.LearningTaskHandler
 	ReviewHandler                *handler.ReviewHandler
@@ -414,6 +415,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterTokenBudgetRoutes(v1, params.TokenBudgetHandler, rbacGuards)
 		RegisterTenantExportRoutes(v1, params.TenantExportHandler, rbacGuards)
 		RegisterPromptRolloutRoutes(v1, params.PromptRolloutHandler, rbacGuards)
+		RegisterIndexCheckRoutes(v1, params.IndexCheckHandler, rbacGuards)
 		RegisterQualityMetricsRoutes(v1, params.QualityMetricsHandler, rbacGuards)
 		RegisterLearningTaskRoutes(v1, params.LearningTaskHandler, rbacGuards)
 		RegisterOntologyRoutes(v1, params.OntologyHandler, rbacGuards)

@@ -26553,6 +26553,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/operations/index-check": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "对热路径查询逐条取执行计划，报告哪些是全表扫描（KnowAxis V3.0 §17.1）。检查的是**计划**而不是耗时：耗时依赖数据量与机器，而\"是否全表扫描\"与规模无关，今天就能判定明天会不会出问题。单条检查失败标 unknown 而不当作通过。全表扫描的查询会随表增长线性变慢。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维"
+                ],
+                "summary": "索引覆盖自检",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: IndexCheckReport}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/organization/departments": {
             "get": {
                 "security": [
@@ -28088,6 +28117,186 @@ const docTemplate = `{
                         "description": "缺少租户上下文",
                         "schema": {
                             "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/prompt-rollout/{template_key}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "返回某个提示词模板当前的活跃版本指针（稳定版、灰度版与比例）（KnowAxis V3.0 §16.5）。未配置时返回零值——此时行为与改动前一致：取最新版本。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型与提示词"
+                ],
+                "summary": "提示词灰度配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "template_key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: PromptVersionPointer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "设置稳定版本与可选的灰度版本及比例（KnowAxis V3.0 §16.5）。两个版本都必须真实存在——指向不存在的版本会让取数静默回退到最新，而运营以为配置了灰度。灰度按 (模板键, 主体键) 哈希抽样，同一会话在灰度期内恒看到同一版。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型与提示词"
+                ],
+                "summary": "配置提示词灰度",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "template_key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{stable_version, canary_version, canary_percent}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.PromptVersionPointer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: PromptVersionPointer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/prompt-rollout/{template_key}/rollback": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "把稳定版本指回一个已存在的历史版本（KnowAxis V3.0 §16.5）。回滚是改指针，不删版本、也不复制旧内容成新版本——后者会掩盖\"曾经上线过一个坏版本\"这个事实。回滚同时清空灰度：把流量继续分给刚被判定有问题的版本是自相矛盾的。note 必填。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型与提示词"
+                ],
+                "summary": "回滚提示词版本",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "template_key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{to_version, note}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Tencent_WeKnora_internal_types.PromptRollbackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: PromptVersionPointer}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/prompt-rollout/{template_key}/select": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按 (模板键, 主体键) 解析灰度结果（KnowAxis V3.0 §16.5）。同一主体在灰度期内恒得到同一版本——哈希是纯函数，不依赖进程状态。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型与提示词"
+                ],
+                "summary": "解析某主体应看到的提示词版本",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板键",
+                        "name": "template_key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "主体键（会话或用户 ID）",
+                        "name": "subject_key",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: PromptVersionSelection}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -41083,6 +41292,9 @@ const docTemplate = `{
                 "ontology.relation_created",
                 "ontology.relation_updated",
                 "ontology.relation_deleted",
+                "feedback.recorded",
+                "quality_task.created",
+                "quality_task.updated",
                 "rbac.member_added",
                 "rbac.member_removed",
                 "rbac.member_role_changed",
@@ -41146,23 +41358,6 @@ const docTemplate = `{
                 "faq.import_started",
                 "faq.import_completed",
                 "faq.import_failed",
-                "aipre.completed",
-                "aipre.failed",
-                "parse_quality.computed",
-                "candidate.created",
-                "candidate.confirmed",
-                "candidate.published",
-                "candidate.rejected",
-                "feedback.recorded",
-                "quality_task.created",
-                "quality_task.updated",
-                "share.created",
-                "share.revoked",
-                "share.visited",
-                "review.submitted",
-                "review.approved",
-                "review.rejected",
-                "review.receipt_issued",
                 "cr.created",
                 "cr.item_added",
                 "cr.item_removed",
@@ -41175,7 +41370,21 @@ const docTemplate = `{
                 "cr.rolled_back",
                 "cr.impact_task_updated",
                 "cr.verified",
-                "cr.notified"
+                "cr.notified",
+                "parse_quality.computed",
+                "candidate.created",
+                "candidate.confirmed",
+                "candidate.published",
+                "candidate.rejected",
+                "review.submitted",
+                "review.approved",
+                "review.rejected",
+                "review.receipt_issued",
+                "share.created",
+                "share.revoked",
+                "share.visited",
+                "aipre.completed",
+                "aipre.failed"
             ],
             "x-enum-varnames": [
                 "OntologyActionSchemaProposalCreated",
@@ -41196,6 +41405,9 @@ const docTemplate = `{
                 "OntologyActionRelationCreated",
                 "OntologyActionRelationUpdated",
                 "OntologyActionRelationDeleted",
+                "AuditActionFeedbackRecorded",
+                "AuditActionQualityTaskCreated",
+                "AuditActionQualityTaskUpdated",
                 "AuditActionMemberAdded",
                 "AuditActionMemberRemoved",
                 "AuditActionMemberRoleChanged",
@@ -41259,23 +41471,6 @@ const docTemplate = `{
                 "AuditActionFAQImportStarted",
                 "AuditActionFAQImportCompleted",
                 "AuditActionFAQImportFailed",
-                "AuditActionAIPreReviewCompleted",
-                "AuditActionAIPreReviewFailed",
-                "ParseQualityAuditActionComputed",
-                "AuditActionCandidateCreated",
-                "AuditActionCandidateConfirmed",
-                "AuditActionCandidatePublished",
-                "AuditActionCandidateRejected",
-                "AuditActionFeedbackRecorded",
-                "AuditActionQualityTaskCreated",
-                "AuditActionQualityTaskUpdated",
-                "AuditActionShareLinkCreated",
-                "AuditActionShareLinkRevoked",
-                "AuditActionShareLinkVisited",
-                "AuditActionReviewSubmitted",
-                "AuditActionReviewApproved",
-                "AuditActionReviewRejected",
-                "AuditActionReviewReceiptIssued",
                 "AuditActionCRCreated",
                 "AuditActionCRItemAdded",
                 "AuditActionCRItemRemoved",
@@ -41288,7 +41483,21 @@ const docTemplate = `{
                 "AuditActionCRRolledBack",
                 "AuditActionCRImpactTaskUpdated",
                 "AuditActionCRVerified",
-                "AuditActionCRNotified"
+                "AuditActionCRNotified",
+                "ParseQualityAuditActionComputed",
+                "AuditActionCandidateCreated",
+                "AuditActionCandidateConfirmed",
+                "AuditActionCandidatePublished",
+                "AuditActionCandidateRejected",
+                "AuditActionReviewSubmitted",
+                "AuditActionReviewApproved",
+                "AuditActionReviewRejected",
+                "AuditActionReviewReceiptIssued",
+                "AuditActionShareLinkCreated",
+                "AuditActionShareLinkRevoked",
+                "AuditActionShareLinkVisited",
+                "AuditActionAIPreReviewCompleted",
+                "AuditActionAIPreReviewFailed"
             ]
         },
         "github_com_Tencent_WeKnora_internal_types.AuditLog": {
@@ -49105,6 +49314,57 @@ const docTemplate = `{
                 },
                 "name": {
                     "description": "Name is the placeholder name (without braces), e.g., \"query\"",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.PromptRollbackRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "description": "Note explains why (required: a rollback without a reason cannot be reviewed).",
+                    "type": "string"
+                },
+                "template_key": {
+                    "description": "TemplateKey being rolled back.",
+                    "type": "string"
+                },
+                "to_version": {
+                    "description": "ToVersion is the version to make stable again.",
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Tencent_WeKnora_internal_types.PromptVersionPointer": {
+            "type": "object",
+            "properties": {
+                "canary_percent": {
+                    "description": "CanaryPercent is the fraction (0-100) that sees CanaryVersion.",
+                    "type": "integer"
+                },
+                "canary_version": {
+                    "description": "CanaryVersion is the version served to the sampled fraction.\n0 disables the canary entirely (the common case).",
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "stable_version": {
+                    "description": "StableVersion is the version everyone gets.",
+                    "type": "integer"
+                },
+                "template_key": {
+                    "description": "TemplateKey identifies the prompt template.",
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "description": "UpdatedBy / UpdatedAt record the last change.",
                     "type": "string"
                 }
             }
